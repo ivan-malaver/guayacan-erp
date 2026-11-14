@@ -1,0 +1,7 @@
+stateDiagram-v2
+  [*] --> borrador: lo generan reglas o el contador
+  borrador --> contabilizado: débitos = créditos y periodo abierto
+  contabilizado --> anulado: solo con motivo
+  borrador --> [*]
+  anulado --> [*]
+  note right of contabilizado: movimientos inmutables, correcciones con nota contable

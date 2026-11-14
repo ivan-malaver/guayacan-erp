@@ -1,0 +1,12 @@
+flowchart LR
+  C[Cámaras y time-lapse] --> G[Grabación por movimiento<br/>en la pasarela local]
+  G --> R{Clip}
+  R -- seguridad --> RT[Se guarda 30 días<br/>y se borra solo]
+  R -- elegido para redes --> NU[Sube a la nube]
+  NU --> AG[Gestor de redes propone<br/>guion y texto]
+  AG --> FF[FFmpeg arma el video<br/>logo y música con licencia]
+  FF --> CO{¿Aparecen personas?}
+  CO -- sí --> CK[Verificar autorización de imagen<br/>de cada persona]
+  CO -- no --> AP
+  CK --> AP[Una persona aprueba]
+  AP --> PU[Publicación en redes<br/>y video para el asesor virtual]

@@ -1,0 +1,10 @@
+stateDiagram-v2
+  [*] --> disponible: entrada por kardex
+  disponible --> agotado: cantidad llega a cero
+  disponible --> vencido: marcar_vencidos() pasada la fecha
+  disponible --> bloqueado: excursión de frío, retiro o persona
+  bloqueado --> disponible: una persona lo libera
+  bloqueado --> vencido: una persona lo descarta
+  agotado --> [*]
+  vencido --> [*]: merma con causa
+  note right of disponible: solo se vende si puede_venderse() antes de su fecha límite

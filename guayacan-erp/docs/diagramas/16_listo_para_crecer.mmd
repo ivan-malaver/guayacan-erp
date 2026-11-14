@@ -1,0 +1,17 @@
+flowchart TB
+  F[nucleo.funcionalidad<br/>interruptor por finca] --> P1
+  F --> P2
+  F --> P3
+  F --> P4
+  subgraph P1["Puerto DetectorPresencia"]
+    H1[Hoy: sensor PIR y magnético] --- M1[Mañana: cámara térmica]
+  end
+  subgraph P2["Puerto VerificadorIdentidad"]
+    H2[Hoy: PIN o tarjeta RFID] --- M2[Mañana: rostro, con autorización expresa]
+  end
+  subgraph P3["Puerto MapaFinca (estado en GeoJSON)"]
+    H3[Hoy: mapa 2D con zonas PostGIS] --- M3[Mañana: gemelo digital 3D]
+  end
+  subgraph P4["Puerto RegistroExterno"]
+    H4[Hoy: cadena de huellas SHA-256] --- M4[Mañana: anclaje en blockchain]
+  end

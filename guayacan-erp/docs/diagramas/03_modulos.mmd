@@ -1,0 +1,24 @@
+flowchart LR
+  subgraph ERP[Núcleo ERP · una app Django por módulo]
+    NUC[nucleo<br/>usuarios, roles, parámetros,<br/>auditoría, predio, zonas]
+    TER[terceros<br/>clientes, proveedores,<br/>empleados, consentimiento]
+    PRO[produccion<br/>aves, ovinos, caprinos, peces,<br/>siembras, cosechas, suelo]
+    RIE[riego<br/>fuentes, tanques,<br/>válvulas, eventos]
+    INV[inventario<br/>productos, lotes, kardex]
+    COM[comercial<br/>precios, pedidos,<br/>facturas, pagos]
+    CMP[compras<br/>órdenes, cotizaciones,<br/>precios de mercado]
+    FIN[finanzas<br/>PUC, comprobantes,<br/>centros de costo]
+    IA[ia<br/>agentes, aprobaciones,<br/>conocimiento]
+    RED[redes<br/>cuentas, publicaciones]
+    TUR[turismo · fase 3]
+    IOT[iot · fase 4]
+  end
+  PRO -- cosechas y postura crean lotes --> INV
+  CMP -- recepción crea lotes --> INV
+  COM -- reserva y descarga --> INV
+  COM -- ventas generan comprobantes --> FIN
+  CMP -- compras generan comprobantes --> FIN
+  IA -- propuestas de precio --> COM
+  IA -- publicaciones --> RED
+  RIE -- automatización --> IOT
+  TUR -- reservas generan pedidos --> COM

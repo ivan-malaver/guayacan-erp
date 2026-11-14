@@ -1,0 +1,41 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Estrategia de negocio (EST)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "FAM";}
+"FAM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Familia", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Estrategia de negocio"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "EST-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-01\nMantener las líneas de\nnegocio y la matriz DOFA"];
+  "EST-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-02\nRegistrar un estudio de\nmercado"];
+  "EST-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-03\nProponer una iniciativa de\ncrecimiento"];
+  "EST-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-04\nEvaluar financieramente\nuna iniciativa"];
+  "EST-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-05\nAprobar una iniciativa"];
+  "EST-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-06\nReinvertir utilidades de\nuna línea"];
+  "EST-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-07\nSeguir el retorno de las\niniciativas"];
+  "EST-08" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="EST-08\nDefinir objetivos y metas\ndel cuadro de mando"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "FIN-10" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="FIN-10\nCalcular punto de\nequilibrio y palancas\n(Finanzas y contabilidad)"];
+  "PRY-01" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="PRY-01\nConstituir un proyecto\n(Proyectos (PMBOK 8))"];
+}
+{rank=sink; "AG_EST"; "MER"; "AG_NEG";}
+"AG_EST" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nEstratega"];
+"MER" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nFuentes de mercado"];
+"AG_NEG" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAnalista de\nnegocio"];
+"FAM" -> "EST-01";
+"EST-01" -> "AG_EST" [style=solid];
+"FAM" -> "EST-02";
+"EST-02" -> "AG_EST" [style=solid];
+"EST-02" -> "MER" [style=solid];
+"FAM" -> "EST-03";
+"EST-03" -> "AG_EST" [style=solid];
+"FAM" -> "EST-04";
+"EST-04" -> "AG_EST" [style=solid];
+"EST-04" -> "FIN-10" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"FAM" -> "EST-05";
+"EST-05" -> "EST-04" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"EST-05" -> "PRY-01" [style=dashed, arrowhead=none, arrowtail=vee, dir=back, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280"];
+"FAM" -> "EST-06";
+"FAM" -> "EST-07";
+"EST-07" -> "AG_NEG" [style=solid];
+"FAM" -> "EST-08";
+}

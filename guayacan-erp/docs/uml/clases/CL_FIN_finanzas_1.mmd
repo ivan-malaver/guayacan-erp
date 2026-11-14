@@ -1,0 +1,137 @@
+classDiagram
+  direction LR
+  class finanzas__centro_costo["centro_costo"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+  }
+  class finanzas__presupuesto_detalle["presupuesto_detalle"] {
+    <<por finca · fase 2>>
+    +presupuesto_id : ref presupuesto
+    +componente : enum
+    +mes : smallint
+    +centro_costo_id? : ref centro_costo
+    +cuenta_id? : ref cuenta_contable
+    +producto_id? : ref producto
+    +cantidad? : decimal
+    +valor : dinero
+    +justificacion? : text
+  }
+  class finanzas__movimiento_contable["movimiento_contable"] {
+    <<por finca · fase 1>>
+    +comprobante_id : ref comprobante
+    +cuenta_id : ref cuenta_contable
+    +tercero_id? : ref tercero
+    +centro_costo_id? : ref centro_costo
+    +debito : dinero
+    +credito : dinero
+    +detalle? : texto
+  }
+  class finanzas__actividad_costo["actividad_costo"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +inductor : texto
+    +centro_costo_id? : ref centro_costo
+  }
+  class finanzas__asignacion_costo["asignacion_costo"] {
+    <<por finca · fase 2>>
+    +mes : date
+    +actividad_id : ref actividad_costo
+    +centro_costo_id : ref centro_costo
+    +cantidad_inductor : decimal
+    +valor_asignado? : dinero
+  }
+  class finanzas__valor_indicador["valor_indicador"] {
+    <<por finca · fase 2>>
+    +indicador_id : ref indicador
+    +desde : date
+    +hasta : date
+    +centro_costo_id? : ref centro_costo
+    +valor? : decimal
+    +meta? : decimal
+    +semaforo : enum
+  }
+  class finanzas__cuenta_contable["cuenta_contable"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +naturaleza : enum
+    +nivel : smallint
+    +padre_id? : ref cuenta_contable
+    +acepta_movimiento : boolean
+  }
+  class finanzas__presupuesto["presupuesto"] {
+    <<por finca · fase 2>>
+    +nombre : texto
+    +anio : smallint
+    +version : smallint
+    +base_cero : boolean
+    +fuente : enum
+    +estado : enum
+    +aprobado_por? : ref usuario
+  }
+  class finanzas__comprobante["comprobante"] {
+    <<por finca · fase 1>>
+    +tipo : enum
+    +numero : texto
+    +fecha : date
+    +descripcion : text
+    +origen_tabla? : texto
+    +origen_id? : bigint
+    +estado : enum
+    +aprobado_por? : ref usuario
+    +contabilizado_en? : momento
+    +motivo_anulacion? : text
+  }
+  class finanzas__anticipo_proveedor["anticipo_proveedor"] {
+    <<por finca · fase 2>>
+    +proveedor_id : ref proveedor
+    +fecha : date
+    +valor : dinero
+    +saldo : dinero
+    +comprobante_id? : ref comprobante
+    +estado : enum
+  }
+  class finanzas__aplicacion_anticipo["aplicacion_anticipo"] {
+    <<por finca · fase 2>>
+    +anticipo_id : ref anticipo_proveedor
+    +orden_compra_id : ref orden_compra
+    +valor : dinero
+  }
+  namespace compras {
+    class compras__orden_compra["compras.orden_compra"]
+  }
+  namespace finanzas_otra_parte {
+    class finanzas__indicador["finanzas.indicador"]
+  }
+  namespace inventario {
+    class inventario__producto["inventario.producto"]
+  }
+  namespace terceros {
+    class terceros__proveedor["terceros.proveedor"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  finanzas__presupuesto_detalle "*" --> "1" finanzas__presupuesto : presupuesto_id
+  finanzas__presupuesto_detalle "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  finanzas__presupuesto_detalle "*" --> "0..1" finanzas__cuenta_contable : cuenta_id
+  finanzas__presupuesto_detalle "*" --> "0..1" inventario__producto : producto_id
+  finanzas__movimiento_contable "*" --> "1" finanzas__comprobante : comprobante_id
+  finanzas__movimiento_contable "*" --> "1" finanzas__cuenta_contable : cuenta_id
+  finanzas__movimiento_contable "*" --> "0..1" terceros__tercero : tercero_id
+  finanzas__movimiento_contable "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  finanzas__actividad_costo "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  finanzas__asignacion_costo "*" --> "1" finanzas__actividad_costo : actividad_id
+  finanzas__asignacion_costo "*" --> "1" finanzas__centro_costo : centro_costo_id
+  finanzas__valor_indicador "*" --> "1" finanzas__indicador : indicador_id
+  finanzas__valor_indicador "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  finanzas__cuenta_contable "*" --> "0..1" finanzas__cuenta_contable : padre_id
+  finanzas__anticipo_proveedor "*" --> "1" terceros__proveedor : proveedor_id
+  finanzas__anticipo_proveedor "*" --> "0..1" finanzas__comprobante : comprobante_id
+  finanzas__aplicacion_anticipo "*" --> "1" finanzas__anticipo_proveedor : anticipo_id
+  finanzas__aplicacion_anticipo "*" --> "1" compras__orden_compra : orden_compra_id
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style compras__orden_compra fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__indicador fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__proveedor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

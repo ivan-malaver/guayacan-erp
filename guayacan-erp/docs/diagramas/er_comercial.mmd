@@ -1,0 +1,238 @@
+erDiagram
+    lista_precios {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        boolean activa
+    }
+    precio_producto {
+        bigint id PK
+        bigint predio_id FK
+        bigint lista_precios_id FK
+        bigint producto_id FK
+        numeric precio_unitario
+        boolean incluye_iva
+        timestamptz vigente_desde
+        timestamptz vigente_hasta
+        bigint propuesta_precio_id FK
+        bigint aprobado_por FK
+    }
+    propuesta_precio {
+        bigint id PK
+        bigint predio_id FK
+        bigint producto_id FK
+        bigint lista_precios_id FK
+        numeric precio_actual
+        numeric precio_propuesto
+        numeric variacion_pct
+        text justificacion
+        jsonb evidencia
+        bigint agente_id FK
+        lista estado
+        timestamptz vence_en
+        bigint revisado_por FK
+        timestamptz revisado_en
+        text comentario_revision
+        timestamptz aplicada_en
+    }
+    pedido {
+        bigint id PK
+        bigint predio_id FK
+        varchar numero
+        bigint cliente_id FK
+        lista canal
+        lista estado
+        lista forma_pago
+        bigint pedido_recurrente_id FK
+        date fecha_entrega_programada
+        varchar direccion_entrega
+        numeric subtotal
+        numeric descuento
+        numeric impuestos
+        numeric valor_domicilio
+        numeric total
+        varchar conversacion_ref
+        bigint creado_por_agente_id FK
+        bigint vendedor_id FK
+    }
+    pedido_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint pedido_id FK
+        bigint producto_id FK
+        numeric cantidad
+        bigint precio_producto_id FK
+        numeric precio_unitario
+        numeric descuento
+        numeric tarifa_iva
+        numeric total_linea
+    }
+    factura {
+        bigint id PK
+        bigint predio_id FK
+        varchar prefijo
+        integer numero
+        bigint pedido_id FK
+        bigint cliente_id FK
+        timestamptz fecha_emision
+        numeric subtotal
+        numeric iva
+        numeric total
+        lista forma_pago
+        date fecha_vencimiento
+        numeric saldo
+        varchar cufe
+        lista estado_dian
+        varchar xml_url
+        varchar pdf_url
+    }
+    pago {
+        bigint id PK
+        bigint predio_id FK
+        bigint pedido_id FK
+        bigint factura_id FK
+        timestamptz fecha
+        numeric valor
+        lista medio
+        lista proveedor_pasarela
+        varchar id_transaccion_pasarela
+        varchar referencia
+        lista estado
+        bigint confirmado_por FK
+    }
+    entrega {
+        bigint id PK
+        bigint predio_id FK
+        bigint pedido_id FK
+        timestamptz fecha_salida
+        timestamptz fecha_entrega
+        varchar responsable
+        bigint vehiculo_id FK
+        lista estado
+        varchar evidencia_url
+        smallint calificacion_cliente
+    }
+    reserva_lote {
+        bigint id PK
+        bigint predio_id FK
+        bigint pedido_detalle_id FK
+        bigint lote_inventario_id FK
+        numeric cantidad
+        lista estado
+    }
+    retiro_lote {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_inventario_id FK
+        text motivo
+        lista estado
+        bigint abierto_por FK
+        timestamptz cerrado_en
+    }
+    retiro_aviso {
+        bigint id PK
+        bigint predio_id FK
+        bigint retiro_lote_id FK
+        bigint cliente_id FK
+        bigint pedido_id FK
+        numeric cantidad
+        timestamptz avisado_en
+        lista medio_aviso
+        numeric cantidad_devuelta
+    }
+    pedido_recurrente {
+        bigint id PK
+        bigint predio_id FK
+        bigint cliente_id FK
+        lista frecuencia
+        date proxima_fecha
+        lista canal
+        lista forma_pago
+        boolean activo
+    }
+    pedido_recurrente_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint pedido_recurrente_id FK
+        bigint producto_id FK
+        numeric cantidad
+    }
+    permuta {
+        bigint id PK
+        bigint predio_id FK
+        bigint factura_id FK
+        bigint documento_soporte_id FK
+        numeric valor_compensado
+        text acuerdo
+        bigint registrado_por FK
+    }
+    huella_trazabilidad {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_inventario_id FK
+        lista hecho
+        jsonb contenido
+        char hash_anterior
+        char hash
+        varchar anclaje_red
+        varchar anclaje_transaccion
+        timestamptz anclado_en
+    }
+    compras_documento_soporte {
+        bigint id PK
+    }
+    ia_agente {
+        bigint id PK
+    }
+    inventario_lote_inventario {
+        bigint id PK
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    inventario_vehiculo {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    terceros_cliente {
+        bigint id PK
+    }
+    compras_documento_soporte ||--o{ permuta : "documento_soporte_id"
+    factura ||--o{ pago : "factura_id"
+    factura ||--o{ permuta : "factura_id"
+    ia_agente ||--o{ pedido : "creado_por_agente_id"
+    ia_agente ||--o{ propuesta_precio : "agente_id"
+    inventario_lote_inventario ||--o{ huella_trazabilidad : "lote_inventario_id"
+    inventario_lote_inventario ||--o{ reserva_lote : "lote_inventario_id"
+    inventario_lote_inventario ||--o{ retiro_lote : "lote_inventario_id"
+    inventario_producto ||--o{ pedido_detalle : "producto_id"
+    inventario_producto ||--o{ pedido_recurrente_detalle : "producto_id"
+    inventario_producto ||--o{ precio_producto : "producto_id"
+    inventario_producto ||--o{ propuesta_precio : "producto_id"
+    inventario_vehiculo ||--o{ entrega : "vehiculo_id"
+    lista_precios ||--o{ precio_producto : "lista_precios_id"
+    lista_precios ||--o{ propuesta_precio : "lista_precios_id"
+    nucleo_usuario ||--o{ pago : "confirmado_por"
+    nucleo_usuario ||--o{ pedido : "vendedor_id"
+    nucleo_usuario ||--o{ permuta : "registrado_por"
+    nucleo_usuario ||--o{ precio_producto : "aprobado_por"
+    nucleo_usuario ||--o{ propuesta_precio : "revisado_por"
+    nucleo_usuario ||--o{ retiro_lote : "abierto_por"
+    pedido ||--o{ entrega : "pedido_id"
+    pedido ||--o{ factura : "pedido_id"
+    pedido ||--o{ pago : "pedido_id"
+    pedido ||--o{ pedido_detalle : "pedido_id"
+    pedido ||--o{ retiro_aviso : "pedido_id"
+    pedido_detalle ||--o{ reserva_lote : "pedido_detalle_id"
+    pedido_recurrente ||--o{ pedido : "pedido_recurrente_id"
+    pedido_recurrente ||--o{ pedido_recurrente_detalle : "pedido_recurrente_id"
+    precio_producto ||--o{ pedido_detalle : "precio_producto_id"
+    propuesta_precio ||--o{ precio_producto : "propuesta_precio_id"
+    retiro_lote ||--o{ retiro_aviso : "retiro_lote_id"
+    terceros_cliente ||--o{ factura : "cliente_id"
+    terceros_cliente ||--o{ pedido : "cliente_id"
+    terceros_cliente ||--o{ pedido_recurrente : "cliente_id"
+    terceros_cliente ||--o{ retiro_aviso : "cliente_id"

@@ -1,0 +1,17 @@
+flowchart TD
+  A([Celery Beat 00:30]) --> B[nucleo.mantener_particiones]
+  B --> C[inventario.marcar_vencidos]
+  C --> D[formacion.actualizar_habilitaciones]
+  D --> E[activos.generar_ordenes_trabajo]
+  E --> F[personal.generar_tareas_del_dia]
+  F --> G{pedidos_recurrentes encendida?}
+  G -- sí --> H[comercial.generar_pedidos_recurrentes]
+  G -- no --> I
+  H --> I[cumplimiento.evaluar_expediente por expediente]
+  I --> J[seguridad.revisar_copias]
+  J --> K{seguro_parametrico encendida?}
+  K -- sí --> L[seguros.vigilar_indice por póliza]
+  K -- no --> M
+  L --> M[iot.depurar_clips]
+  M --> N[comercial.actualizar_mora]
+  N --> O([Fin: resumen al administrador])

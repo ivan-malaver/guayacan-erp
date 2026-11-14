@@ -1,0 +1,172 @@
+classDiagram
+  direction TB
+  class comercial__pedido["pedido"] {
+    <<por finca · fase 1>>
+    +numero : texto
+    +cliente_id : ref cliente
+    +canal : enum
+    +estado : enum
+    +forma_pago : enum
+    +pedido_recurrente_id? : ref pedido_recurrente
+    +fecha_entrega_programada? : date
+    +direccion_entrega? : texto
+    +subtotal : dinero
+    +descuento : dinero
+    +impuestos : dinero
+    +valor_domicilio : dinero
+    +… 4 campos más
+  }
+  class comercial__pedido_detalle["pedido_detalle"] {
+    <<por finca · fase 1>>
+    +pedido_id : ref pedido
+    +producto_id : ref producto
+    +cantidad : decimal
+    +precio_producto_id : ref precio_producto
+    +precio_unitario : dinero
+    +descuento : dinero
+    +tarifa_iva : decimal
+    +total_linea : dinero
+  }
+  class comercial__factura["factura"] {
+    <<por finca · fase 1>>
+    +prefijo : texto
+    +numero : integer
+    +pedido_id? : ref pedido
+    +cliente_id : ref cliente
+    +fecha_emision : momento
+    +subtotal : dinero
+    +iva : dinero
+    +total : dinero
+    +forma_pago : enum
+    +fecha_vencimiento? : date
+    +saldo : dinero
+    +cufe? : texto
+    +… 3 campos más
+  }
+  class comercial__pago["pago"] {
+    <<por finca · fase 1>>
+    +pedido_id? : ref pedido
+    +factura_id? : ref factura
+    +fecha : momento
+    +valor : dinero
+    +medio : enum
+    +proveedor_pasarela? : enum
+    +id_transaccion_pasarela? : texto
+    +referencia? : texto
+    +estado : enum
+    +confirmado_por? : ref usuario
+  }
+  class comercial__retiro_aviso["retiro_aviso"] {
+    <<por finca · fase 1>>
+    +retiro_lote_id : ref retiro_lote
+    +cliente_id : ref cliente
+    +pedido_id : ref pedido
+    +cantidad : decimal
+    +avisado_en? : momento
+    +medio_aviso? : enum
+    +cantidad_devuelta : decimal
+  }
+  class comercial__pedido_recurrente["pedido_recurrente"] {
+    <<por finca · fase 2>>
+    +cliente_id : ref cliente
+    +frecuencia : enum
+    +proxima_fecha : date
+    +canal : enum
+    +forma_pago : enum
+    +activo : boolean
+  }
+  class comercial__entrega["entrega"] {
+    <<por finca · fase 1>>
+    +pedido_id : ref pedido
+    +fecha_salida? : momento
+    +fecha_entrega? : momento
+    +responsable? : texto
+    +vehiculo_id? : ref vehiculo
+    +estado : enum
+    +evidencia_url? : texto
+    +calificacion_cliente? : smallint
+  }
+  class comercial__precio_producto["precio_producto"] {
+    <<por finca · fase 1>>
+    +lista_precios_id : ref lista_precios
+    +producto_id : ref producto
+    +precio_unitario : dinero
+    +incluye_iva : boolean
+    +vigente_desde : momento
+    +vigente_hasta? : momento
+    +propuesta_precio_id? : ref propuesta_precio
+    +aprobado_por : ref usuario
+  }
+  class comercial__reserva_lote["reserva_lote"] {
+    <<por finca · fase 1>>
+    +pedido_detalle_id : ref pedido_detalle
+    +lote_inventario_id : ref lote_inventario
+    +cantidad : decimal
+    +estado : enum
+  }
+  class comercial__lista_precios["lista_precios"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+    +activa : boolean
+  }
+  class comercial__propuesta_precio["propuesta_precio"] {
+    <<por finca · fase 1>>
+    +producto_id : ref producto
+    +lista_precios_id : ref lista_precios
+    +precio_actual : dinero
+    +precio_propuesto : dinero
+    +variacion_pct : decimal
+    +justificacion : text
+    +evidencia : jsonb
+    +agente_id? : ref agente
+    +estado : enum
+    +vence_en : momento
+    +revisado_por? : ref usuario
+    +revisado_en? : momento
+    +… 2 campos más
+  }
+  namespace comercial_otra_parte {
+    class comercial__retiro_lote["comercial.retiro_lote"]
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+  }
+  namespace inventario {
+    class inventario__lote_inventario["inventario.lote_inventario"]
+    class inventario__producto["inventario.producto"]
+    class inventario__vehiculo["inventario.vehiculo"]
+  }
+  namespace terceros {
+    class terceros__cliente["terceros.cliente"]
+  }
+  comercial__pedido "*" --> "1" terceros__cliente : cliente_id
+  comercial__pedido "*" --> "0..1" comercial__pedido_recurrente : pedido_recurrente_id
+  comercial__pedido "*" --> "0..1" ia__agente : creado_por_agente_id
+  comercial__pedido_detalle "*" --> "1" comercial__pedido : pedido_id
+  comercial__pedido_detalle "*" --> "1" inventario__producto : producto_id
+  comercial__pedido_detalle "*" --> "1" comercial__precio_producto : precio_producto_id
+  comercial__factura "*" --> "0..1" comercial__pedido : pedido_id
+  comercial__factura "*" --> "1" terceros__cliente : cliente_id
+  comercial__pago "*" --> "0..1" comercial__pedido : pedido_id
+  comercial__pago "*" --> "0..1" comercial__factura : factura_id
+  comercial__retiro_aviso "*" --> "1" comercial__retiro_lote : retiro_lote_id
+  comercial__retiro_aviso "*" --> "1" terceros__cliente : cliente_id
+  comercial__retiro_aviso "*" --> "1" comercial__pedido : pedido_id
+  comercial__pedido_recurrente "*" --> "1" terceros__cliente : cliente_id
+  comercial__entrega "*" --> "1" comercial__pedido : pedido_id
+  comercial__entrega "*" --> "0..1" inventario__vehiculo : vehiculo_id
+  comercial__precio_producto "*" --> "1" comercial__lista_precios : lista_precios_id
+  comercial__precio_producto "*" --> "1" inventario__producto : producto_id
+  comercial__precio_producto "*" --> "0..1" comercial__propuesta_precio : propuesta_precio_id
+  comercial__reserva_lote "*" --> "1" comercial__pedido_detalle : pedido_detalle_id
+  comercial__reserva_lote "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  comercial__propuesta_precio "*" --> "1" inventario__producto : producto_id
+  comercial__propuesta_precio "*" --> "1" comercial__lista_precios : lista_precios_id
+  comercial__propuesta_precio "*" --> "0..1" ia__agente : agente_id
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style comercial__retiro_lote fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__lote_inventario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__cliente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__vehiculo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

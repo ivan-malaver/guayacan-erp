@@ -1,0 +1,71 @@
+classDiagram
+  direction LR
+  class iot__cambio_estado_alarma["cambio_estado_alarma"] {
+    <<por finca · fase 4>>
+    +zona_seguridad_id : ref zona_seguridad
+    +estado_anterior : texto
+    +estado_nuevo : texto
+    +origen : enum
+    +usuario_id? : ref usuario
+    +ocurrido_en : momento
+  }
+  class iot__clip_video["clip_video"] {
+    <<por finca · fase 4>>
+    +camara_id : ref camara
+    +inicio : momento
+    +fin : momento
+    +motivo : enum
+    +evento_seguridad_id? : ref evento_seguridad
+    +ubicacion : enum
+    +archivo_url : texto
+    +para_redes : boolean
+    +retener_hasta : date
+    +borrado_en? : momento
+  }
+  class iot__mision_robot["mision_robot"] {
+    <<por finca · fase 4>>
+    +activo_id : ref activo
+    +tipo : enum
+    +zona_id : ref zona
+    +estado : enum
+    +aprobada_por? : ref usuario
+    +piloto_id? : ref tercero
+    +poliza_id? : ref poliza
+    +altura_max_m? : decimal
+    +zona_sin_personas : boolean
+    +parada_emergencia_probada : boolean
+    +inicio? : momento
+    +fin? : momento
+    +… 1 campos más
+  }
+  namespace activos {
+    class activos__activo["activos.activo"]
+  }
+  namespace iot_otra_parte {
+    class iot__camara["iot.camara"]
+    class iot__evento_seguridad["iot.evento_seguridad"]
+    class iot__zona_seguridad["iot.zona_seguridad"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace seguros {
+    class seguros__poliza["seguros.poliza"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  iot__cambio_estado_alarma "*" --> "1" iot__zona_seguridad : zona_seguridad_id
+  iot__clip_video "*" --> "1" iot__camara : camara_id
+  iot__clip_video "*" --> "0..1" iot__evento_seguridad : evento_seguridad_id
+  iot__mision_robot "*" --> "1" activos__activo : activo_id
+  iot__mision_robot "*" --> "1" nucleo__zona : zona_id
+  iot__mision_robot "*" --> "0..1" terceros__tercero : piloto_id
+  iot__mision_robot "*" --> "0..1" seguros__poliza : poliza_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style seguros__poliza fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__camara fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style activos__activo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__evento_seguridad fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__zona_seguridad fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

@@ -1,0 +1,49 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Producción animal y agrícola (PRO)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ENC"; "OPE";}
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Producción animal y agrícola"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "PRO-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-01\nRegistrar el ingreso de un\nlote de animales"];
+  "PRO-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-02\nRegistrar la postura\ndiaria y clasificar el\nhuevo"];
+  "PRO-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-03\nRegistrar alimentación,\npesajes y eventos\nsanitarios"];
+  "PRO-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-04\nRegistrar eventos\nreproductivos de ovinos y\ncaprinos"];
+  "PRO-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-05\nRegistrar una siembra y\nsus labores culturales"];
+  "PRO-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-06\nRegistrar una cosecha y su\ndestino"];
+  "PRO-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-07\nRegistrar un análisis de\nsuelo y su recomendación"];
+  "PRO-08" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-08\nRegistrar bioseguridad e\ninocuidad"];
+  "PRO-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-09\nProducir abono en\nlombricultivo o compostera"];
+  "PRO-10" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRO-10\nMedir la calidad del agua\nde los estanques"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "NUC-05" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="NUC-05\nSincronizar registros\ncapturados sin\nconexión\n(Núcleo de la plataforma)"];
+  "INV-02" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="INV-02\nRecibir un lote en\nbodega y etiquetarlo\n(Inventario y cadena de frío)"];
+}
+{rank=sink; "GW"; "AG_AGR";}
+"GW" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela IoT local"];
+"AG_AGR" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAgrónomo"];
+"ENC" -> "PRO-01";
+"OPE" -> "PRO-01";
+"PRO-01" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-02";
+"PRO-02" -> "GW" [style=solid];
+"PRO-02" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-03";
+"PRO-03" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-04";
+"PRO-04" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-05";
+"ENC" -> "PRO-05";
+"PRO-05" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-06";
+"PRO-06" -> "INV-02" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"ENC" -> "PRO-07";
+"PRO-07" -> "AG_AGR" [style=solid];
+"OPE" -> "PRO-08";
+"PRO-08" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "PRO-09";
+"OPE" -> "PRO-10";
+"PRO-10" -> "GW" [style=solid];
+"PRO-10" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+}

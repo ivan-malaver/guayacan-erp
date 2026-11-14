@@ -1,0 +1,17 @@
+sequenceDiagram
+  participant V as Visitante o proveedor
+  participant E as Encargado
+  participant DB as Base de datos
+  participant P as Portería (PWA sin internet)
+  V->>E: Pide visita (hora, placa, zona)
+  E->>DB: Aprueba la visita
+  DB-->>E: Si va al galpón, exige declarar 72 h sin contacto con aves
+  E->>DB: emitir_pase()
+  DB-->>V: Código QR (la base guarda solo la huella)
+  V->>P: Llega con el QR
+  P->>DB: Entrada (placa, desinfección)
+  DB-->>P: Rechaza placa distinta, fuera de horario o sin desinfección
+  DB-->>P: Visita en sitio (v_en_sitio)
+  V->>P: Sale
+  P->>DB: Salida
+  Note over DB: El carné de un trabajador abre y cierra su jornada

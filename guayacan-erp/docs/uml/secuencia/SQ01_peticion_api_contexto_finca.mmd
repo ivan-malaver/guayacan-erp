@@ -1,0 +1,26 @@
+sequenceDiagram
+  autonumber
+  actor U as Usuario (PWA o panel)
+  participant N as Nginx
+  participant MW as Django · ContextoFincaMiddleware
+  participant V as Vista DRF
+  participant S as Servicio (caso de uso)
+  participant DB as PostgreSQL (rol guayacan_app)
+  U->>N: HTTPS con JWT y cabecera X-Predio
+  N->>MW: petición
+  MW->>MW: valida JWT y que el usuario tenga rol en esa finca
+  MW->>DB: BEGIN y set_config(app.predio_id, app.usuario_id, app.agente_id, true)
+  MW->>V: request con predio y usuario
+  V->>V: serializer valida formato
+  V->>S: ejecutar(datos)
+  S->>DB: INSERT o UPDATE o SELECT funcion()
+  alt la base acepta
+    DB-->>S: filas solo de esa finca (RLS)
+    S-->>V: resultado
+    V-->>U: 200 o 201 con JSON
+  else una regla de la base rechaza
+    DB-->>S: RAISE EXCEPTION con mensaje en español
+    S-->>V: ErrorDeRegla
+    V-->>U: 422 con el mensaje de la regla
+  end
+  MW->>DB: COMMIT o ROLLBACK

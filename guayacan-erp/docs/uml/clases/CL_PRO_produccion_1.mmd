@@ -1,0 +1,116 @@
+classDiagram
+  direction TB
+  class produccion__lote_animal["lote_animal"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +especie_id : ref especie
+    +zona_id : ref zona
+    +raza_linea? : texto
+    +proposito : enum
+    +fecha_ingreso : date
+    +edad_ingreso_semanas? : smallint
+    +cantidad_inicial : integer
+    +cantidad_actual : integer
+    +costo_ingreso? : dinero
+    +estado : enum
+    +fecha_cierre? : date
+  }
+  class produccion__animal["animal"] {
+    <<por finca · fase 1>>
+    +lote_animal_id : ref lote_animal
+    +identificador : texto
+    +sexo : enum
+    +fecha_nacimiento? : date
+    +madre_id? : ref animal
+    +padre_id? : ref animal
+    +estado : enum
+  }
+  class produccion__registro_pesaje["registro_pesaje"] {
+    <<por finca · fase 1>>
+    +lote_animal_id : ref lote_animal
+    +animal_id? : ref animal
+    +fecha : date
+    +animales_muestreados : integer
+    +peso_promedio_kg : decimal
+  }
+  class produccion__evento_sanitario["evento_sanitario"] {
+    <<por finca · fase 1>>
+    +lote_animal_id : ref lote_animal
+    +animal_id? : ref animal
+    +fecha : date
+    +tipo : enum
+    +producto_id? : ref producto
+    +dosis? : texto
+    +cantidad_afectada : integer
+    +causa? : texto
+    +responsable? : texto
+  }
+  class produccion__registro_postura["registro_postura"] {
+    <<por finca · fase 1>>
+    +lote_animal_id : ref lote_animal
+    +fecha : date
+    +huevos_recogidos : integer
+    +huevos_rotos : integer
+    +registrado_por : ref usuario
+  }
+  class produccion__especie["especie"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre_comun : texto
+    +nombre_cientifico? : texto
+    +grupo : enum
+    +manejo_individual : boolean
+  }
+  class produccion__registro_alimentacion["registro_alimentacion"] {
+    <<por finca · fase 1>>
+    +lote_animal_id : ref lote_animal
+    +fecha : date
+    +producto_id : ref producto
+    +cantidad_kg : decimal
+    +origen : enum
+  }
+  class produccion__evento_reproductivo["evento_reproductivo"] {
+    <<por finca · fase 1>>
+    +hembra_id : ref animal
+    +macho_id? : ref animal
+    +tipo : enum
+    +fecha : date
+    +crias_vivas? : smallint
+    +crias_muertas? : smallint
+  }
+  class produccion__clasificacion_postura["clasificacion_postura"] {
+    <<por finca · fase 1>>
+    +registro_postura_id : ref registro_postura
+    +categoria_huevo_id : ref categoria_huevo
+    +cantidad : integer
+    +metodo : enum
+  }
+  namespace inventario {
+    class inventario__producto["inventario.producto"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace produccion_otra_parte {
+    class produccion__categoria_huevo["produccion.categoria_huevo"]
+  }
+  produccion__lote_animal "*" --> "1" produccion__especie : especie_id
+  produccion__lote_animal "*" --> "1" nucleo__zona : zona_id
+  produccion__animal "*" --> "1" produccion__lote_animal : lote_animal_id
+  produccion__animal "*" --> "0..1" produccion__animal : madre_id
+  produccion__animal "*" --> "0..1" produccion__animal : padre_id
+  produccion__registro_pesaje "*" --> "1" produccion__lote_animal : lote_animal_id
+  produccion__registro_pesaje "*" --> "0..1" produccion__animal : animal_id
+  produccion__evento_sanitario "*" --> "1" produccion__lote_animal : lote_animal_id
+  produccion__evento_sanitario "*" --> "0..1" produccion__animal : animal_id
+  produccion__evento_sanitario "*" --> "0..1" inventario__producto : producto_id
+  produccion__registro_postura "*" --> "1" produccion__lote_animal : lote_animal_id
+  produccion__registro_alimentacion "*" --> "1" produccion__lote_animal : lote_animal_id
+  produccion__registro_alimentacion "*" --> "1" inventario__producto : producto_id
+  produccion__evento_reproductivo "*" --> "1" produccion__animal : hembra_id
+  produccion__evento_reproductivo "*" --> "0..1" produccion__animal : macho_id
+  produccion__clasificacion_postura "*" --> "1" produccion__registro_postura : registro_postura_id
+  produccion__clasificacion_postura "*" --> "1" produccion__categoria_huevo : categoria_huevo_id
+  style produccion__categoria_huevo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

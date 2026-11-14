@@ -1,0 +1,22 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Ambiental (AMB)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "OPE"; "ADM"; "FAM";}
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"FAM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Familia", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Ambiental"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "AMB-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="AMB-01\nRegistrar mediciones\nambientales"];
+  "AMB-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="AMB-02\nMantener factores de\nemisión con su fuente"];
+  "AMB-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="AMB-03\nConsultar indicadores\nambientales y CO₂ estimado"];
+}
+{rank=sink; "GW"; "AG_RED";}
+"GW" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela IoT local"];
+"AG_RED" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nGestor de redes"];
+"OPE" -> "AMB-01";
+"AMB-01" -> "GW" [style=solid];
+"ADM" -> "AMB-02";
+"FAM" -> "AMB-03";
+"ADM" -> "AMB-03";
+"AMB-03" -> "AG_RED" [style=solid];
+}

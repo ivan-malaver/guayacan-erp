@@ -1,0 +1,17 @@
+sequenceDiagram
+  autonumber
+  actor C as Contador
+  actor F as Familia
+  actor E as Encargado
+  participant DB as PostgreSQL
+  C->>DB: causación contable de la nómina (comprobante cuadrado y contabilizado)
+  F->>DB: UPDATE periodo estado cerrado, cerrado_por F, aprobado_por C
+  DB->>DB: proteger_periodo(): dos personas, ningún agente, comprobante contabilizado
+  DB-->>F: periodo cerrado, liquidaciones aprobadas
+  C->>DB: INSERT pago_nomina preparado_por C
+  F->>DB: aprobado_por F
+  alt valor mayor que monto_doble_aprobacion
+    E->>DB: segunda_aprobacion_por E (tercera persona)
+  end
+  C->>DB: pagado_en y referencia de la transferencia
+  DB->>DB: marcar_pagada(): liquidación pagada

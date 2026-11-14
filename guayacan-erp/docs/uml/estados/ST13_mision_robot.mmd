@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> propuesta: función dron_monitoreo o robot_campo encendida
+  propuesta --> aprobada: una persona
+  aprobada --> en_curso: dron registrado, piloto, póliza, 122 m o robot sin personas
+  en_curso --> terminada
+  en_curso --> abortada: parada de emergencia
+  propuesta --> abortada
+  terminada --> [*]
+  abortada --> [*]

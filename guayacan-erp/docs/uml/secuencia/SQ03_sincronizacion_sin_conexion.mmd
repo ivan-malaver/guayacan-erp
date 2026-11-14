@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  actor O as Operario
+  participant P as PWA (Angular)
+  participant IDB as IndexedDB (Dexie)
+  participant SW as Service worker
+  participant API as Django · /sincronizacion/lote
+  participant DB as PostgreSQL
+  O->>P: registra postura sin señal
+  P->>IDB: guarda con id_cliente UUIDv7 y capturado_en
+  Note over P,IDB: puede capturar cientos de registros sin conexión
+  SW->>SW: vuelve la señal (o se abre la app en iPhone)
+  SW->>API: POST lote de pendientes
+  loop cada registro
+    API->>DB: INSERT ... ON CONFLICT (predio_id, id_cliente) DO NOTHING
+    alt insertado
+      DB-->>API: aceptado
+    else ya existía
+      DB-->>API: duplicado (cuenta una sola vez)
+    else una regla lo rechaza
+      DB-->>API: rechazado con el mensaje
+    end
+  end
+  API->>DB: INSERT nucleo.sincronizacion (subidos, rechazados)
+  API-->>SW: resultado por registro
+  SW->>IDB: borra aceptados y duplicados, marca rechazados
+  P-->>O: muestra rechazos para corregir

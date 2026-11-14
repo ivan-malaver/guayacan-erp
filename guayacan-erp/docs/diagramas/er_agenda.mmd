@@ -1,0 +1,110 @@
+erDiagram
+    recurso {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo
+        bigint alojamiento_id FK
+        bigint activo_id FK
+        bigint zona_id FK
+        smallint capacidad
+        smallint minutos_preparacion
+        boolean activo
+    }
+    cita {
+        bigint id PK
+        bigint predio_id FK
+        bigint recurso_id FK
+        varchar titulo
+        lista tipo
+        timestamptz inicio
+        timestamptz fin
+        timestamptz fin_con_preparacion
+        lista estado
+        bigint reserva_id FK
+        bigint bloqueo_id FK
+        bigint tarea_id FK
+        bigint responsable_id FK
+        text notas
+    }
+    visita {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        varchar nombre
+        bigint tercero_id FK
+        smallint personas
+        varchar vehiculo_placa
+        lista vehiculo_tipo
+        varchar motivo
+        bigint zona_destino_id FK
+        timestamptz ingreso_programado
+        timestamptz salida_programada
+        bigint anfitrion_id FK
+        boolean requiere_bioseguridad
+        boolean contacto_aves_reciente
+        char pase_hash
+        lista estado
+        bigint aprobada_por FK
+        varchar motivo_rechazo
+        bigint cita_id FK
+    }
+    registro_acceso {
+        bigint id PK
+        bigint predio_id FK
+        lista sentido
+        lista tipo
+        bigint visita_id FK
+        bigint empleado_id FK
+        varchar nombre
+        varchar placa
+        varchar punto
+        lista metodo
+        boolean desinfeccion
+        timestamptz ocurrido_en
+        bigint registrado_por FK
+    }
+    activos_activo {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    terceros_empleado {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    turismo_alojamiento {
+        bigint id PK
+    }
+    turismo_bloqueo_calendario {
+        bigint id PK
+    }
+    turismo_reserva {
+        bigint id PK
+    }
+    activos_activo ||--o{ recurso : "activo_id"
+    cita ||--o{ visita : "cita_id"
+    nucleo_usuario ||--o{ cita : "responsable_id"
+    nucleo_usuario ||--o{ registro_acceso : "registrado_por"
+    nucleo_usuario ||--o{ visita : "anfitrion_id"
+    nucleo_usuario ||--o{ visita : "aprobada_por"
+    nucleo_zona ||--o{ recurso : "zona_id"
+    nucleo_zona ||--o{ visita : "zona_destino_id"
+    personal_tarea ||--o{ cita : "tarea_id"
+    recurso ||--o{ cita : "recurso_id"
+    terceros_empleado ||--o{ registro_acceso : "empleado_id"
+    terceros_tercero ||--o{ visita : "tercero_id"
+    turismo_alojamiento ||--o| recurso : "alojamiento_id"
+    turismo_bloqueo_calendario ||--o{ cita : "bloqueo_id"
+    turismo_reserva ||--o{ cita : "reserva_id"
+    visita ||--o{ registro_acceso : "visita_id"

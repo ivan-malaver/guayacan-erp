@@ -1,0 +1,31 @@
+digraph D {graph [fontname="DejaVu Sans", pad=0.3, bgcolor=white, labelloc=t, fontsize=16, nodesep=0.35, ranksep=0.7, compound=true];node [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"];edge [fontname="DejaVu Sans", fontsize=9.5, color="#6B7280", fontcolor="#4B5563", arrowhead=vee];
+label="Despliegue: fase 1 en un VPS con Docker Compose; la finca no depende de un servidor propio";
+rankdir=TB;
+node [shape=box3d, style=filled, fillcolor="#F9FAFB"];
+subgraph cluster_finca { label="«nodo» Finca El Guayacán (Pueblo Nuevo, Nilo)"; style=rounded; color="#2E6B4F"; fontcolor="#2E6B4F";
+  cel [label="«dispositivo»\nCelulares y tabletas\nPWA instalada"];
+  lect [label="«dispositivo»\nLectores de código y básculas\nBluetooth / USB"];
+  pas [label="«dispositivo»\nPasarela local (Raspberry Pi o mini PC)\nMosquitto, reglas, NVR de cámaras"];
+  esp [label="«dispositivo»\nNodos ESP32 / PLC\nsensores y actuadores (fase 4)"];
+}
+subgraph cluster_nube { label="«nodo» Nube · VPS (fase 1) → Kubernetes (cuando crezca)"; style=rounded; color="#4B5563";
+  subgraph cluster_compose { label="«entorno de ejecución» Docker Compose"; style="rounded,dashed"; color="#9CA3AF";
+    n1 [label="«contenedor» nginx", shape=component, fillcolor="#FFFFFF"];
+    n2 [label="«contenedor» erp (gunicorn + Django)", shape=component, fillcolor="#EAF3EE"];
+    n3 [label="«contenedor» celery-worker + celery-beat", shape=component, fillcolor="#EAF3EE"];
+    n4 [label="«contenedor» agentes (uvicorn + FastAPI)", shape=component, fillcolor="#F5F0FA"];
+    n5 [label="«contenedor» postgres 18 + PostGIS + pgvector", shape=component, fillcolor="#EEF2FF"];
+    n6 [label="«contenedor» mongodb 8", shape=component, fillcolor="#EEF2FF"];
+    n7 [label="«contenedor» redis 7", shape=component, fillcolor="#EEF2FF"];
+    n8 [label="«contenedor» minio", shape=component, fillcolor="#EEF2FF"];
+  }
+  bk [label="«almacén externo»\nCopias cifradas 3-2-1\nprueba de restauración mensual"];
+}
+subgraph cluster_saas { label="«nodo» Servicios externos"; style="rounded,dashed"; color="#9CA3AF";
+  e1 [label="DIAN"]; e2 [label="Meta y TikTok"]; e3 [label="Proveedor de IA"]; e4 [label="Pasarela de pagos"];
+}
+cel -> n1 [label="HTTPS 443 (4G o wifi)"]; lect -> cel [label="Bluetooth / HID", arrowhead=none];
+esp -> pas [label="MQTT en red local", arrowhead=none]; pas -> n1 [label="HTTPS / MQTT sobre TLS cuando hay internet"];
+n1 -> n2; n1 -> n4; n2 -> n5; n3 -> n5; n3 -> n7; n4 -> n6; n4 -> n7; n2 -> n8; n5 -> bk [label="pgBackRest / pg_dump cifrado"];
+n3 -> e1; n4 -> e2; n4 -> e3; e4 -> n1 [label="webhook"];
+}

@@ -1,0 +1,63 @@
+erDiagram
+    alojamiento {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        smallint capacidad_personas
+        bigint zona_id FK
+        numeric tarifa_noche
+        boolean activo
+    }
+    plan_turistico {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        text descripcion
+        numeric duracion_horas
+        smallint cupo_maximo
+        numeric precio_persona
+    }
+    reserva {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        bigint cliente_id FK
+        bigint alojamiento_id FK
+        bigint plan_turistico_id FK
+        date fecha_inicio
+        date fecha_fin
+        smallint personas
+        lista estado
+        numeric total
+        numeric valor_deposito
+        timestamptz checkin_en
+        timestamptz checkout_en
+        bigint pedido_id FK
+    }
+    bloqueo_calendario {
+        bigint id PK
+        bigint predio_id FK
+        bigint alojamiento_id FK
+        bigint plan_turistico_id FK
+        date desde
+        date hasta
+        varchar motivo
+    }
+    comercial_pedido {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    terceros_cliente {
+        bigint id PK
+    }
+    alojamiento ||--o{ bloqueo_calendario : "alojamiento_id"
+    alojamiento ||--o{ reserva : "alojamiento_id"
+    comercial_pedido ||--o{ reserva : "pedido_id"
+    nucleo_zona ||--o{ alojamiento : "zona_id"
+    plan_turistico ||--o{ bloqueo_calendario : "plan_turistico_id"
+    plan_turistico ||--o{ reserva : "plan_turistico_id"
+    terceros_cliente ||--o{ reserva : "cliente_id"

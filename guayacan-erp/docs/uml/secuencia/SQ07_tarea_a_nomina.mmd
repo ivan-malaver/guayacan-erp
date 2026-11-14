@@ -1,0 +1,18 @@
+sequenceDiagram
+  autonumber
+  participant B as Celery Beat
+  participant DB as PostgreSQL
+  actor E as Encargado o responsable del área
+  actor O as Operario
+  actor C as Contador
+  B->>DB: personal.generar_tareas_del_dia(fecha)
+  DB-->>E: tareas del día sin asignar, con lista de chequeo
+  E->>DB: asigna tarea a O
+  DB->>DB: validar_tarea(): disponible, habilitado, del área
+  O->>DB: en_curso, pasos, foto de evidencia, terminada con cantidad
+  E->>DB: aprobada
+  DB->>DB: permiso o responsable del área, no la propia
+  C->>DB: nomina.preparar_prenomina(periodo)
+  DB->>DB: novedad de destajo o jornal desde la tarea aprobada
+  C->>DB: nomina.liquidar(periodo)
+  DB-->>C: devengado, deducciones, neto y provisiones

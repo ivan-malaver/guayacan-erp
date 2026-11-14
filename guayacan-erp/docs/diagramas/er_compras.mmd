@@ -1,0 +1,75 @@
+erDiagram
+    orden_compra {
+        bigint id PK
+        bigint predio_id FK
+        varchar numero
+        bigint proveedor_id FK
+        date fecha
+        lista estado
+        numeric total
+        bigint aprobado_por FK
+    }
+    orden_compra_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint orden_compra_id FK
+        bigint producto_id FK
+        numeric cantidad
+        numeric cantidad_recibida
+        numeric precio_unitario
+    }
+    cotizacion_proveedor {
+        bigint id PK
+        bigint predio_id FK
+        bigint proveedor_id FK
+        varchar nombre_proveedor
+        bigint producto_id FK
+        numeric precio_unitario
+        date fecha
+        date vigente_hasta
+        lista fuente
+        varchar fuente_url
+    }
+    precio_mercado {
+        bigint id PK
+        bigint predio_id FK
+        bigint producto_id FK
+        varchar mercado
+        date fecha
+        numeric precio_minimo
+        numeric precio_maximo
+        numeric precio_promedio
+        varchar unidad
+        varchar fuente_url
+    }
+    documento_soporte {
+        bigint id PK
+        bigint predio_id FK
+        bigint proveedor_id FK
+        bigint orden_compra_id FK
+        varchar prefijo
+        integer numero
+        date fecha
+        text descripcion
+        numeric total
+        varchar cuds
+        lista estado_dian
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    terceros_proveedor {
+        bigint id PK
+    }
+    inventario_producto ||--o{ cotizacion_proveedor : "producto_id"
+    inventario_producto ||--o{ orden_compra_detalle : "producto_id"
+    inventario_producto ||--o{ precio_mercado : "producto_id"
+    nucleo_usuario ||--o{ orden_compra : "aprobado_por"
+    orden_compra ||--o{ documento_soporte : "orden_compra_id"
+    orden_compra ||--o{ orden_compra_detalle : "orden_compra_id"
+    terceros_proveedor ||--o{ cotizacion_proveedor : "proveedor_id"
+    terceros_proveedor ||--o{ documento_soporte : "proveedor_id"
+    terceros_proveedor ||--o{ orden_compra : "proveedor_id"

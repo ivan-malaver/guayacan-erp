@@ -1,0 +1,186 @@
+erDiagram
+    competencia {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        smallint vigencia_meses
+        text descripcion
+    }
+    curso {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        text descripcion
+        lista publico
+        lista modalidad
+        bigint competencia_id FK
+        numeric nota_minima
+        numeric duracion_horas
+        lista origen
+        varchar url_externa
+        varchar ruta_cargo
+        boolean activo
+    }
+    leccion {
+        bigint id PK
+        bigint predio_id FK
+        bigint curso_id FK
+        smallint orden
+        varchar titulo
+        lista tipo
+        varchar contenido_url
+        varchar pantalla
+        bigint documento_id FK
+        boolean descargable
+    }
+    evaluacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint curso_id FK
+        varchar titulo
+        smallint intentos_max
+    }
+    pregunta {
+        bigint id PK
+        bigint predio_id FK
+        bigint evaluacion_id FK
+        smallint orden
+        text enunciado
+        lista tipo
+        jsonb opciones
+        jsonb respuesta_correcta
+        numeric puntos
+    }
+    inscripcion {
+        bigint id PK
+        bigint predio_id FK
+        bigint curso_id FK
+        bigint tercero_id FK
+        date inscrito_en
+        lista estado
+        numeric nota
+        date aprobado_en
+    }
+    progreso {
+        bigint id PK
+        bigint predio_id FK
+        bigint inscripcion_id FK
+        bigint leccion_id FK
+        timestamptz completada_en
+    }
+    sesion_presencial {
+        bigint id PK
+        bigint predio_id FK
+        bigint curso_id FK
+        bigint instructor_id FK
+        date fecha
+        varchar lugar
+        numeric duracion_horas
+    }
+    asistencia {
+        bigint id PK
+        bigint predio_id FK
+        bigint sesion_id FK
+        bigint tercero_id FK
+        boolean asistio
+        numeric nota
+    }
+    certificado {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        bigint competencia_id FK
+        bigint inscripcion_id FK
+        bigint sesion_id FK
+        date emitido_en
+        date vence_en
+        numeric nota
+        varchar codigo_verificacion
+    }
+    habilitacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        bigint competencia_id FK
+        bigint certificado_id FK
+        date desde
+        date hasta
+        boolean activa
+        timestamptz retirada_en
+    }
+    necesidad_formacion {
+        bigint id PK
+        bigint predio_id FK
+        lista origen
+        text descripcion
+        bigint tercero_id FK
+        bigint competencia_id FK
+        bigint curso_id FK
+        lista estado
+    }
+    encuesta {
+        bigint id PK
+        bigint predio_id FK
+        bigint curso_id FK
+        bigint sesion_id FK
+        bigint tercero_id FK
+        smallint satisfaccion
+        smallint utilidad
+        smallint instructor
+        text comentario
+    }
+    queja_apelacion {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        bigint tercero_id FK
+        bigint curso_id FK
+        bigint certificado_id FK
+        text descripcion
+        date presentada_en
+        date responder_antes
+        lista estado
+        text respuesta
+        bigint resuelta_por FK
+    }
+    documental_documento {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    certificado ||--o{ habilitacion : "certificado_id"
+    certificado ||--o{ queja_apelacion : "certificado_id"
+    competencia ||--o{ certificado : "competencia_id"
+    competencia ||--o{ curso : "competencia_id"
+    competencia ||--o{ habilitacion : "competencia_id"
+    competencia ||--o{ necesidad_formacion : "competencia_id"
+    curso ||--o{ encuesta : "curso_id"
+    curso ||--o{ evaluacion : "curso_id"
+    curso ||--o{ inscripcion : "curso_id"
+    curso ||--o{ leccion : "curso_id"
+    curso ||--o{ necesidad_formacion : "curso_id"
+    curso ||--o{ queja_apelacion : "curso_id"
+    curso ||--o{ sesion_presencial : "curso_id"
+    documental_documento ||--o{ leccion : "documento_id"
+    evaluacion ||--o{ pregunta : "evaluacion_id"
+    inscripcion ||--o{ certificado : "inscripcion_id"
+    inscripcion ||--o{ progreso : "inscripcion_id"
+    leccion ||--o{ progreso : "leccion_id"
+    nucleo_usuario ||--o{ queja_apelacion : "resuelta_por"
+    sesion_presencial ||--o{ asistencia : "sesion_id"
+    sesion_presencial ||--o{ certificado : "sesion_id"
+    sesion_presencial ||--o{ encuesta : "sesion_id"
+    terceros_tercero ||--o{ asistencia : "tercero_id"
+    terceros_tercero ||--o{ certificado : "tercero_id"
+    terceros_tercero ||--o{ encuesta : "tercero_id"
+    terceros_tercero ||--o{ habilitacion : "tercero_id"
+    terceros_tercero ||--o{ inscripcion : "tercero_id"
+    terceros_tercero ||--o{ necesidad_formacion : "tercero_id"
+    terceros_tercero ||--o{ queja_apelacion : "tercero_id"
+    terceros_tercero ||--o{ sesion_presencial : "instructor_id"

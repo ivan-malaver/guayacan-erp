@@ -1,0 +1,89 @@
+classDiagram
+  direction TB
+  class seguros__poliza["poliza"] {
+    <<por finca · fase 2>>
+    +numero : texto
+    +aseguradora_id : ref tercero
+    +corredor_id? : ref tercero
+    +tipo : enum
+    +desde : date
+    +hasta : date
+    +prima : dinero
+    +incentivo_pct : decimal
+    +valor_subsidiado : dinero
+    +suma_asegurada : dinero
+    +deducible? : texto
+    +estado : enum
+    +… 2 campos más
+  }
+  class seguros__bien_asegurado["bien_asegurado"] {
+    <<por finca · fase 2>>
+    +poliza_id : ref poliza
+    +activo_id? : ref activo
+    +siembra_id? : ref siembra
+    +lote_animal_id? : ref lote_animal
+    +zona_id? : ref zona
+    +descripcion : texto
+    +valor_asegurado : dinero
+  }
+  class seguros__indice_poliza["indice_poliza"] {
+    <<por finca · fase 2>>
+    +poliza_id : ref poliza
+    +variable : enum
+    +fuente_oficial : texto
+    +comparador : enum
+    +umbral : decimal
+    +ventana_dias : smallint
+    +sensor_id? : ref sensor
+  }
+  class seguros__aviso_siniestro["aviso_siniestro"] {
+    <<por finca · fase 2>>
+    +poliza_id : ref poliza
+    +indice_id? : ref indice_poliza
+    +detectado_en : momento
+    +descripcion : text
+    +serie_datos? : jsonb
+    +estado : enum
+    +revisado_por? : ref usuario
+    +enviado_en? : momento
+    +valor_reclamado? : dinero
+    +valor_pagado? : dinero
+  }
+  namespace activos {
+    class activos__activo["activos.activo"]
+  }
+  namespace documental {
+    class documental__documento["documental.documento"]
+  }
+  namespace iot {
+    class iot__sensor["iot.sensor"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace produccion {
+    class produccion__lote_animal["produccion.lote_animal"]
+    class produccion__siembra["produccion.siembra"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  seguros__poliza "*" --> "1" terceros__tercero : aseguradora_id
+  seguros__poliza "*" --> "0..1" terceros__tercero : corredor_id
+  seguros__poliza "*" --> "0..1" documental__documento : documento_id
+  seguros__bien_asegurado "*" --> "1" seguros__poliza : poliza_id
+  seguros__bien_asegurado "*" --> "0..1" activos__activo : activo_id
+  seguros__bien_asegurado "*" --> "0..1" produccion__siembra : siembra_id
+  seguros__bien_asegurado "*" --> "0..1" produccion__lote_animal : lote_animal_id
+  seguros__bien_asegurado "*" --> "0..1" nucleo__zona : zona_id
+  seguros__indice_poliza "*" --> "1" seguros__poliza : poliza_id
+  seguros__indice_poliza "*" --> "0..1" iot__sensor : sensor_id
+  seguros__aviso_siniestro "*" --> "1" seguros__poliza : poliza_id
+  seguros__aviso_siniestro "*" --> "0..1" seguros__indice_poliza : indice_id
+  style produccion__siembra fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style documental__documento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style produccion__lote_animal fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style activos__activo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__sensor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

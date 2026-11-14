@@ -1,0 +1,70 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Ventas (VTA)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "VEN"; "CLI"; "OPE"; "SCH"; "CON";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"CLI" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Cliente", fontsize=11, fontcolor="#1F2933"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"CON" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Contador", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Ventas"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "VTA-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-01\nGestionar listas y precios\ncon vigencia"];
+  "VTA-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-02\nProponer y aprobar un\ncambio de precio"];
+  "VTA-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-03\nTomar y confirmar un\npedido"];
+  "VTA-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-04\nVender en la finca o en la\nferia sin conexión"];
+  "VTA-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-05\nDespachar y entregar un\npedido"];
+  "VTA-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-06\nFacturar electrónicamente"];
+  "VTA-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-07\nRegistrar y confirmar un\npago"];
+  "VTA-08" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-08\nVender a crédito y\ncontrolar la cartera\n[función venta_credito]"];
+  "VTA-09" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-09\nGenerar pedidos\nrecurrentes\n[función pedidos_recurrentes]"];
+  "VTA-10" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-10\nRegistrar una permuta\n[función permuta]"];
+  "VTA-11" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-11\nConsultar la trazabilidad\nde un lote"];
+  "VTA-12" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="VTA-12\nRetirar un lote del\nmercado"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "IA-02" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="IA-02\nResolver la bandeja de\naprobaciones\n(Inteligencia artificial)"];
+  "NUC-05" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="NUC-05\nSincronizar registros\ncapturados sin\nconexión\n(Núcleo de la plataforma)"];
+  "INV-03" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="INV-03\nEscanear un código y\npesar con báscula\n(Inventario y cadena de frío)"];
+}
+{rank=sink; "AG_MER"; "AG_ASE"; "GW"; "DIAN"; "PAG"; "NOT"; "CAN";}
+"AG_MER" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAnalista de\nmercados"];
+"AG_ASE" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAsesor virtual"];
+"GW" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela IoT local"];
+"DIAN" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nDIAN"];
+"PAG" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela de pagos"];
+"NOT" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCorreo y SMS"];
+"CAN" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCanales de\nmensajería"];
+"ADM" -> "VTA-01";
+"ADM" -> "VTA-02";
+"VTA-02" -> "AG_MER" [style=solid];
+"VTA-02" -> "IA-02" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"VEN" -> "VTA-03";
+"CLI" -> "VTA-03";
+"VTA-03" -> "AG_ASE" [style=solid];
+"VTA-08" -> "VTA-03" [style=dashed, arrowhead=vee, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"VEN" -> "VTA-04";
+"VTA-04" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"VTA-04" -> "INV-03" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPE" -> "VTA-05";
+"VEN" -> "VTA-05";
+"VTA-05" -> "GW" [style=solid];
+"VTA-05" -> "INV-03" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"SCH" -> "VTA-06";
+"VTA-06" -> "DIAN" [style=solid];
+"VEN" -> "VTA-07";
+"CON" -> "VTA-07";
+"VTA-07" -> "PAG" [style=solid];
+"CON" -> "VTA-08";
+"VEN" -> "VTA-08";
+"VTA-08" -> "NOT" [style=solid];
+"SCH" -> "VTA-09";
+"VEN" -> "VTA-09";
+"CON" -> "VTA-10";
+"VTA-10" -> "DIAN" [style=solid];
+"CLI" -> "VTA-11";
+"ADM" -> "VTA-11";
+"ADM" -> "VTA-12";
+"VTA-12" -> "NOT" [style=solid];
+"VTA-12" -> "CAN" [style=solid];
+}

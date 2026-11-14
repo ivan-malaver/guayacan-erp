@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  actor V as Vendedor
+  participant API as Django · pedidos
+  participant DB as PostgreSQL
+  participant OB as nucleo.evento_salida
+  participant C as Celery
+  participant MG as MongoDB y agentes
+  V->>API: POST /pedidos/{id}/confirmar
+  API->>DB: SELECT comercial.confirmar_pedido(id)
+  DB->>DB: valida borrador, precio vigente y cupo si es a crédito
+  loop cada línea del pedido
+    DB->>DB: inventario.reservar_fefo(): toma primero el lote que vence antes (FOR UPDATE)
+    alt no alcanza el inventario vendible
+      DB-->>API: Inventario insuficiente, sin reservas a medias
+      API-->>V: 422
+    end
+  end
+  DB->>OB: INSERT pedido.confirmado en la misma transacción
+  DB-->>API: pedido confirmado con reservas
+  API-->>V: 200
+  C->>OB: lee pendientes
+  C->>MG: publica en Redis Streams, actualiza perfil de interés
+  C->>OB: marca publicado

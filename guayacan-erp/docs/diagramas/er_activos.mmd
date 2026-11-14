@@ -1,0 +1,127 @@
+erDiagram
+    activo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo
+        varchar marca
+        varchar modelo
+        varchar serie
+        date fecha_compra
+        numeric valor_compra
+        numeric valor_residual
+        smallint vida_util_meses
+        lista metodo_depreciacion
+        bigint zona_id FK
+        bigint responsable_id FK
+        bigint centro_costo_id FK
+        date garantia_hasta
+        numeric horometro
+        numeric odometro
+        bigint vehiculo_id FK
+        bigint dispositivo_id FK
+        varchar registro_aerocivil
+        lista estado
+    }
+    plan_mantenimiento {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        varchar nombre
+        lista tipo
+        lista frecuencia_tipo
+        numeric frecuencia_valor
+        numeric ultima_lectura
+        date ultima_fecha
+        boolean activo
+    }
+    orden_trabajo {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        bigint plan_id FK
+        lista tipo
+        text descripcion
+        lista estado
+        bigint tarea_id FK
+        numeric lectura_cierre
+        numeric costo_mano_obra
+        numeric costo_repuestos
+        timestamptz cerrada_en
+    }
+    repuesto_orden {
+        bigint id PK
+        bigint predio_id FK
+        bigint orden_id FK
+        bigint producto_id FK
+        numeric cantidad
+        bigint movimiento_id FK
+    }
+    uso_activo {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        date fecha
+        bigint empleado_id FK
+        numeric horas
+        numeric km
+        numeric combustible_litros
+        numeric costo_combustible
+        bigint centro_costo_id FK
+        bigint tarea_id FK
+    }
+    depreciacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        date mes
+        numeric valor
+        numeric acumulada
+        bigint comprobante_id FK
+    }
+    finanzas_centro_costo {
+        bigint id PK
+    }
+    finanzas_comprobante {
+        bigint id PK
+    }
+    inventario_movimiento_inventario {
+        bigint id PK
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    inventario_vehiculo {
+        bigint id PK
+    }
+    iot_dispositivo {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    terceros_empleado {
+        bigint id PK
+    }
+    activo ||--o{ depreciacion : "activo_id"
+    activo ||--o{ orden_trabajo : "activo_id"
+    activo ||--o{ plan_mantenimiento : "activo_id"
+    activo ||--o{ uso_activo : "activo_id"
+    finanzas_centro_costo ||--o{ activo : "centro_costo_id"
+    finanzas_centro_costo ||--o{ uso_activo : "centro_costo_id"
+    finanzas_comprobante ||--o{ depreciacion : "comprobante_id"
+    inventario_movimiento_inventario ||--o{ repuesto_orden : "movimiento_id"
+    inventario_producto ||--o{ repuesto_orden : "producto_id"
+    inventario_vehiculo ||--o{ activo : "vehiculo_id"
+    iot_dispositivo ||--o{ activo : "dispositivo_id"
+    nucleo_zona ||--o{ activo : "zona_id"
+    orden_trabajo ||--o{ repuesto_orden : "orden_id"
+    personal_tarea ||--o{ orden_trabajo : "tarea_id"
+    personal_tarea ||--o{ uso_activo : "tarea_id"
+    plan_mantenimiento ||--o{ orden_trabajo : "plan_id"
+    terceros_empleado ||--o{ activo : "responsable_id"
+    terceros_empleado ||--o{ uso_activo : "empleado_id"

@@ -1,0 +1,13 @@
+flowchart LR
+  subgraph FINCA["Finca · red local con energía solar (funciona sin internet)"]
+    S1[Sensores de puerta,<br/>movimiento y vidrio] -->|MQTT| P
+    S2[Sensores de humo,<br/>gas y amoníaco] -->|MQTT| P
+    S3[Cámara térmica<br/>apagada hasta comprarla] -.->|MQTT| P
+    A1[Lector de acceso<br/>PIN o tarjeta; rostro apagado] -->|MQTT| P
+    P[Pasarela local<br/>reglas por estado de alarma] --> AC[Acciones: sirena, reflectores,<br/>extractor, cortinas del galpón]
+    P --> CL[Clip de la cámara<br/>grabado en la pasarela]
+  end
+  P -->|evento de seguridad| AV[Aviso push o SMS<br/>al administrador]
+  P -.->|cuando hay señal| N[Nube: iot.evento_seguridad,<br/>atención e historial]
+  U[Administrador] -->|armar, desarmar,<br/>noche, mantenimiento| ES{Estado de la alarma}
+  ES --> P

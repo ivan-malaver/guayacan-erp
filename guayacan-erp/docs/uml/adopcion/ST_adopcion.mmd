@@ -1,0 +1,28 @@
+stateDiagram-v2
+direction LR
+state "Bien" as B {
+[*] --> disponible
+disponible --> reservado : compra de árbol
+disponible --> activo : compra de animal
+reservado --> activo : registrar_siembra
+activo --> en_readopcion : 3 cuotas vencidas
+en_readopcion --> activo : readopción
+activo --> maduro : marcar_madurez
+maduro --> liquidado : tala, sacrificio o venta
+activo --> muerto : registrar_muerte
+maduro --> muerto : registrar_muerte
+muerto --> [*]
+liquidado --> [*]
+}
+state "Contrato" as C {
+[*] --> c_activo : compra, readopción o cesión
+c_activo --> terminado_abandono : 3 meses de mora
+c_activo --> cedido : cesión a otro adoptante
+c_activo --> terminado_liquidacion : liquidación final aprobada
+c_activo --> terminado_muerte : muerte fuera de garantía
+c_activo --> c_activo : muerte en garantía, pasa al reemplazo
+terminado_abandono --> [*]
+cedido --> [*]
+terminado_liquidacion --> [*]
+terminado_muerte --> [*]
+}

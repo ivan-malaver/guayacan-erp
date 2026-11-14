@@ -1,0 +1,11 @@
+flowchart LR
+  subgraph PostgreSQL
+    T1[Tabla de negocio<br/>ej. pedido confirmado]
+    OB[nucleo.evento_salida<br/>misma transacción]
+  end
+  T1 -- commit --> OB
+  OB -- Celery lee pendientes --> PUB[Publicador]
+  PUB -- Redis Streams --> AGS[Servicio de agentes]
+  PUB --> MG[(MongoDB<br/>actualiza perfil e historial)]
+  AGS -- lee referencias *_id --> MG
+  AGS -- nunca escribe directo --> X[ERP vía MCP]

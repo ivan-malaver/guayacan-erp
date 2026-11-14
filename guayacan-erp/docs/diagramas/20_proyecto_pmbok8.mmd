@@ -1,0 +1,11 @@
+flowchart LR
+  I[Iniciativa aprobada<br/>VPN, TIR, ROI] --> A[Acta: objetivo, patrocinador,<br/>director, presupuesto, fechas]
+  A -->|aprueba el patrocinador| LB1[Línea base 1]
+  LB1 --> PL[Planificación: EDT, actividades,<br/>dependencias, riesgos, interesados]
+  PL -->|calcular_ruta_critica| RC[Ruta crítica y holguras]
+  RC --> EJ[Ejecución: tareas de campo,<br/>iteraciones]
+  EJ -->|calcular_valor_ganado| MC[Monitoreo: CPI, SPI, EAC]
+  MC -->|solicitud de cambio| SC{Decide otra persona}
+  SC -- aprobada --> LB2[Línea base nueva]
+  LB2 --> EJ
+  MC --> CI[Cierre: entregables aceptados<br/>y lecciones aprendidas]

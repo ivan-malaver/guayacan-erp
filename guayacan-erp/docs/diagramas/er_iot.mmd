@@ -1,0 +1,224 @@
+erDiagram
+    dispositivo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        lista tipo
+        bigint pasarela_id FK
+        bigint zona_id FK
+        varchar topico_mqtt
+        inet direccion_red_local
+        varchar version_firmware
+        timestamptz ultima_conexion
+        timestamptz ultima_sincronizacion_nube
+        boolean activo
+    }
+    sensor {
+        bigint id PK
+        bigint predio_id FK
+        bigint dispositivo_id FK
+        varchar codigo
+        lista magnitud
+        varchar unidad
+        numeric valor_minimo_alerta
+        numeric valor_maximo_alerta
+    }
+    actuador {
+        bigint id PK
+        bigint predio_id FK
+        bigint dispositivo_id FK
+        varchar codigo
+        lista tipo
+        bigint zona_seguridad_id FK
+        lista modo_falla
+        lista estado_actual
+    }
+    lectura {
+        bigint id PK
+        bigint predio_id FK
+        bigint sensor_id FK
+        timestamptz medido_en
+        timestamptz recibido_en
+        double_precision valor
+    }
+    regla_automatizacion {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        jsonb condicion
+        bigint actuador_id FK
+        lista accion
+        smallint duracion_max_min
+        lista ejecuta_en
+        integer version
+        integer desplegada_version
+        boolean activa
+        bigint aprobado_por FK
+    }
+    comando_actuador {
+        bigint id PK
+        bigint predio_id FK
+        bigint actuador_id FK
+        lista accion
+        lista origen
+        bigint regla_id FK
+        bigint solicitado_por FK
+        smallint duracion_max_min
+        lista estado
+        timestamptz expira_en
+        timestamptz ejecutado_en
+    }
+    zona_seguridad {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo
+        boolean paso_personas
+        boolean bioseguridad
+        lista estado_alarma
+    }
+    cambio_estado_alarma {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_seguridad_id FK
+        varchar estado_anterior
+        varchar estado_nuevo
+        lista origen
+        bigint usuario_id FK
+        timestamptz ocurrido_en
+    }
+    credencial_acceso {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        bigint zona_seguridad_id FK
+        lista metodo
+        varchar referencia_hash
+        bigint consentimiento_id FK
+        date vigente_desde
+        date vigente_hasta
+        boolean activa
+    }
+    camara {
+        bigint id PK
+        bigint predio_id FK
+        bigint dispositivo_id FK
+        bigint zona_id FK
+        bigint zona_seguridad_id FK
+        lista tipo
+        boolean graba_por_movimiento
+        smallint intervalo_timelapse_min
+        smallint retencion_dias
+        boolean aviso_visible
+        varchar stream_secreto_ref
+        boolean activa
+    }
+    evento_seguridad {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_seguridad_id FK
+        lista tipo
+        lista detector
+        bigint sensor_id FK
+        bigint camara_id FK
+        bigint credencial_id FK
+        lista severidad
+        varchar estado_alarma
+        jsonb acciones
+        timestamptz ocurrido_en
+        bigint atendido_por FK
+        timestamptz atendido_en
+        text nota_atencion
+    }
+    clip_video {
+        bigint id PK
+        bigint predio_id FK
+        bigint camara_id FK
+        timestamptz inicio
+        timestamptz fin
+        lista motivo
+        bigint evento_seguridad_id FK
+        lista ubicacion
+        varchar archivo_url
+        boolean para_redes
+        date retener_hasta
+        timestamptz borrado_en
+    }
+    mision_robot {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        lista tipo
+        bigint zona_id FK
+        lista estado
+        bigint aprobada_por FK
+        bigint piloto_id FK
+        bigint poliza_id FK
+        numeric altura_max_m
+        boolean zona_sin_personas
+        boolean parada_emergencia_probada
+        timestamptz inicio
+        timestamptz fin
+        jsonb resultado
+    }
+    prioridad_carga {
+        bigint id PK
+        bigint predio_id FK
+        bigint actuador_id FK
+        smallint prioridad
+        boolean esencial
+        smallint corte_bateria_pct
+    }
+    activos_activo {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    seguros_poliza {
+        bigint id PK
+    }
+    terceros_consentimiento_datos {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    activos_activo ||--o{ mision_robot : "activo_id"
+    actuador ||--o{ comando_actuador : "actuador_id"
+    actuador ||--o{ regla_automatizacion : "actuador_id"
+    actuador ||--o| prioridad_carga : "actuador_id"
+    camara ||--o{ clip_video : "camara_id"
+    camara ||--o{ evento_seguridad : "camara_id"
+    credencial_acceso ||--o{ evento_seguridad : "credencial_id"
+    dispositivo ||--o{ actuador : "dispositivo_id"
+    dispositivo ||--o{ camara : "dispositivo_id"
+    dispositivo ||--o{ dispositivo : "pasarela_id"
+    dispositivo ||--o{ sensor : "dispositivo_id"
+    evento_seguridad ||--o{ clip_video : "evento_seguridad_id"
+    nucleo_usuario ||--o{ cambio_estado_alarma : "usuario_id"
+    nucleo_usuario ||--o{ comando_actuador : "solicitado_por"
+    nucleo_usuario ||--o{ evento_seguridad : "atendido_por"
+    nucleo_usuario ||--o{ mision_robot : "aprobada_por"
+    nucleo_usuario ||--o{ regla_automatizacion : "aprobado_por"
+    nucleo_zona ||--o{ camara : "zona_id"
+    nucleo_zona ||--o{ dispositivo : "zona_id"
+    nucleo_zona ||--o{ mision_robot : "zona_id"
+    nucleo_zona ||--o{ zona_seguridad : "zona_id"
+    regla_automatizacion ||--o{ comando_actuador : "regla_id"
+    seguros_poliza ||--o{ mision_robot : "poliza_id"
+    sensor ||--o{ evento_seguridad : "sensor_id"
+    sensor ||--o{ lectura : "sensor_id"
+    terceros_consentimiento_datos ||--o{ credencial_acceso : "consentimiento_id"
+    terceros_tercero ||--o{ credencial_acceso : "tercero_id"
+    terceros_tercero ||--o{ mision_robot : "piloto_id"
+    zona_seguridad ||--o{ actuador : "zona_seguridad_id"
+    zona_seguridad ||--o{ camara : "zona_seguridad_id"
+    zona_seguridad ||--o{ cambio_estado_alarma : "zona_seguridad_id"
+    zona_seguridad ||--o{ credencial_acceso : "zona_seguridad_id"
+    zona_seguridad ||--o{ evento_seguridad : "zona_seguridad_id"

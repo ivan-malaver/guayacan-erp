@@ -1,0 +1,18 @@
+flowchart LR
+  subgraph Personas
+    ADM[Administrador<br/>aprueba precios, pagos y publicaciones]
+    OPE[Operario de granja<br/>registra producción y riego]
+    CON[Contador]
+    CLI[Clientes y visitantes]
+  end
+  SIS((GuayacanERP))
+  ADM --> SIS
+  OPE --> SIS
+  CON --> SIS
+  CLI -- WhatsApp, web, redes --> SIS
+  SIS -- Facturación electrónica --> DIAN[DIAN o proveedor tecnológico]
+  SIS -- API oficial --> META[WhatsApp Business, Facebook, Instagram]
+  SIS -- Modelos de lenguaje --> LLM[Anthropic y otros proveedores]
+  SIS -- Precios de referencia --> SIPSA[SIPSA-DANE, Corabastos]
+  SIS -- Pagos --> PAG[Nequi, Daviplata, Bre-B]
+  SIS -- MQTT --> IOT[Sensores y electroválvulas de riego]

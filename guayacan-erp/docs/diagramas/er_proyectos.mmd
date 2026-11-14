@@ -1,0 +1,218 @@
+erDiagram
+    proyecto {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        text objetivo
+        text justificacion
+        text criterios_exito
+        bigint iniciativa_id FK
+        bigint linea_negocio_id FK
+        lista enfoque
+        lista area_enfoque
+        lista estado
+        bigint patrocinador_id FK
+        bigint director_id FK
+        numeric presupuesto
+        lista fuente_fondos
+        date inicio_plan
+        date fin_plan
+        date inicio_real
+        date fin_real
+        bigint acta_documento_id FK
+        bigint aprobado_por FK
+        timestamptz aprobado_en
+    }
+    interesado {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        bigint tercero_id FK
+        bigint usuario_id FK
+        varchar nombre
+        varchar rol
+        smallint interes
+        smallint influencia
+        varchar estrategia
+        text expectativas
+    }
+    elemento_edt {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        bigint padre_id FK
+        varchar codigo
+        varchar nombre
+        boolean es_entregable
+        text criterio_aceptacion
+        lista estado
+        bigint aceptado_por FK
+        timestamptz aceptado_en
+    }
+    iteracion {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        smallint numero
+        text objetivo
+        date inicio
+        date fin
+        lista estado
+        text retrospectiva
+    }
+    actividad {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        bigint elemento_edt_id FK
+        bigint iteracion_id FK
+        varchar codigo
+        varchar nombre
+        boolean es_hito
+        smallint duracion_dias
+        smallint inicio_temprano
+        smallint fin_temprano
+        smallint inicio_tardio
+        smallint fin_tardio
+        smallint holgura
+        boolean critica
+        date inicio_plan
+        date fin_plan
+        date inicio_real
+        date fin_real
+        numeric avance_pct
+        numeric costo_plan
+        numeric costo_real
+        bigint responsable_id FK
+        bigint area_id FK
+        bigint tarea_id FK
+    }
+    dependencia {
+        bigint id PK
+        bigint predio_id FK
+        bigint predecesora_id FK
+        bigint sucesora_id FK
+        lista tipo
+        smallint desfase_dias
+    }
+    riesgo {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        text descripcion
+        lista tipo
+        lista categoria
+        smallint probabilidad
+        smallint impacto
+        smallint_generated_always_as_ severidad
+        lista respuesta
+        text plan_respuesta
+        varchar disparador
+        bigint responsable_id FK
+        lista estado
+    }
+    registro {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        lista tipo
+        text descripcion
+        bigint responsable_id FK
+        lista estado
+        date fecha
+    }
+    solicitud_cambio {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        text descripcion
+        bigint solicitada_por FK
+        text impacto_alcance
+        smallint impacto_dias
+        numeric impacto_costo
+        lista estado
+        bigint decidida_por FK
+        timestamptz decidida_en
+    }
+    linea_base {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        smallint version
+        numeric presupuesto
+        date fin_plan
+        text alcance
+        bigint solicitud_cambio_id FK
+        bigint aprobada_por FK
+    }
+    medicion_valor_ganado {
+        bigint id PK
+        bigint predio_id FK
+        bigint proyecto_id FK
+        date fecha_corte
+        numeric pv
+        numeric ev
+        numeric ac
+        numeric cpi
+        numeric spi
+        numeric eac
+        numeric etc
+        numeric vac
+    }
+    documental_documento {
+        bigint id PK
+    }
+    estrategia_iniciativa {
+        bigint id PK
+    }
+    estrategia_linea_negocio {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    personal_area_responsabilidad {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    terceros_empleado {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    actividad ||--o{ dependencia : "predecesora_id"
+    actividad ||--o{ dependencia : "sucesora_id"
+    documental_documento ||--o{ proyecto : "acta_documento_id"
+    elemento_edt ||--o{ actividad : "elemento_edt_id"
+    elemento_edt ||--o{ elemento_edt : "padre_id"
+    estrategia_iniciativa ||--o{ proyecto : "iniciativa_id"
+    estrategia_linea_negocio ||--o{ proyecto : "linea_negocio_id"
+    iteracion ||--o{ actividad : "iteracion_id"
+    nucleo_usuario ||--o{ elemento_edt : "aceptado_por"
+    nucleo_usuario ||--o{ interesado : "usuario_id"
+    nucleo_usuario ||--o{ linea_base : "aprobada_por"
+    nucleo_usuario ||--o{ proyecto : "aprobado_por"
+    nucleo_usuario ||--o{ proyecto : "director_id"
+    nucleo_usuario ||--o{ proyecto : "patrocinador_id"
+    nucleo_usuario ||--o{ registro : "responsable_id"
+    nucleo_usuario ||--o{ riesgo : "responsable_id"
+    nucleo_usuario ||--o{ solicitud_cambio : "decidida_por"
+    nucleo_usuario ||--o{ solicitud_cambio : "solicitada_por"
+    personal_area_responsabilidad ||--o{ actividad : "area_id"
+    personal_tarea ||--o{ actividad : "tarea_id"
+    proyecto ||--o{ actividad : "proyecto_id"
+    proyecto ||--o{ elemento_edt : "proyecto_id"
+    proyecto ||--o{ interesado : "proyecto_id"
+    proyecto ||--o{ iteracion : "proyecto_id"
+    proyecto ||--o{ linea_base : "proyecto_id"
+    proyecto ||--o{ medicion_valor_ganado : "proyecto_id"
+    proyecto ||--o{ registro : "proyecto_id"
+    proyecto ||--o{ riesgo : "proyecto_id"
+    proyecto ||--o{ solicitud_cambio : "proyecto_id"
+    solicitud_cambio ||--o{ linea_base : "solicitud_cambio_id"
+    terceros_empleado ||--o{ actividad : "responsable_id"
+    terceros_tercero ||--o{ interesado : "tercero_id"

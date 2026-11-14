@@ -1,0 +1,17 @@
+sequenceDiagram
+  autonumber
+  participant HS as Sensor de humedad
+  participant TQ as Sensor de nivel del tanque
+  participant GW as Pasarela local (reglas)
+  participant EV as Electroválvula V-03
+  participant EM as Estación meteorológica
+  participant API as Django (cuando hay internet)
+  HS->>GW: MQTT humedad 27 %
+  TQ->>GW: MQTT tanque 55 %
+  EM->>GW: llovió en las últimas horas
+  GW->>GW: regla: humedad menor a 30 y tanque mayor a 40 y no llovió
+  GW->>EV: abrir
+  EV-->>GW: abierta
+  GW->>GW: cierra al cumplir el tiempo o el volumen
+  GW->>API: sube comando_actuador, lecturas y evento_riego al volver la conexión
+  Note over GW: funciona sin internet, la regla vive en la pasarela

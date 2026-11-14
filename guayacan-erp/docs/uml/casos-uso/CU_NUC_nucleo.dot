@@ -1,0 +1,52 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Núcleo de la plataforma (NUC)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "CON"; "OPE"; "VEN"; "AUD"; "EST"; "INS"; "SCH";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"CON" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Contador", fontsize=11, fontcolor="#1F2933"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"AUD" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Auditor externo", fontsize=11, fontcolor="#1F2933"];
+"EST" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Estudiante", fontsize=11, fontcolor="#1F2933"];
+"INS" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Instructor", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+subgraph cluster_sistema { label="GuayacanERP · Núcleo de la plataforma"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "NUC-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-01\nConfigurar la finca, sus\nzonas y el mapa"];
+  "NUC-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-02\nGestionar usuarios, roles\ny permisos"];
+  "NUC-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-03\nAdministrar parámetros con\nvigencia"];
+  "NUC-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-04\nEncender o apagar una\nfunción de la finca"];
+  "NUC-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-05\nSincronizar registros\ncapturados sin conexión"];
+  "NUC-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-06\nConsultar la auditoría de\ncambios"];
+  "NUC-07" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-07\nRegistrar una nota de voz\nen campo y confirmarla\n[función notas_voz]"];
+  "NUC-08" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-08\nPracticar en la finca de\naprendizaje\n[función modo_aprendiz]"];
+  "NUC-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-09\nPublicar los eventos de\nintegración"];
+  "NUC-10" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="NUC-10\nAdministrar llaves de API\nB2B y webhooks\n[función api_b2b]"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "SEG-04" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="SEG-04\nAtender una alerta o\nun incidente de\nseguridad\n(Seguridad informática)"];
+}
+{rank=sink; "AG_ORQ"; "NOT"; "B2B";}
+"AG_ORQ" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nOrquestador"];
+"NOT" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCorreo y SMS"];
+"B2B" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nSistema del\ncliente B2B"];
+"ADM" -> "NUC-01";
+"ADM" -> "NUC-02";
+"NUC-02" -> "SEG-04" [style=dashed, arrowhead=none, arrowtail=vee, dir=back, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280"];
+"ADM" -> "NUC-03";
+"CON" -> "NUC-03";
+"ADM" -> "NUC-04";
+"OPE" -> "NUC-05";
+"VEN" -> "NUC-05";
+"ADM" -> "NUC-06";
+"CON" -> "NUC-06";
+"AUD" -> "NUC-06";
+"OPE" -> "NUC-07";
+"NUC-07" -> "AG_ORQ" [style=solid];
+"NUC-07" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"EST" -> "NUC-08";
+"INS" -> "NUC-08";
+"SCH" -> "NUC-09";
+"NUC-09" -> "NOT" [style=solid];
+"ADM" -> "NUC-10";
+"NUC-10" -> "B2B" [style=solid];
+}

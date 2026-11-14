@@ -1,0 +1,22 @@
+classDiagram
+  direction TB
+  class ambiental__factor_emision["factor_emision"] {
+    <<compartida>>
+    +magnitud : texto
+    +factor_kgco2e : decimal
+    +fuente : texto
+    +vigente_desde : date
+  }
+  class ambiental__registro_ambiental["registro_ambiental"] {
+    <<por finca · fase 2>>
+    +magnitud : enum
+    +cantidad : decimal
+    +fecha : date
+    +origen : enum
+    +sensor_id? : ref sensor
+  }
+  namespace iot {
+    class iot__sensor["iot.sensor"]
+  }
+  ambiental__registro_ambiental "*" --> "0..1" iot__sensor : sensor_id
+  style iot__sensor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

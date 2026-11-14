@@ -1,0 +1,14 @@
+{
+  // Extensiones recomendadas: VS Code ofrece instalarlas al abrir la carpeta del proyecto.
+  "recommendations": [
+    "ms-python.python",                // Python: ejecutar, depurar, pruebas
+    "ms-python.vscode-pylance",        // autocompletado e información de tipos en Python
+    "charliermarsh.ruff",              // revisor y formateador de Python (el mismo que usa la CI)
+    "angular.ng-template",             // ayuda en las plantillas de Angular
+    "ms-azuretools.vscode-docker",     // ver y manejar los contenedores de docker-compose
+    "ckolkman.vscode-postgres",        // consultar PostgreSQL desde VS Code
+    "bierner.markdown-mermaid",        // ver los diagramas .mmd dentro de los Markdown
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-spanish"
+  ]
+}

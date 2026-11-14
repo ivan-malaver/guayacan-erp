@@ -1,0 +1,126 @@
+classDiagram
+  direction TB
+  class estrategia__linea_negocio["linea_negocio"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +centro_costo_id? : ref centro_costo
+    +estado : enum
+    +palanca_dominante? : enum
+    +descripcion? : text
+  }
+  class estrategia__factor_dofa["factor_dofa"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +linea_negocio_id? : ref linea_negocio
+    +descripcion : text
+    +impacto : smallint
+    +fuente? : texto
+    +vigente : boolean
+  }
+  class estrategia__estudio_mercado["estudio_mercado"] {
+    <<por finca · fase 2>>
+    +mercado : texto
+    +segmento_id? : ref segmento
+    +tamano_estimado? : dinero
+    +precio_referencia? : dinero
+    +competidores? : text
+    +barreras? : text
+    +fuente : texto
+    +fecha : date
+  }
+  class estrategia__iniciativa["iniciativa"] {
+    <<por finca · fase 2>>
+    +titulo : texto
+    +descripcion : text
+    +ansoff : enum
+    +tipo : enum
+    +palanca : enum
+    +linea_negocio_id? : ref linea_negocio
+    +segmento_id? : ref segmento
+    +hipotesis? : text
+    +estado : enum
+    +propuesta_por? : ref usuario
+    +agente_id? : ref agente
+    +aprobada_por? : ref usuario
+    +… 2 campos más
+  }
+  class estrategia__evaluacion_proyecto["evaluacion_proyecto"] {
+    <<por finca · fase 2>>
+    +iniciativa_id : ref iniciativa
+    +version : smallint
+    +inversion_inicial : dinero
+    +horizonte_meses : smallint
+    +tasa_descuento_anual : decimal
+    +precio_unitario? : dinero
+    +costo_variable_unitario? : dinero
+    +costos_fijos_mes? : dinero
+    +intereses_mes : dinero
+    +unidades_mes? : decimal
+    +fuente_fondos : enum
+    +vpn? : dinero
+    +… 10 campos más
+  }
+  class estrategia__flujo_proyecto["flujo_proyecto"] {
+    <<por finca · fase 2>>
+    +evaluacion_id : ref evaluacion_proyecto
+    +mes : smallint
+    +ingresos : dinero
+    +egresos : dinero
+    +inversion : dinero
+  }
+  class estrategia__reinversion["reinversion"] {
+    <<por finca · fase 2>>
+    +anio : smallint
+    +mes : smallint
+    +linea_origen_id : ref linea_negocio
+    +utilidad_linea : dinero
+    +valor : dinero
+    +iniciativa_id : ref iniciativa
+    +estado : enum
+    +aprobada_por? : ref usuario
+  }
+  class estrategia__seguimiento_iniciativa["seguimiento_iniciativa"] {
+    <<por finca · fase 2>>
+    +iniciativa_id : ref iniciativa
+    +mes : date
+    +ingresos_reales : dinero
+    +egresos_reales : dinero
+    +unidades_reales? : decimal
+    +nota? : text
+  }
+  class estrategia__objetivo["objetivo"] {
+    <<por finca · fase 2>>
+    +perspectiva : enum
+    +descripcion : text
+    +indicador_id? : ref indicador
+    +meta? : decimal
+    +fecha_meta? : date
+    +responsable_id? : ref usuario
+  }
+  namespace crm {
+    class crm__segmento["crm.segmento"]
+  }
+  namespace finanzas {
+    class finanzas__centro_costo["finanzas.centro_costo"]
+    class finanzas__indicador["finanzas.indicador"]
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+  }
+  estrategia__linea_negocio "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  estrategia__factor_dofa "*" --> "0..1" estrategia__linea_negocio : linea_negocio_id
+  estrategia__estudio_mercado "*" --> "0..1" crm__segmento : segmento_id
+  estrategia__iniciativa "*" --> "0..1" estrategia__linea_negocio : linea_negocio_id
+  estrategia__iniciativa "*" --> "0..1" crm__segmento : segmento_id
+  estrategia__iniciativa "*" --> "0..1" ia__agente : agente_id
+  estrategia__evaluacion_proyecto "*" --> "1" estrategia__iniciativa : iniciativa_id
+  estrategia__flujo_proyecto "*" --> "1" estrategia__evaluacion_proyecto : evaluacion_id
+  estrategia__reinversion "*" --> "1" estrategia__linea_negocio : linea_origen_id
+  estrategia__reinversion "*" --> "1" estrategia__iniciativa : iniciativa_id
+  estrategia__seguimiento_iniciativa "*" --> "1" estrategia__iniciativa : iniciativa_id
+  estrategia__objetivo "*" --> "0..1" finanzas__indicador : indicador_id
+  style finanzas__indicador fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__centro_costo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style crm__segmento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

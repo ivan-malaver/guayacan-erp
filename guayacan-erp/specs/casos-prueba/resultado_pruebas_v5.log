@@ -1,0 +1,310 @@
+== Pruebas v4 (regresión) sobre el esquema v5 · PostgreSQL 16 con sustitutos de PostGIS y pgvector · 2026-10-27
+OK  RLS: la finca 1 ve solo sus 12 productos
+OK  RLS: no ve el producto de la otra finca
+OK  RLS: no puede escribir en otra finca -> "new row violates row-level security policy for table "bodega""
+OK  RLS: sin finca en la sesión no ve nada
+OK  Llave compuesta: la finca 2 no puede usar el producto 1 de la finca 1 aunque sepa su número -> "insert or update on table "lote_inventario" violates foreign key constraint "fk_lote_inventario_producto_id""
+OK  Vencimiento: huevo de 14 días vence en 7 y su límite de venta es en 2 (21 días de vida útil, 5 de margen)
+OK  Kardex: cada lote nuevo genera su entrada (50 + 40 + 10)
+OK  Kardex: 3 movimientos de entrada
+OK  Kardex: nadie edita cantidades a mano -> "Las cantidades del lote LOTE-A solo cambian con un movimiento de inventario"
+OK  Kardex: los movimientos no se editan -> "La tabla movimiento_inventario es de solo inserción"
+OK  Alerta: LOTE-A en amarillo (2 días para el límite, alerta a 4)
+OK  Alerta: precio de liquidación $16.575 (15 % sobre $19.500)
+OK  Alerta: LOTE-C en rojo (pasó su fecha límite de venta)
+OK  Catálogo: ofrece 90, no los 10 del lote pasado de fecha
+OK  FEFO: toma primero las 50 del lote que vence antes y 10 del siguiente; ignora el lote pasado de fecha
+OK  Pedido: total $1.170.000 (60 × $19.500)
+OK  FEFO: no reserva más de lo que hay (quedan 30 vendibles) -> "Inventario insuficiente de Huevo de gallinas en pastoreo AA · cubeta x 30: faltan 10.00 para la línea 2"
+OK  FEFO: el intento fallido no dejó reservas a medias
+OK  Despacho: LOTE-A agotado y LOTE-B con 30
+OK  Vencidos: ningún lote pasó aún su fecha de vencimiento
+OK  Merma: exige la causa -> "Toda merma debe indicar su causa"
+OK  Merma: LOTE-C dado de baja por vencido
+OK  Sin conexión: el mismo registro enviado dos veces se aplica una sola vez
+OK  Auditoría: guarda solo el campo cambiado y quién lo cambió
+OK  Auditoría: la API no puede borrarla -> "permission denied for table auditoria"
+OK  Contabilidad: no contabiliza si débitos ≠ créditos -> "Comprobante RC-1 descuadrado: débitos 1170000.00, créditos 1100000.00, líneas 2"
+OK  Contabilidad: cuadrado, se contabiliza y registra el momento
+OK  Contabilidad: contabilizado = movimientos inmutables -> "El comprobante está contabilizado: sus movimientos no se pueden cambiar (use una nota contable)"
+OK  Contabilidad: solo se anula, con motivo -> "El comprobante RC-1 está contabilizado: solo se puede anular indicando el motivo"
+OK  Contabilidad: periodo cerrado o inexistente -> "El periodo 2026-1 está cerrado o no existe"
+OK  WhatsApp: el agente responde dentro de las 24 h
+OK  WhatsApp: a las 30 h exige plantilla aprobada
+OK  WhatsApp: plantilla de mercadeo bloqueada sin consentimiento de publicidad
+OK  Instagram: una persona puede responder hasta 7 días (agente humano)
+OK  Instagram: el agente de IA no puede usar la extensión de 7 días
+OK  TikTok: después de 10 mensajes en la ventana se detiene
+OK  Funciones: crédito apagado y modo aprendiz encendido al iniciar
+OK  Práctica: la finca real no ve la finca de práctica
+OK  Práctica: en la finca de práctica no aparece nada de la finca real
+OK  Particiones: la API solo lee la auditoría por la tabla madre (con seguridad por filas) -> "permission denied for table auditoria_202610"
+OK  Particiones: la auditoría se consulta normal por la tabla madre
+OK  Huevo: 68 g = AAA, 59,9 g = A, 80 g = jumbo según los rangos vigentes
+OK  Huevo: la clasificación no supera los huevos buenos (100 − 4 rotos) -> "La clasificación suma 100 huevos y solo hay 96 buenos"
+OK  Huevo: la clasificación con visión espera su equipo (función apagada) -> "La función vision_artificial no está activa en esta finca"
+OK  Frío: un lote refrigerado usa la vida útil refrigerada (35 días)
+OK  Frío: antes de la excursión el catálogo ofrece 49 (29 + 20)
+OK  Frío: 10 minutos fuera de rango aún no bloquean (tolerancia 30)
+OK  Frío: a los 45 minutos la regla bloquea el lote de la nevera
+OK  Frío: el catálogo deja de ofrecer el lote bloqueado
+OK  Frío: la especificación "se puede vender" lo excluye
+OK  Frío: publica los eventos lote.bloqueado y temperatura.fuera_de_rango
+OK  Frío: un agente de IA no puede liberar un lote -> "Solo una persona decide sobre un lote bloqueado"
+OK  Frío: una persona lo libera y queda registrado quién decidió
+OK  Frío: una decisión tomada no se cambia -> "El bloqueo 1 ya fue decidido"
+OK  Trazabilidad: el lote A llegó al cliente del pedido PED-1
+OK  Retiro: bloquea el lote y crea el aviso al cliente que recibió 50
+OK  Huellas: la cadena SHA-256 de la finca se verifica completa
+OK  Huellas: nadie puede alterar una huella -> "permission denied for table huella_trazabilidad"
+OK  Huellas: registrar el anclaje no rompe la cadena
+OK  Crédito: apagado, no se vende a crédito -> "La función venta_credito no está activa en esta finca"
+OK  Funciones: encender una función registra quién y cuándo
+OK  Crédito: factura de $390.000 con saldo completo y vence a 30 días
+OK  Crédito: no pasa del cupo ($390.000 + $195.000 > $500.000) -> "Cupo de crédito insuficiente: cartera 390000.00, pedido 195000.00, cupo 500000.00"
+OK  Crédito: factura vencida hace 5 días = cartera de 1 a 30 días y cliente bloqueado
+OK  Crédito: cliente en mora no compra a crédito -> "El cliente tiene facturas vencidas: no puede comprar a crédito"
+OK  Pagos: un agente no confirma pagos -> "Un agente no puede confirmar pagos"
+OK  Crédito: al pagar, el saldo queda en cero y se levanta el bloqueo
+OK  Permuta: apagada, no se registra -> "La función permuta no está activa en esta finca"
+OK  Permuta: compensa $100.000 con un pago de compensación; la factura queda debiendo $50.000
+OK  Permuta: no compensa más de lo que vale el documento soporte -> "La permuta (10000.00) supera el saldo de la factura (50000.00) o lo disponible del documento soporte (0.00)"
+OK  Recurrentes: con la función apagada no genera nada
+OK  Recurrentes: genera el pedido del día
+OK  Recurrentes: queda en borrador para que un vendedor lo confirme y la próxima fecha pasa a dentro de 7 días
+OK  Audiovisual: no se aprueba si alguien que aparece no autorizó su imagen -> "Falta autorización de imagen de: Cliente Prueba"
+OK  Audiovisual: un agente no aprueba contenido -> "Solo una persona aprueba contenido para redes"
+OK  Audiovisual: con autorización, una persona la aprueba
+OK  Cámaras: borra solo el clip de seguridad vencido (30 días); conserva el elegido para redes y el reciente
+OK  Listo para crecer: la cámara térmica espera su equipo (función apagada) -> "La función camara_termica no está activa en esta finca"
+OK  Alarma: de armado no se pasa a mantenimiento sin desarmar -> "Cambio de alarma no permitido: armado a mantenimiento"
+OK  Alarma: el estado no se edita directo -> "El estado de la alarma solo cambia con iot.cambiar_estado_alarma"
+OK  Alarma: el cambio queda en el historial
+OK  Seguridad: una cerradura en un paso de personas no puede quedar cerrada sin energía -> "La cerradura CER-ACC está en un paso de personas: debe abrir sin energía"
+OK  Seguridad: la bodega de concentrado sí puede quedar cerrada sin energía
+OK  Seguridad: un evento no se altera -> "Un evento de seguridad no se modifica; solo se registra su atención"
+OK  Seguridad: se registra la atención del evento
+OK  Biometría: el rostro espera su equipo (función apagada) -> "La función reconocimiento_facial no está activa en esta finca"
+OK  Biometría: una autorización de imagen no sirve para biometría -> "El acceso facial exige autorización expresa y vigente de biometría de la misma persona; use PIN o tarjeta"
+OK  Biometría: al revocar la autorización se apaga el acceso facial; el PIN sigue
+OK  Ambiental: sin factor con fuente no se calcula CO₂
+OK  Ambiental: CO₂ estimado = cantidad × factor, con la fuente a la vista
+Total OK: 90 · FALLA: 0
+
+== Pruebas v5
+OK  Personal: no se asigna una tarea a quien no tiene la habilitación -> "El trabajador 1 no está habilitado para esta tarea (falta el curso o el certificado venció)"
+OK  Formación: con nota menor a la mínima no se aprueba -> "Nota 3.00 menor que la mínima 3.50 para aprobar"
+OK  Formación: aprobar el curso emite el certificado con vencimiento a 12 meses
+OK  Formación: el certificado crea la habilitación
+OK  Formación: un curso de Moodle exige la función cursos_externos -> "La función cursos_externos no está activa en esta finca"
+OK  Formación: un certificado vencido no habilita
+OK  Formación: la tarea diaria retira la habilitación vencida
+OK  Formación: la asistencia presencial certifica igual que un curso virtual
+OK  Personal: no se asigna a quien está de vacaciones -> "El trabajador 1 no está disponible el 2026-10-28 (retirado o con ausencia)"
+OK  Personal: el agente Coordinador propone pero no asigna -> "Un agente propone tareas pero no las asigna: la asignación la hace el encargado"
+OK  Personal: la propuesta del agente queda sin asignar
+OK  Personal: solo se aprueba una tarea terminada -> "Solo se aprueba o devuelve una tarea terminada"
+OK  Personal: el operario no tiene permiso para aprobar -> "El usuario 4 no tiene el permiso personal.aprobar_tarea ni es responsable del área"
+OK  Personal: devolver exige comentario -> "Para devolver una tarea hay que decir por qué"
+OK  Personal: el encargado aprueba y quedan las marcas de inicio, fin y aprobación
+OK  Personal: una tarea aprobada no se edita -> "La tarea 3 está aprobada: no se edita"
+OK  Personal: nadie aprueba su propia tarea -> "Nadie aprueba su propia tarea"
+OK  Personal: el plan de labores crea las tareas del día
+OK  Personal: generar dos veces el mismo día no duplica
+OK  Personal: la tarea del plan trae su lista de chequeo
+OK  Personal: la jornada calcula las horas desde el carné
+OK  Personal: el carné es QR o NFC, nunca biométrico -> "new row for relation "credencial_trabajo" violates check constraint "ck_credencial_trabajo_tipo""
+OK  Nómina: la prenómina reúne 2 salarios, 2 auxilios, 1 destajo y 1 jornal
+OK  Nómina: salario de 30 días del contrato
+OK  Nómina: destajo de 100 kg a $500 desde la tarea aprobada
+OK  Nómina: jornal desde la jornada aprobada
+OK  Nómina: el salario de un contrato no depende de tareas -> "El salario de un contrato no depende de que se aprueben tareas: las tareas solo pagan jornales y destajo"
+OK  Nómina: liquida a los 3 trabajadores
+OK  Nómina: devengado 2.000.000, salud y pensión 4 % + 4 % sobre 1.750.905, neto 1.859.928
+OK  Nómina: provisión de cesantías 8,33 %
+OK  Nómina: el jornalero no provisiona prestaciones de contrato
+OK  Nómina: el cierre necesita dos personas -> "El cierre de nómina necesita dos personas distintas (cierra 3 y aprueba <NULL>)"
+OK  Nómina: el cierre necesita su comprobante contabilizado -> "El cierre necesita su comprobante de causación contabilizado (cuadrado)"
+OK  Nómina: ningún agente cierra la nómina -> "Un agente de IA no puede cerrar la nómina: lo hace una persona"
+OK  Nómina: al cerrar, las liquidaciones quedan aprobadas
+OK  Nómina: un periodo cerrado no recibe novedades -> "El periodo de nómina está cerrado: no se cambian sus datos"
+OK  Nómina: un periodo cerrado no se edita -> "El periodo 2026-10 está cerrado: no se edita; las correcciones van como nota de ajuste"
+OK  Nómina: quien prepara el pago no lo aprueba -> "Quien prepara el pago no lo aprueba"
+OK  Nómina: nadie aprueba su propio pago -> "Nadie aprueba su propio pago"
+OK  Nómina: no se paga más que el neto -> "El pago supera el neto de la liquidación (1859929.00 de 1859928.00)"
+OK  Nómina: pagos grandes necesitan segunda aprobación -> "Pagos mayores a 1000000 necesitan segunda aprobación"
+OK  Nómina: la segunda aprobación es de otra persona -> "La segunda aprobación la da una tercera persona distinta"
+OK  Nómina: pagada por completo, la liquidación queda pagada (aun con el periodo cerrado)
+OK  Nómina: la nómina electrónica queda apagada hasta confirmar la obligación -> "La función nomina_electronica no está activa en esta finca"
+OK  Activos: con 30 horas aún no toca mantenimiento
+OK  Activos: a las 55 horas se crea la orden de trabajo
+OK  Activos: la orden llega como tarea
+OK  Activos: no se duplica la orden abierta
+OK  Activos: al cerrar, el plan reinicia desde el horómetro actual
+OK  Activos: se deprecia el activo del mes
+OK  Activos: depreciación en línea recta 1.200.000 / 12
+OK  Activos: el mismo mes no se deprecia dos veces
+OK  Documental: aprobar la versión 2 vuelve obsoleta la 1
+OK  Documental: una versión aprobada no cambia su archivo -> "Una versión aprobada no cambia su archivo: cree una versión nueva"
+OK  Documental: un agente no lee documentos no autorizados -> "El documento 1 no está aprobado, vigente y autorizado para agentes"
+OK  Documental: el agente recibe solo la versión aprobada y vigente
+OK  Documental: un agente no aprueba documentos -> "Un agente de IA no puede aprobar documentos: lo hace una persona"
+OK  Documental: con datos personales se exige finalidad y tiempo de conservación (Ley 1581) -> "new row for relation "documento" violates check constraint "documento_check""
+OK  Cumplimiento: BPA queda cargada y apagada -> "La función certificacion_bpa no está activa en esta finca"
+OK  Cumplimiento: la granja biosegura aún tiene requisitos pendientes
+OK  Cumplimiento: "personal capacitado" se cumple solo con las habilitaciones vigentes
+OK  Cumplimiento: "procedimientos escritos" se cumple con el protocolo aprobado
+OK  Cumplimiento: sin registros de desinfección recientes no se cumple
+OK  Cumplimiento: al registrar la desinfección, el requisito pasa a cumple
+OK  Cumplimiento: con la evidencia vencida el requisito pasa solo a no cumple
+OK  Cumplimiento: no se cierra sin acciones verificadas -> "Una no conformidad no se cierra sin todas sus acciones correctivas verificadas"
+OK  Cumplimiento: solo se verifica una acción hecha -> "Solo se verifica una acción hecha"
+OK  Cumplimiento: el cierre registra la verificación -> "Para cerrar una no conformidad hay que registrar la verificación"
+OK  Cumplimiento: no conformidad cerrada con responsable
+OK  Cumplimiento: con 250 gallinas y sin certificado ICA hay alerta
+OK  Seguros: el incentivo del 80 % queda como valor subsidiado
+OK  Seguros: aviso de póliza próxima a vencer
+OK  Seguros: el paramétrico queda apagado -> "La función seguro_parametrico no está activa en esta finca"
+OK  Seguros: no hay reclamación automática -> "No hay reclamación automática: el aviso se revisa antes de enviarlo"
+OK  Seguros: un agente no revisa avisos -> "Un agente de IA no puede revisar avisos de siniestro: lo hace una persona"
+OK  Seguros: revisado por una persona y enviado
+OK  IA: el diagnóstico por foto queda apagado -> "La función diagnostico_imagen no está activa en esta finca"
+OK  IA: el agente no confirma su propio diagnóstico -> "Un agente de IA no puede confirmar diagnósticos: lo hace una persona"
+OK  IA: confirmado por una persona
+OK  IA: un agente no toma decisiones -> "Un agente de IA no puede tomar decisiones: lo hace una persona"
+OK  IA: una decisión tomada no se cambia -> "Una decisión tomada no se cambia: registre una decisión nueva"
+OK  Finanzas: el anticipo se descuenta en la compra
+OK  Finanzas: el anticipo nunca queda negativo -> "El anticipo solo tiene saldo de 200000.00 (se intentó descontar 300000.00)"
+OK  Finanzas: un anticipo solo se descuenta al mismo proveedor -> "El anticipo es de otro proveedor"
+OK  Finanzas: un costo semivariable declara su parte fija -> "Un costo semivariable necesita su parte fija (%)"
+OK  Finanzas: en base cero cada rubro se justifica -> "En presupuesto base cero cada rubro se justifica"
+OK  Finanzas: un presupuesto aprobado no cambia sus rubros -> "El presupuesto Presupuesto 2027 está aprobado: no se cambian sus rubros (cree una versión nueva)"
+OK  Finanzas: costeo variable: MC 6 M, UO 2 M, utilidad neta 1,5 M
+OK  Finanzas: el balance cuadra (activo 28,5 M = pasivo 7 M + patrimonio 21,5 M)
+OK  Finanzas: se calculan los indicadores del periodo
+OK  Finanzas: GPO = MC / UO = 3
+OK  Finanzas: GPF = UO / (UO − I) = 1,33
+OK  Finanzas: razón corriente 28,5 / 7
+OK  Finanzas: sin meta el semáforo lo dice
+OK  Finanzas: palancas del documento: PE = CF/(P−CV) = 500, GPO 2, GPF 1,25, GPT 2,5
+OK  Finanzas: los indicadores para crédito quedan apagados -> "La función indicadores_credito no está activa en esta finca"
+OK  Finanzas: el informe externo no lleva costos ni datos personales -> "El informe de indicadores no lleva costos ni datos personales"
+OK  Finanzas: el informe queda con su huella verificable
+OK  Estrategia: un agente solo propone ideas -> "Un agente solo propone ideas"
+OK  Estrategia: la idea del agente queda registrada a su nombre
+OK  Estrategia: no se aprueba sin evaluación financiera -> "Una iniciativa se aprueba con su evaluación financiera calculada (VPN, TIR, ROI)"
+OK  Estrategia: VPN al 15 % anual = 8.815.882
+OK  Estrategia: ROI 100 %, recuperación en 12 meses, equilibrio 250 cubetas, margen de seguridad 50 %, GPO 2, TIR 112,7 % anual
+OK  Estrategia: aprobada por una persona con su evaluación
+OK  Estrategia: la utilidad de la línea avícola (4 M) sale de la contabilidad
+OK  Estrategia: no se reinvierte más del 30 % de la utilidad de la línea -> "La reinversión supera el tope: 30 % de la utilidad (1300000.00 de 4000000.00)"
+OK  Estrategia: no se reinvierte desde una línea sin utilidad -> "No se reinvierte desde una línea con pérdida o sin utilidad en 2026-10"
+OK  Estrategia: retorno proyectado contra real y lo reinvertido
+OK  Estrategia: matriz de líneas muestra la utilidad de cada sección
+OK  Seguridad: 4 fallos se registran
+OK  Seguridad: al 5.º fallo en 15 minutos la cuenta se bloquea
+OK  Seguridad: con la cuenta bloqueada ni la contraseña correcta entra
+OK  Seguridad: alerta de fuerza bruta
+OK  Seguridad: 10 cuentas distintas fallidas desde una IP la bloquean (relleno de credenciales)
+OK  Seguridad: la IP bloqueada no entra ni con clave correcta
+OK  Seguridad: tocar la cuenta señuelo delata al intruso
+OK  Seguridad: el señuelo crea alerta crítica y bloquea la IP 24 horas
+OK  Seguridad: sesión normal de un usuario sin rol crítico
+OK  Seguridad: el contador entra solo con doble factor -> "Este usuario debe entrar con doble factor"
+OK  Seguridad: las sesiones vencen a las 12 horas -> "Una sesión dura como máximo 12 horas"
+OK  Seguridad: una cuenta bloqueada no abre sesión -> "La cuenta 4 está bloqueada"
+OK  Seguridad: dar rol de administrador genera alerta
+OK  Seguridad: la API no puede rebajar una alerta -> "permission denied for table alerta_seguridad"
+OK  Seguridad: la atención de la alerta queda a nombre de quien la atiende
+OK  Seguridad: los intentos de acceso no se borran -> "permission denied for table intento_acceso"
+OK  Seguridad: 20 exportaciones en una hora generan alerta de exportación masiva
+OK  Seguridad: sin copia diaria ni prueba de restauración hay dos alertas
+OK  Seguridad: toda copia va cifrada -> "new row for relation "copia_seguridad" violates check constraint "copia_seguridad_cifrada_check""
+OK  Seguridad: el módulo de pruebas registra cada corrida
+OK  Seguridad: tablero de monitoreo
+OK  Integración: la API B2B queda apagada -> "La función api_b2b no está activa en esta finca"
+OK  Integración: solo un cliente tiene llave -> "Solo un cliente tiene llave de la API B2B"
+OK  Integración: la llave señuelo no da acceso
+OK  Integración: la llave señuelo bloquea la IP de quien la use
+OK  Integración: los webhooks quedan apagados -> "La función webhooks_salientes no está activa en esta finca"
+OK  Integración: un webhook solo va por https -> "new row for relation "webhook_suscripcion" violates check constraint "webhook_suscripcion_url_check""
+OK  CRM: el teléfono de una persona solo se guarda con su autorización -> "Los datos de contacto de una persona solo se guardan con su autorización (Ley 1581)"
+OK  CRM: el primer contacto mueve el prospecto a contactado
+OK  CRM: puntaje 85 (empresa, sector HORECA, volumen alto, contacto reciente)
+OK  CRM: revocada la autorización, no se le escribe -> "No se contacta a una persona sin su autorización vigente"
+OK  CRM: para ganarlo hay que convertirlo en cliente -> "Para ganar el prospecto conviértalo en cliente (crm.convertir_prospecto)"
+OK  CRM: la conversión devuelve el tercero
+OK  CRM: convertido en tercero y cliente
+OK  CRM: un prospecto perdido registra el motivo -> "Registre por qué se perdió el prospecto"
+OK  CRM: costo por cliente ganado de la campaña
+OK  Robótica: el dron queda apagado -> "La función dron_monitoreo no está activa en esta finca"
+OK  Robótica: la misión de dron usa un dron -> "La misión de dron necesita un activo tipo dron"
+OK  Robótica: sin aprobación humana no arranca -> "Una misión solo arranca aprobada por una persona"
+OK  Robótica: el dron debe estar registrado (RAC 100) -> "El dron no tiene registro ante la Aerocivil (RAC 100)"
+OK  Robótica: altura máxima 122 m -> "RAC 100: la altura máxima es 122 m"
+OK  Robótica: el vuelo necesita póliza de responsabilidad civil -> "El vuelo necesita póliza de responsabilidad civil vigente"
+OK  Robótica: vuelo aprobado, registrado, con piloto y póliza
+OK  Robótica: el robot solo opera sin personas y con parada de emergencia probada -> "El robot solo opera en una zona sin personas y con la parada de emergencia probada"
+OK  Robótica: una labor hecha por robot viene de una misión -> "new row for relation "labor_cultural" violates check constraint "labor_cultural_check""
+OK  Energía: una carga esencial nunca se corta -> "new row for relation "prioridad_carga" violates check constraint "prioridad_carga_check""
+OK  Energía: con 30 % de batería solo se cortan las luces
+OK  Energía: con 20 % se cortan luces y riego; la nevera sigue
+OK  Áreas: no se asigna una tarea del galpón a quien no es del área -> "El trabajador 2 no pertenece al área de responsabilidad de la tarea"
+OK  Áreas: el responsable del área aprueba las tareas de su área aunque no tenga el permiso general
+OK  Turnos: el turno de noche cruza la medianoche y suma 8 horas
+OK  Turnos: dos turnos de la misma persona no se cruzan -> "El turno se cruza con otro del mismo trabajador el 2026-10-27"
+OK  Turnos: entre turnos hay al menos 10 horas de descanso -> "Entre dos turnos debe haber al menos 10 horas de descanso"
+OK  Turnos: un turno no supera la jornada máxima diaria -> "El turno de 13.00 horas supera la jornada máxima diaria de 11 horas"
+OK  Turnos: no se programa a quien está de vacaciones -> "El trabajador 1 tiene una ausencia el 2026-10-29"
+OK  Cronograma: 4 vigilantes × 14 días generados desde la rotación 24/7
+OK  Cronograma: detecta el hueco de 0:00 a 6:00 del primer día (nadie entró de noche el día anterior)
+OK  Cronograma: no se publica con huecos de cobertura -> "Falta cobertura: el 2026-11-02 a las 00:00:00 hay 0 de 1 personas requeridas"
+OK  Cronograma: con el turno de la noche anterior queda cubierto 24/7
+OK  Cronograma: publicado por una persona
+OK  Cronograma: 48 horas por semana (42 + 6 extra), dentro del límite
+OK  Cronograma: no se asignan tareas en el día de descanso -> "El trabajador 7 no está disponible el 2026-11-02 (retirado o con ausencia)"
+OK  Cronograma: nadie trabaja 7 días seguidos sin descanso -> "El trabajador 1 no tendría día de descanso en los 7 días desde el 2026-12-07"
+OK  Agenda: la reserva confirmada ocupa la cabaña de 15:00 a 12:00 más 2 horas de limpieza
+OK  Agenda: otra reserva puede llegar el mismo día de la salida, después de la limpieza
+OK  Agenda: no hay dos reservas cruzadas en la misma cabaña -> "La cabaña ya está ocupada o bloqueada entre el 2026-12-11 y el 2026-12-12 (incluye el tiempo de limpieza)"
+OK  Agenda: no se supera la capacidad de la cabaña -> "La cabaña admite 4 personas y la reserva es para 6"
+OK  Agenda: el bloqueo por mantenimiento también ocupa el calendario -> "La cabaña ya está ocupada o bloqueada entre el 2026-12-21 y el 2026-12-22 (incluye el tiempo de limpieza)"
+OK  Agenda: al cancelar, la fecha queda libre para otra reserva
+OK  Agenda: consulta de disponibilidad
+OK  Agenda: la salida del huésped crea la tarea de limpieza del área de turismo
+OK  Visitas: al galpón solo entra quien declara no haber tenido contacto con otras aves -> "Bioseguridad: quien entra al galpón declara no haber tenido contacto con otras aves en las últimas 72 horas"
+OK  Visitas: se emite el código del pase
+OK  Visitas: la base guarda solo la huella del pase
+OK  Portería: la placa debe ser la de la visita -> "La placa XYZ999 no corresponde a la visita programada (ABC123)"
+OK  Portería: sin desinfección no entra al galpón -> "Bioseguridad: la entrada al galpón exige desinfección de personas y vehículos"
+OK  Portería: el camión queda en sitio
+OK  Portería: al salir deja de estar en sitio
+OK  Portería: una visita no entra fuera de su horario -> "La visita llega fuera del horario programado"
+OK  Portería: el carné del trabajador abre su jornada
+OK  Portería: la salida cierra la jornada con sus horas
+OK  Portería: no se registra la salida de quien no entró -> "No hay una entrada registrada hoy para DESCONOCIDO"
+OK  Portería: los registros de acceso no se alteran -> "La tabla registro_acceso es de solo inserción"
+OK  Formación: la apelación tiene plazo de respuesta de 15 días
+OK  Formación: el instructor no resuelve la apelación de su propio curso -> "La queja o apelación la resuelve alguien distinto del instructor del curso"
+OK  Formación: seguimiento de satisfacción y aprobación por curso
+OK  Formación: el expediente ISO 21001 queda cargado y apagado -> "La función iso_21001 no está activa en esta finca"
+OK  Proyectos: estrategia de cada interesado según interés e influencia
+OK  Proyectos: el proyecto lo aprueba su patrocinador -> "El proyecto lo aprueba su patrocinador"
+OK  Proyectos: al aprobar nace la línea base 1
+OK  Proyectos: el cronograma no admite ciclos -> "La dependencia crea un ciclo en el cronograma"
+OK  Proyectos: duración de 14 días por la ruta crítica
+OK  Proyectos: ruta crítica A-C-D-E y holgura de 4 días en compras
+OK  Proyectos: CPI = EV 8,5 M / AC 9 M = 0,94 (gasta más de lo planeado)
+OK  Proyectos: SPI = EV 8,5 M / PV 11 M = 0,77 (va atrasado)
+OK  Proyectos: quien pide el cambio no lo aprueba -> "Quien pide el cambio no lo aprueba"
+OK  Proyectos: el cambio aprobado crea la línea base 2 con 32 M y 10 días más
+OK  Proyectos: una línea base no se edita -> "La tabla linea_base es de solo inserción"
+OK  Proyectos: no se cierra con entregables sin aceptar -> "No se cierra: hay entregables sin aceptar"
+OK  Proyectos: solo se acepta un entregable terminado -> "Solo se acepta un entregable terminado"
+OK  Proyectos: no se cierra sin lecciones aprendidas -> "No se cierra sin registrar lecciones aprendidas"
+OK  Proyectos: cerrado con entregables aceptados y lecciones
+OK  Proyectos: tablero con avance y CPI
+OK  Finanzas: análisis vertical: la caja pesa 35,09 % del activo
+OK  Finanzas: fuentes y usos: más caja es uso, más capital es fuente
+OK  RLS: otra finca no ve tareas, nómina, prospectos, iniciativas, visitas, proyectos ni turnos
+Total OK: 215 · FALLA: 0

@@ -1,0 +1,47 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Canales y redes sociales (RED)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "CLI"; "VEN"; "ADM";}
+"CLI" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Cliente", fontsize=11, fontcolor="#1F2933"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Canales y redes sociales"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "RED-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-01\nAtender el mensaje de un\ncliente por un canal"];
+  "RED-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-02\nEscalar una conversación a\nuna persona"];
+  "RED-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-03\nEnviar un mensaje saliente\ndentro de las reglas del\ncanal"];
+  "RED-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-04\nProponer y aprobar una\npublicación"];
+  "RED-05" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-05\nProducir una pieza\naudiovisual con\nautorización de imagen\n[función videos_promocionales]"];
+  "RED-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="RED-06\nMantener plantillas y\npolíticas de canal"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "VTA-03" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="VTA-03\nTomar y confirmar un\npedido\n(Ventas)"];
+  "IA-02" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="IA-02\nResolver la bandeja de\naprobaciones\n(Inteligencia artificial)"];
+}
+{rank=sink; "CAN"; "AG_ORQ"; "AG_ASE"; "AG_VEP"; "AG_RED";}
+"CAN" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCanales de\nmensajería"];
+"AG_ORQ" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nOrquestador"];
+"AG_ASE" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAsesor virtual"];
+"AG_VEP" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nVendedor\npersonalizado"];
+"AG_RED" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nGestor de redes"];
+"CLI" -> "RED-01";
+"RED-01" -> "CAN" [style=solid];
+"RED-01" -> "AG_ORQ" [style=solid];
+"RED-01" -> "AG_ASE" [style=solid];
+"RED-01" -> "AG_VEP" [style=solid];
+"RED-01" -> "RED-03" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"RED-02" -> "RED-01" [style=dashed, arrowhead=vee, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"RED-01" -> "VTA-03" [style=dashed, arrowhead=none, arrowtail=vee, dir=back, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280"];
+"VEN" -> "RED-02";
+"RED-02" -> "AG_ORQ" [style=solid];
+"VEN" -> "RED-03";
+"RED-03" -> "CAN" [style=solid];
+"RED-03" -> "AG_ASE" [style=solid];
+"ADM" -> "RED-04";
+"RED-04" -> "AG_RED" [style=solid];
+"RED-04" -> "CAN" [style=solid];
+"RED-04" -> "IA-02" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"ADM" -> "RED-05";
+"RED-05" -> "AG_RED" [style=solid];
+"ADM" -> "RED-06";
+"RED-06" -> "CAN" [style=solid];
+}

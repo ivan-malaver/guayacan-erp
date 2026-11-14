@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> solicitada
+  solicitada --> aprobada: persona, bioseguridad declarada si va al galpón
+  solicitada --> rechazada: con motivo
+  aprobada --> en_sitio: entrada en portería dentro del horario
+  aprobada --> no_llego
+  aprobada --> cancelada
+  en_sitio --> salio: salida en portería
+  salio --> [*]
+  rechazada --> [*]
+  no_llego --> [*]
+  cancelada --> [*]

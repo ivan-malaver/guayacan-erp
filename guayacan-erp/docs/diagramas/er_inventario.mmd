@@ -1,0 +1,213 @@
+erDiagram
+    unidad_medida {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        varchar unidad_base
+        numeric factor_base
+    }
+    categoria_producto {
+        bigint id PK
+        varchar nombre
+        bigint padre_id FK
+    }
+    producto {
+        bigint id PK
+        bigint predio_id FK
+        varchar sku
+        varchar nombre
+        text descripcion
+        bigint categoria_id FK
+        bigint unidad_id FK
+        lista tipo
+        boolean se_vende
+        boolean se_compra
+        boolean se_produce
+        boolean perecedero
+        smallint vida_util_ambiente_dias
+        smallint vida_util_refrigerado_dias
+        smallint dias_margen_venta
+        smallint dias_alerta_venta
+        lista metodo_salida
+        varchar gtin
+        boolean pesable
+        numeric peso_nominal_kg
+        numeric tolerancia_peso_pct
+        numeric tarifa_iva
+        numeric stock_minimo
+        boolean activo
+    }
+    bodega {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        bigint zona_id FK
+        boolean refrigerada
+        bigint sensor_temperatura_id FK
+        numeric temperatura_min_c
+        numeric temperatura_max_c
+        smallint minutos_tolerancia
+    }
+    lote_inventario {
+        bigint id PK
+        bigint predio_id FK
+        bigint producto_id FK
+        bigint bodega_id FK
+        varchar codigo_lote
+        lista origen
+        varchar origen_tabla
+        bigint origen_id
+        date fecha_produccion
+        lista condicion_almacenamiento
+        lista origen_vencimiento
+        date fecha_vencimiento
+        date fecha_limite_venta
+        numeric peso_neto_kg
+        numeric cantidad_inicial
+        numeric cantidad_disponible
+        numeric cantidad_reservada
+        numeric costo_unitario
+        lista estado
+    }
+    movimiento_inventario {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_inventario_id FK
+        lista tipo
+        numeric cantidad
+        lista causa_merma
+        bigint pesaje_id FK
+        bigint lectura_codigo_id FK
+        numeric costo_unitario
+        varchar documento_tipo
+        bigint documento_id
+        timestamptz ocurrido_en
+        bigint usuario_id FK
+    }
+    etiqueta {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_inventario_id FK
+        varchar codigo
+        lista simbologia
+        bigint impresora_id FK
+        timestamptz impresa_en
+        boolean anulada
+    }
+    lectura_codigo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo_leido
+        varchar simbologia
+        bigint etiqueta_id FK
+        lista accion
+        lista resultado
+        bigint usuario_id FK
+    }
+    pesaje {
+        bigint id PK
+        bigint predio_id FK
+        numeric peso_bruto_kg
+        numeric tara_kg
+        numeric peso_neto_kg
+        boolean estable
+        lista origen
+        varchar referencia_tabla
+        bigint referencia_id
+        bigint usuario_id FK
+    }
+    conteo_fisico {
+        bigint id PK
+        bigint predio_id FK
+        bigint bodega_id FK
+        date fecha
+        lista estado
+        bigint responsable_id FK
+    }
+    conteo_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint conteo_fisico_id FK
+        bigint lote_inventario_id FK
+        numeric cantidad_sistema
+        numeric cantidad_contada
+        bigint movimiento_ajuste_id FK
+    }
+    vehiculo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        lista tipo
+        varchar placa
+        numeric capacidad_kg
+        boolean refrigerado
+        bigint sensor_temperatura_id FK
+        numeric temperatura_max_c
+        smallint minutos_tolerancia
+        boolean activo
+    }
+    excursion_temperatura {
+        bigint id PK
+        bigint predio_id FK
+        bigint sensor_id FK
+        bigint bodega_id FK
+        bigint vehiculo_id FK
+        timestamptz inicio
+        timestamptz fin
+        numeric temperatura_extrema_c
+        integer minutos_fuera
+        integer lotes_bloqueados
+        lista estado
+    }
+    bloqueo_lote {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_inventario_id FK
+        lista motivo
+        varchar origen_tabla
+        bigint origen_id
+        lista decision
+        bigint decidido_por FK
+        timestamptz decidido_en
+        text observacion
+    }
+    iot_sensor {
+        bigint id PK
+    }
+    nucleo_dispositivo_captura {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    bodega ||--o{ conteo_fisico : "bodega_id"
+    bodega ||--o{ excursion_temperatura : "bodega_id"
+    bodega ||--o{ lote_inventario : "bodega_id"
+    categoria_producto ||--o{ categoria_producto : "padre_id"
+    categoria_producto ||--o{ producto : "categoria_id"
+    conteo_fisico ||--o{ conteo_detalle : "conteo_fisico_id"
+    etiqueta ||--o{ lectura_codigo : "etiqueta_id"
+    iot_sensor ||--o{ bodega : "sensor_temperatura_id"
+    iot_sensor ||--o{ excursion_temperatura : "sensor_id"
+    iot_sensor ||--o{ vehiculo : "sensor_temperatura_id"
+    lectura_codigo ||--o{ movimiento_inventario : "lectura_codigo_id"
+    lote_inventario ||--o{ bloqueo_lote : "lote_inventario_id"
+    lote_inventario ||--o{ conteo_detalle : "lote_inventario_id"
+    lote_inventario ||--o{ etiqueta : "lote_inventario_id"
+    lote_inventario ||--o{ movimiento_inventario : "lote_inventario_id"
+    movimiento_inventario ||--o{ conteo_detalle : "movimiento_ajuste_id"
+    nucleo_dispositivo_captura ||--o{ etiqueta : "impresora_id"
+    nucleo_usuario ||--o{ bloqueo_lote : "decidido_por"
+    nucleo_usuario ||--o{ conteo_fisico : "responsable_id"
+    nucleo_usuario ||--o{ lectura_codigo : "usuario_id"
+    nucleo_usuario ||--o{ movimiento_inventario : "usuario_id"
+    nucleo_usuario ||--o{ pesaje : "usuario_id"
+    nucleo_zona ||--o{ bodega : "zona_id"
+    pesaje ||--o{ movimiento_inventario : "pesaje_id"
+    producto ||--o{ lote_inventario : "producto_id"
+    unidad_medida ||--o{ producto : "unidad_id"
+    vehiculo ||--o{ excursion_temperatura : "vehiculo_id"

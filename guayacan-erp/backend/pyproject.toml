@@ -1,0 +1,55 @@
+# Descripción del proyecto Python del backend: nombre, versión de Python, librerías y configuración de herramientas.
+# Instalar (desde la carpeta backend, con el venv activo):   pip install -e ".[dev]"
+#   -e  = modo editable: los cambios en el código se ven sin reinstalar
+#   [dev] = instala también las herramientas de desarrollo (pruebas y revisor de estilo)
+
+[project]
+name = "guayacan-erp"
+version = "0.1.0"
+description = "Núcleo ERP de El Guayacán de los Malaver: Django + DRF, dueño de PostgreSQL"
+requires-python = ">=3.12"
+# Versiones mínimas. La primera vez que instale, fije las exactas con:  pip freeze > requirements.lock  y súbalo a Git.
+dependencies = [
+    "Django>=5.2,<6.0",                    # framework web
+    "djangorestframework>=3.16",           # la API REST
+    "djangorestframework-simplejwt>=5.5",  # inicio de sesión con tokens JWT
+    "drf-spectacular>=0.28",               # documentación OpenAPI (Swagger) en /api/docs/
+    "django-cors-headers>=4.7",            # permite que el frontend Angular llame a la API
+    "psycopg[binary]>=3.2",                # conector con PostgreSQL
+    "pgvector>=0.4",                       # columnas de vectores para la búsqueda de la IA
+    "argon2-cffi>=23.1",                   # cifrado de contraseñas Argon2
+    "pyotp>=2.9",                          # códigos de doble factor (TOTP)
+    "celery[redis]>=5.5",                  # tareas programadas, con Redis como cola
+    "gunicorn>=23.0",                      # servidor de producción (en Windows no se usa; use runserver)
+    "python-dotenv>=1.0",                  # lee el archivo .env al arrancar en su PC
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",         # ejecuta las pruebas
+    "pytest-django>=4.9",  # integra pytest con Django
+    "ruff>=0.8",           # revisa el estilo y errores comunes del código
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Paquetes de Python que forman el proyecto
+include = ["config*", "guayacan*", "apps*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"  # pytest usa la configuración de pruebas
+python_files = ["test_*.py"]                      # archivos que pytest reconoce como pruebas
+addopts = "-ra"                                   # al final, resume las pruebas saltadas o fallidas
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+extend-exclude = ["apps/*/models.py"]  # los modelos generados tienen líneas largas a propósito
+
+[tool.ruff.lint]
+# E/W estilo, F errores, I orden de imports, B posibles fallos, UP sintaxis moderna de Python
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]  # no exigir largo máximo de línea

@@ -1,0 +1,128 @@
+# Integración continua (CI) de GuayacanERP con GitHub Actions.
+#
+# QUÉ ES: cada vez que sube cambios a GitHub (push a main) o abre una solicitud de cambios (pull request),
+# GitHub prepara máquinas limpias y corre estas comprobaciones. Si algo falla, lo verá en rojo en la pestaña
+# «Actions» del repositorio y sabrá que ese cambio rompió algo antes de que llegue a producción.
+#
+# TRABAJOS (jobs)
+# 1. reglas-base: construye PostgreSQL 18 + PostGIS + pgvector, carga el esquema y corre las tres baterías de
+#    reglas de la base (v5, v4 y Apéndice A de adopción), cada una sobre una base nueva. Si falla, nada más importa.
+# 2. backend: revisión de estilo (ruff), chequeo de Django y pytest contra una base recién cargada.
+# 3. agentes, iot y frontend: revisión, pruebas y compilación de cada parte.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  reglas-base:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # descarga el código del repositorio
+      - name: Construir PostgreSQL 18 con PostGIS y pgvector
+        run: docker build -t guayacan-pg ./docker/postgres
+      - name: Levantar PostgreSQL
+        run: |
+          docker run -d --name pg -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=guayacan -p 5432:5432 guayacan-pg
+          # Espera hasta 60 s a que la base acepte conexiones
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
+      # ON_ERROR_STOP=1 hace que psql se detenga en el primer error; grep comprueba el mensaje final de éxito
+      - name: Pruebas de reglas v5
+        run: |
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/esquema_postgresql.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/datos_iniciales.sql
+          docker exec -i pg psql -U postgres -d guayacan < specs/casos-prueba/pruebas_reglas_v5.sql | tee v5.log
+          grep -q "TODAS LAS PRUEBAS PASARON" v5.log
+      - name: Pruebas de regresión v4 (base nueva)
+        run: |
+          docker exec pg psql -U postgres -c "drop database guayacan" -c "create database guayacan"
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/esquema_postgresql.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/datos_iniciales.sql
+          docker exec -i pg psql -U postgres -d guayacan < specs/casos-prueba/pruebas_reglas_v4.sql | tee v4.log
+          grep -q "TODAS LAS PRUEBAS PASARON" v4.log
+      - name: Pruebas del Apéndice A, adopción (base nueva)
+        run: |
+          docker exec pg psql -U postgres -c "drop database guayacan" -c "create database guayacan"
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/esquema_postgresql.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/datos_iniciales.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/apendice_a_adopcion.sql
+          docker exec -i pg psql -U postgres -d guayacan < specs/casos-prueba/pruebas_adopcion.sql | tee adopcion.log
+          grep -q "TODAS LAS PRUEBAS PASARON" adopcion.log
+
+  backend:
+    needs: reglas-base   # solo corre si las reglas de la base pasaron
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      POSTGRES_HOST: localhost
+      POSTGRES_PASSWORD: ci
+      POSTGRES_API_CLAVE: ci_api
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Base recién cargada para las pruebas (esquema, datos, Apéndice A y usuario de la API)
+        working-directory: .
+        run: |
+          docker build -t guayacan-pg ./docker/postgres
+          docker run -d --name pg -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=guayacan -p 5432:5432 guayacan-pg
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/esquema_postgresql.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/datos_iniciales.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -q < specs/modelo-datos/apendice_a_adopcion.sql
+          docker exec -i pg psql -U postgres -d guayacan -v ON_ERROR_STOP=1 -v clave_api=ci_api < backend/sql/preparar_api.sql
+      - run: pip install -e .[dev]
+      - run: ruff check .                              # estilo y errores comunes de Python
+      - run: python manage.py check                    # configuración de Django
+      - run: python manage.py migrate --database=admin # tablas internas de Django en el esquema django
+      - run: pytest
+
+  agentes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servicios/agentes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e .[dev]
+      - run: ruff check .
+      - run: pytest
+
+  iot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servicios/iot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e .[dev]
+      - run: ruff check .
+      - run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Cambie a `npm ci` cuando suba package-lock.json (lo genera la primera instalación en su PC)
+      - run: npm install
+      - run: npm run build   # compila la PWA; falla si hay errores de TypeScript
+      - run: npm test        # pruebas unitarias en Chrome sin ventana

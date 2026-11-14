@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant C as Cliente
+  participant W as WhatsApp Business
+  participant K as Conector de canales
+  participant O as Orquestador
+  participant V as Asesor o vendedor
+  participant E as ERP vía MCP
+  participant G as MongoDB
+  C->>W: Hola, ¿tienen huevo para el sábado?
+  W->>K: Webhook
+  K->>G: Guarda el mensaje en la conversación
+  K->>O: Mensaje + historial corto
+  O->>V: Intención consulta_producto
+  V->>E: consultar_catalogo y consentimiento del cliente
+  E-->>V: Cubeta AA disponible a precio vigente
+  opt Consentimiento de personalización vigente
+    V->>G: Lee perfil_interes
+  end
+  V-->>C: Respuesta con precio y propuesta de pedido
+  C->>W: Sí, 2 cubetas
+  V->>E: crear_pedido_borrador
+  E-->>V: PED-000123 en borrador
+  V-->>C: Confirmación y medio de pago
+  Note over E: Un vendedor confirma y el pago lo verifica una persona

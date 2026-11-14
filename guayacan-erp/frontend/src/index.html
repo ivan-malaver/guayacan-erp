@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Página única de la aplicación (SPA). Angular reemplaza <gy-raiz> por el componente App al arrancar. -->
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <title>GuayacanERP</title>
+    <!-- Base de las rutas: todas las direcciones de la app cuelgan de "/" -->
+    <base href="/" />
+    <!-- Hace que la página se vea bien en celular (ancho del dispositivo, sin zoom inicial) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Color de la barra del navegador en el celular (verde de la marca) -->
+    <meta name="theme-color" content="#2e6b4f" />
+    <link rel="icon" type="image/png" href="icons/icono-192.png" />
+    <!-- Manifiesto de la PWA: nombre, íconos y colores para «instalar» la app en el celular -->
+    <link rel="manifest" href="manifest.webmanifest" />
+  </head>
+  <body>
+    <gy-raiz></gy-raiz>
+    <noscript>Active JavaScript para usar GuayacanERP.</noscript>
+  </body>
+</html>

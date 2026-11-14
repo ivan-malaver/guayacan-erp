@@ -1,0 +1,32 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Compras (CMP)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "OPE"; "CON";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+"CON" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Contador", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Compras"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "CMP-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CMP-01\nRegistrar cotizaciones y\nprecios de mercado"];
+  "CMP-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CMP-02\nCrear y aprobar una orden\nde compra"];
+  "CMP-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CMP-03\nRecibir una compra en\nbodega"];
+  "CMP-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CMP-04\nEmitir un documento\nsoporte electrónico"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "INV-02" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="INV-02\nRecibir un lote en\nbodega y etiquetarlo\n(Inventario y cadena de frío)"];
+  "FIN-11" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="FIN-11\nGestionar anticipos a\nproveedores\n(Finanzas y contabilidad)"];
+}
+{rank=sink; "AG_MER"; "MER"; "DIAN";}
+"AG_MER" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAnalista de\nmercados"];
+"MER" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nFuentes de mercado"];
+"DIAN" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nDIAN"];
+"ADM" -> "CMP-01";
+"CMP-01" -> "AG_MER" [style=solid];
+"CMP-01" -> "MER" [style=solid];
+"ADM" -> "CMP-02";
+"CMP-02" -> "AG_MER" [style=solid];
+"OPE" -> "CMP-03";
+"CMP-03" -> "INV-02" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"CMP-03" -> "FIN-11" [style=dashed, arrowhead=none, arrowtail=vee, dir=back, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280"];
+"CON" -> "CMP-04";
+"CMP-04" -> "DIAN" [style=solid];
+}

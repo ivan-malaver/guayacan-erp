@@ -1,0 +1,169 @@
+classDiagram
+  direction TB
+  class inventario__lote_inventario["lote_inventario"] {
+    <<por finca · fase 1>>
+    +producto_id : ref producto
+    +bodega_id : ref bodega
+    +codigo_lote : texto
+    +origen : enum
+    +origen_tabla? : texto
+    +origen_id? : bigint
+    +fecha_produccion : date
+    +condicion_almacenamiento : enum
+    +origen_vencimiento : enum
+    +fecha_vencimiento? : date
+    +fecha_limite_venta? : date
+    +peso_neto_kg? : decimal
+    +… 5 campos más
+  }
+  class inventario__movimiento_inventario["movimiento_inventario"] {
+    <<por finca · fase 1>>
+    +lote_inventario_id : ref lote_inventario
+    +tipo : enum
+    +cantidad : decimal
+    +causa_merma? : enum
+    +pesaje_id? : ref pesaje
+    +lectura_codigo_id? : ref lectura_codigo
+    +costo_unitario : dinero
+    +documento_tipo : texto
+    +documento_id : bigint
+    +ocurrido_en : momento
+    +usuario_id? : ref usuario
+  }
+  class inventario__producto["producto"] {
+    <<por finca · fase 1>>
+    +sku : texto
+    +nombre : texto
+    +descripcion? : text
+    +categoria_id : ref categoria_producto
+    +unidad_id : ref unidad_medida
+    +tipo : enum
+    +se_vende : boolean
+    +se_compra : boolean
+    +se_produce : boolean
+    +perecedero : boolean
+    +vida_util_ambiente_dias? : smallint
+    +vida_util_refrigerado_dias? : smallint
+    +… 10 campos más
+  }
+  class inventario__conteo_detalle["conteo_detalle"] {
+    <<por finca · fase 1>>
+    +conteo_fisico_id : ref conteo_fisico
+    +lote_inventario_id : ref lote_inventario
+    +cantidad_sistema : decimal
+    +cantidad_contada : decimal
+    +movimiento_ajuste_id? : ref movimiento_inventario
+  }
+  class inventario__bodega["bodega"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+    +zona_id? : ref zona
+    +refrigerada : boolean
+    +sensor_temperatura_id? : ref sensor
+    +temperatura_min_c? : decimal
+    +temperatura_max_c? : decimal
+    +minutos_tolerancia : smallint
+  }
+  class inventario__etiqueta["etiqueta"] {
+    <<por finca · fase 1>>
+    +lote_inventario_id : ref lote_inventario
+    +codigo : texto
+    +simbologia : enum
+    +impresora_id? : ref dispositivo_captura
+    +impresa_en? : momento
+    +anulada : boolean
+  }
+  class inventario__bloqueo_lote["bloqueo_lote"] {
+    <<por finca · fase 2>>
+    +lote_inventario_id : ref lote_inventario
+    +motivo : enum
+    +origen_tabla? : texto
+    +origen_id? : bigint
+    +decision : enum
+    +decidido_por? : ref usuario
+    +decidido_en? : momento
+    +observacion? : text
+  }
+  class inventario__lectura_codigo["lectura_codigo"] {
+    <<por finca · fase 1>>
+    +codigo_leido : texto
+    +simbologia? : texto
+    +etiqueta_id? : ref etiqueta
+    +accion : enum
+    +resultado : enum
+    +usuario_id : ref usuario
+  }
+  class inventario__pesaje["pesaje"] {
+    <<por finca · fase 1>>
+    +peso_bruto_kg : decimal
+    +tara_kg : decimal
+    +peso_neto_kg : decimal
+    +estable : boolean
+    +origen : enum
+    +referencia_tabla? : texto
+    +referencia_id? : bigint
+    +usuario_id : ref usuario
+  }
+  class inventario__vehiculo["vehiculo"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +tipo : enum
+    +placa? : texto
+    +capacidad_kg? : decimal
+    +refrigerado : boolean
+    +sensor_temperatura_id? : ref sensor
+    +temperatura_max_c? : decimal
+    +minutos_tolerancia : smallint
+    +activo : boolean
+  }
+  class inventario__excursion_temperatura["excursion_temperatura"] {
+    <<por finca · fase 2>>
+    +sensor_id : ref sensor
+    +bodega_id? : ref bodega
+    +vehiculo_id? : ref vehiculo
+    +inicio : momento
+    +fin? : momento
+    +temperatura_extrema_c : decimal
+    +minutos_fuera : integer
+    +lotes_bloqueados : integer
+    +estado : enum
+  }
+  namespace inventario_otra_parte {
+    class inventario__categoria_producto["inventario.categoria_producto"]
+    class inventario__conteo_fisico["inventario.conteo_fisico"]
+    class inventario__unidad_medida["inventario.unidad_medida"]
+  }
+  namespace iot {
+    class iot__sensor["iot.sensor"]
+  }
+  namespace nucleo {
+    class nucleo__dispositivo_captura["nucleo.dispositivo_captura"]
+    class nucleo__zona["nucleo.zona"]
+  }
+  inventario__lote_inventario "*" --> "1" inventario__producto : producto_id
+  inventario__lote_inventario "*" --> "1" inventario__bodega : bodega_id
+  inventario__movimiento_inventario "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  inventario__movimiento_inventario "*" --> "0..1" inventario__pesaje : pesaje_id
+  inventario__movimiento_inventario "*" --> "0..1" inventario__lectura_codigo : lectura_codigo_id
+  inventario__producto "*" --> "1" inventario__categoria_producto : categoria_id
+  inventario__producto "*" --> "1" inventario__unidad_medida : unidad_id
+  inventario__conteo_detalle "*" --> "1" inventario__conteo_fisico : conteo_fisico_id
+  inventario__conteo_detalle "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  inventario__conteo_detalle "*" --> "0..1" inventario__movimiento_inventario : movimiento_ajuste_id
+  inventario__bodega "*" --> "0..1" nucleo__zona : zona_id
+  inventario__bodega "*" --> "0..1" iot__sensor : sensor_temperatura_id
+  inventario__etiqueta "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  inventario__etiqueta "*" --> "0..1" nucleo__dispositivo_captura : impresora_id
+  inventario__bloqueo_lote "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  inventario__lectura_codigo "*" --> "0..1" inventario__etiqueta : etiqueta_id
+  inventario__vehiculo "*" --> "0..1" iot__sensor : sensor_temperatura_id
+  inventario__excursion_temperatura "*" --> "1" iot__sensor : sensor_id
+  inventario__excursion_temperatura "*" --> "0..1" inventario__bodega : bodega_id
+  inventario__excursion_temperatura "*" --> "0..1" inventario__vehiculo : vehiculo_id
+  style inventario__unidad_medida fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__categoria_producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__dispositivo_captura fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__conteo_fisico fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__sensor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

@@ -1,0 +1,19 @@
+flowchart TB
+  subgraph F1["Fase 1 · un servidor con Docker Compose"]
+    N[nginx] --> D[erp-django]
+    N --> F[agentes-fastapi]
+    N --> NG[frontend Angular estático]
+    D --> P[(postgres)]
+    D --> R[(redis)]
+    F --> M[(mongodb)]
+    W[celery-worker y celery-beat] --> P
+    D --> S[(minio)]
+  end
+  subgraph F3["Fase 3 en adelante · Kubernetes"]
+    K1[réplicas de erp-django]
+    K2[réplicas de agentes-fastapi<br/>escalan por mensajes en cola]
+    K3[PostgreSQL administrado con réplica de lectura]
+    K4[MongoDB replica set]
+  end
+  GH[GitHub Actions<br/>pruebas, imágenes, despliegue] --> N
+  GH --> K1

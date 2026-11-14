@@ -1,0 +1,44 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Personal, tareas y turnos (PER)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "ENC"; "SCH"; "OPE";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Personal, tareas y turnos"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "PER-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-01\nConfigurar áreas de\nresponsabilidad y matriz\nRACI"];
+  "PER-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-02\nDefinir el plan de labores"];
+  "PER-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-03\nGenerar las tareas del día"];
+  "PER-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-04\nAsignar una tarea"];
+  "PER-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-05\nEjecutar una tarea con\nevidencia"];
+  "PER-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-06\nAprobar o devolver una\ntarea"];
+  "PER-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-07\nArmar y publicar el\ncronograma de turnos"];
+  "PER-08" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-08\nRegistrar disponibilidad y\nausencias"];
+  "PER-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-09\nRegistrar la jornada con\nel carné"];
+  "PER-10" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PER-10\nOrganizar cuadrillas"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "NUC-05" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="NUC-05\nSincronizar registros\ncapturados sin\nconexión\n(Núcleo de la plataforma)"];
+}
+{rank=sink; "AG_COO"; "POR";}
+"AG_COO" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nCoordinador"];
+"POR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Portería", fontsize=11, fontcolor="#1F2933"];
+"ADM" -> "PER-01";
+"ENC" -> "PER-02";
+"SCH" -> "PER-03";
+"PER-03" -> "AG_COO" [style=solid];
+"ENC" -> "PER-04";
+"PER-04" -> "AG_COO" [style=solid];
+"OPE" -> "PER-05";
+"PER-05" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"ENC" -> "PER-06";
+"ENC" -> "PER-07";
+"PER-07" -> "AG_COO" [style=solid];
+"OPE" -> "PER-08";
+"ENC" -> "PER-08";
+"OPE" -> "PER-09";
+"PER-09" -> "POR" [style=solid];
+"PER-09" -> "NUC-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"ENC" -> "PER-10";
+}

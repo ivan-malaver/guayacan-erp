@@ -1,0 +1,19 @@
+flowchart LR
+  subgraph Finca[Red local de la finca · energía solar con batería]
+    R[Router y punto de acceso exterior]
+    PAS[Pasarela local<br/>Raspberry Pi industrial o mini PC<br/>broker MQTT · motor de reglas · respaldo SQLite]
+    N1[Nodo ESP32 sector 1<br/>electroválvula NC · humedad de suelo]
+    N2[Nodo ESP32 sector 2<br/>electroválvula NC · humedad de suelo]
+    NT[Nodo de tanques<br/>nivel TQ-01 y TQ-02]
+    BT[Botón físico<br/>apertura manual]
+    CEL[Celular con la PWA<br/>en la red de la finca]
+  end
+  NUBE[Nube GuayacanERP]
+  N1 <-- MQTT local --> PAS
+  N2 <-- MQTT local --> PAS
+  NT -- MQTT local --> PAS
+  BT --> N1
+  CEL -- comando local --> PAS
+  PAS -- internet disponible --> NUBE
+  NUBE -- reglas aprobadas y versión --> PAS
+  R --- PAS

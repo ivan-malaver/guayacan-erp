@@ -1,0 +1,296 @@
+erDiagram
+    cuadrilla {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        bigint lider_id FK
+        boolean activa
+    }
+    cuadrilla_miembro {
+        bigint id PK
+        bigint predio_id FK
+        bigint cuadrilla_id FK
+        bigint empleado_id FK
+        date desde
+        date hasta
+    }
+    turno {
+        bigint id PK
+        bigint predio_id FK
+        bigint empleado_id FK
+        date fecha
+        time hora_inicio
+        time hora_fin
+        lista tipo
+        bigint area_id FK
+        bigint cronograma_id FK
+        numeric horas
+    }
+    ausencia {
+        bigint id PK
+        bigint predio_id FK
+        bigint empleado_id FK
+        lista tipo
+        date desde
+        date hasta
+        boolean remunerada
+        bigint soporte_documento_id FK
+        bigint aprobada_por FK
+    }
+    plantilla_tarea {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        varchar proceso
+        lista recurrencia
+        smallint[] dias_semana
+        time hora_limite
+        bigint zona_id FK
+        smallint duracion_estimada_min
+        bigint competencia_id FK
+        lista forma_pago
+        numeric valor_unitario
+        varchar unidad_destajo
+        lista registro_que_crea
+        jsonb pasos
+        bigint area_id FK
+        lista prioridad
+        boolean activa
+    }
+    tarea {
+        bigint id PK
+        bigint predio_id FK
+        bigint plantilla_tarea_id FK
+        varchar titulo
+        varchar proceso
+        date fecha
+        timestamptz hora_limite
+        lista prioridad
+        bigint zona_id FK
+        bigint area_id FK
+        bigint lote_animal_id FK
+        bigint siembra_id FK
+        bigint activo_id FK
+        bigint empleado_id FK
+        bigint cuadrilla_id FK
+        lista origen
+        bigint agente_id FK
+        lista estado
+        timestamptz iniciada_en
+        timestamptz terminada_en
+        numeric cantidad
+        varchar unidad
+        bigint aprobado_por FK
+        timestamptz aprobado_en
+        text comentario_revision
+    }
+    paso_tarea {
+        bigint id PK
+        bigint predio_id FK
+        bigint tarea_id FK
+        smallint orden
+        varchar descripcion
+        boolean hecho
+        timestamptz hecho_en
+    }
+    evidencia_tarea {
+        bigint id PK
+        bigint predio_id FK
+        bigint tarea_id FK
+        lista tipo
+        varchar archivo_url
+        varchar registro_tabla
+        bigint registro_id
+    }
+    matriz_responsabilidad {
+        bigint id PK
+        bigint predio_id FK
+        varchar proceso
+        bigint rol_id FK
+        lista responsabilidad
+    }
+    asignacion_equipo {
+        bigint id PK
+        bigint predio_id FK
+        bigint activo_id FK
+        bigint empleado_id FK
+        timestamptz entregado_en
+        lista estado_entrega
+        timestamptz devuelto_en
+        lista estado_devolucion
+    }
+    credencial_trabajo {
+        bigint id PK
+        bigint predio_id FK
+        bigint empleado_id FK
+        lista tipo
+        char codigo_hash
+        date emitida_en
+        timestamptz revocada_en
+    }
+    jornada {
+        bigint id PK
+        bigint predio_id FK
+        bigint empleado_id FK
+        date fecha
+        timestamptz entrada
+        timestamptz salida
+        numeric horas
+        varchar labor
+        bigint zona_id FK
+        lista metodo_registro
+        bigint aprobada_por FK
+        timestamptz aprobada_en
+    }
+    area_responsabilidad {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        text descripcion
+        bigint[] zonas
+        bigint centro_costo_id FK
+        boolean opera_24_7
+        boolean activa
+    }
+    miembro_area {
+        bigint id PK
+        bigint predio_id FK
+        bigint area_id FK
+        bigint empleado_id FK
+        boolean es_responsable
+        date desde
+        date hasta
+    }
+    patron_turno {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo
+        smallint ciclo_dias
+    }
+    patron_turno_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint patron_id FK
+        smallint dia_ciclo
+        time hora_inicio
+        time hora_fin
+        lista tipo
+    }
+    cronograma {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        bigint area_id FK
+        date desde
+        date hasta
+        lista estado
+        boolean permitir_huecos
+        bigint publicado_por FK
+        timestamptz publicado_en
+    }
+    asignacion_patron {
+        bigint id PK
+        bigint predio_id FK
+        bigint cronograma_id FK
+        bigint empleado_id FK
+        bigint patron_id FK
+        smallint desfase_dias
+    }
+    requerimiento_cobertura {
+        bigint id PK
+        bigint predio_id FK
+        bigint area_id FK
+        smallint dia_semana
+        time hora_inicio
+        time hora_fin
+        smallint personas_min
+    }
+    disponibilidad {
+        bigint id PK
+        bigint predio_id FK
+        bigint empleado_id FK
+        smallint dia_semana
+        time hora_inicio
+        time hora_fin
+        lista preferencia
+    }
+    activos_activo {
+        bigint id PK
+    }
+    documental_documento {
+        bigint id PK
+    }
+    finanzas_centro_costo {
+        bigint id PK
+    }
+    formacion_competencia {
+        bigint id PK
+    }
+    ia_agente {
+        bigint id PK
+    }
+    nucleo_rol {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    produccion_lote_animal {
+        bigint id PK
+    }
+    produccion_siembra {
+        bigint id PK
+    }
+    terceros_empleado {
+        bigint id PK
+    }
+    activos_activo ||--o{ asignacion_equipo : "activo_id"
+    activos_activo ||--o{ tarea : "activo_id"
+    area_responsabilidad ||--o{ cronograma : "area_id"
+    area_responsabilidad ||--o{ miembro_area : "area_id"
+    area_responsabilidad ||--o{ plantilla_tarea : "area_id"
+    area_responsabilidad ||--o{ requerimiento_cobertura : "area_id"
+    area_responsabilidad ||--o{ tarea : "area_id"
+    area_responsabilidad ||--o{ turno : "area_id"
+    cronograma ||--o{ asignacion_patron : "cronograma_id"
+    cronograma ||--o{ turno : "cronograma_id"
+    cuadrilla ||--o{ cuadrilla_miembro : "cuadrilla_id"
+    cuadrilla ||--o{ tarea : "cuadrilla_id"
+    documental_documento ||--o{ ausencia : "soporte_documento_id"
+    finanzas_centro_costo ||--o{ area_responsabilidad : "centro_costo_id"
+    formacion_competencia ||--o{ plantilla_tarea : "competencia_id"
+    ia_agente ||--o{ tarea : "agente_id"
+    nucleo_rol ||--o{ matriz_responsabilidad : "rol_id"
+    nucleo_usuario ||--o{ ausencia : "aprobada_por"
+    nucleo_usuario ||--o{ cronograma : "publicado_por"
+    nucleo_usuario ||--o{ jornada : "aprobada_por"
+    nucleo_usuario ||--o{ tarea : "aprobado_por"
+    nucleo_zona ||--o{ jornada : "zona_id"
+    nucleo_zona ||--o{ plantilla_tarea : "zona_id"
+    nucleo_zona ||--o{ tarea : "zona_id"
+    patron_turno ||--o{ asignacion_patron : "patron_id"
+    patron_turno ||--o{ patron_turno_detalle : "patron_id"
+    plantilla_tarea ||--o{ tarea : "plantilla_tarea_id"
+    produccion_lote_animal ||--o{ tarea : "lote_animal_id"
+    produccion_siembra ||--o{ tarea : "siembra_id"
+    tarea ||--o{ evidencia_tarea : "tarea_id"
+    tarea ||--o{ paso_tarea : "tarea_id"
+    terceros_empleado ||--o{ asignacion_equipo : "empleado_id"
+    terceros_empleado ||--o{ asignacion_patron : "empleado_id"
+    terceros_empleado ||--o{ ausencia : "empleado_id"
+    terceros_empleado ||--o{ credencial_trabajo : "empleado_id"
+    terceros_empleado ||--o{ cuadrilla : "lider_id"
+    terceros_empleado ||--o{ cuadrilla_miembro : "empleado_id"
+    terceros_empleado ||--o{ disponibilidad : "empleado_id"
+    terceros_empleado ||--o{ jornada : "empleado_id"
+    terceros_empleado ||--o{ miembro_area : "empleado_id"
+    terceros_empleado ||--o{ tarea : "empleado_id"
+    terceros_empleado ||--o{ turno : "empleado_id"

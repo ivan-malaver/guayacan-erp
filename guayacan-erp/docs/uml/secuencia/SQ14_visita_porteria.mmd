@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  actor V as Visitante o proveedor
+  actor E as Encargado (anfitrión)
+  participant DB as PostgreSQL
+  actor P as Portería (PWA sin internet)
+  V->>E: pide visita (hora, placa, zona)
+  E->>DB: visita aprobada
+  DB-->>E: si va al galpón exige declarar 72 h sin contacto con aves
+  E->>DB: agenda.emitir_pase()
+  DB-->>V: código QR (la base guarda solo la huella)
+  V->>P: llega con el QR
+  P->>DB: registro_acceso entrada (placa, desinfección)
+  DB-->>P: rechaza placa distinta, fuera de horario o sin desinfección
+  P->>DB: salida
+  DB->>DB: visita salió, deja de aparecer en v_en_sitio

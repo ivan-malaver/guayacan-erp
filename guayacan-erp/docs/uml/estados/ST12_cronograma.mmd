@@ -1,0 +1,6 @@
+stateDiagram-v2
+  [*] --> borrador
+  borrador --> borrador: generar_turnos() y ajustes a mano
+  borrador --> publicado: jornada, descanso semanal y cobertura cumplen
+  publicado --> cerrado: termina el periodo
+  cerrado --> [*]

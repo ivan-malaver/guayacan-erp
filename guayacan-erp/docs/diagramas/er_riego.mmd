@@ -1,0 +1,75 @@
+erDiagram
+    fuente_agua {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        lista tipo
+        numeric caudal_l_s
+        boolean requiere_concesion
+        varchar numero_concesion
+        date concesion_vence
+        boolean apta_consumo_humano
+    }
+    tanque {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        integer capacidad_litros
+        bigint fuente_agua_id FK
+        bigint zona_id FK
+        bigint sensor_nivel_id FK
+    }
+    sistema_riego {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        lista tipo
+        bigint tanque_id FK
+        numeric caudal_l_min
+        lista modo_control
+    }
+    valvula {
+        bigint id PK
+        bigint predio_id FK
+        bigint sistema_riego_id FK
+        varchar codigo
+        bigint zona_id FK
+        lista tipo
+        bigint actuador_id FK
+    }
+    evento_riego {
+        bigint id PK
+        bigint predio_id FK
+        bigint valvula_id FK
+        timestamptz inicio
+        timestamptz fin
+        numeric litros_estimados
+        lista modo
+        bigint registrado_por FK
+        bigint regla_id FK
+    }
+    iot_actuador {
+        bigint id PK
+    }
+    iot_regla_automatizacion {
+        bigint id PK
+    }
+    iot_sensor {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    fuente_agua ||--o{ tanque : "fuente_agua_id"
+    iot_actuador ||--o{ valvula : "actuador_id"
+    iot_regla_automatizacion ||--o{ evento_riego : "regla_id"
+    iot_sensor ||--o{ tanque : "sensor_nivel_id"
+    nucleo_usuario ||--o{ evento_riego : "registrado_por"
+    nucleo_zona ||--o{ tanque : "zona_id"
+    nucleo_zona ||--o{ valvula : "zona_id"
+    sistema_riego ||--o{ valvula : "sistema_riego_id"
+    tanque ||--o{ sistema_riego : "tanque_id"
+    valvula ||--o{ evento_riego : "valvula_id"

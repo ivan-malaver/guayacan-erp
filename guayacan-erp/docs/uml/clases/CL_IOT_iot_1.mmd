@@ -1,0 +1,153 @@
+classDiagram
+  direction TB
+  class iot__actuador["actuador"] {
+    <<por finca · fase 4>>
+    +dispositivo_id : ref dispositivo
+    +codigo : texto
+    +tipo : enum
+    +zona_seguridad_id? : ref zona_seguridad
+    +modo_falla : enum
+    +estado_actual : enum
+  }
+  class iot__zona_seguridad["zona_seguridad"] {
+    <<por finca · fase 4>>
+    +zona_id? : ref zona
+    +codigo : texto
+    +nombre : texto
+    +tipo : enum
+    +paso_personas : boolean
+    +bioseguridad : boolean
+    +estado_alarma : enum
+  }
+  class iot__dispositivo["dispositivo"] {
+    <<por finca · fase 4>>
+    +codigo : texto
+    +tipo : enum
+    +pasarela_id? : ref dispositivo
+    +zona_id? : ref zona
+    +topico_mqtt : texto
+    +direccion_red_local? : inet
+    +version_firmware? : texto
+    +ultima_conexion? : momento
+    +ultima_sincronizacion_nube? : momento
+    +activo : boolean
+  }
+  class iot__regla_automatizacion["regla_automatizacion"] {
+    <<por finca · fase 4>>
+    +nombre : texto
+    +condicion : jsonb
+    +actuador_id : ref actuador
+    +accion : enum
+    +duracion_max_min : smallint
+    +ejecuta_en : enum
+    +version : integer
+    +desplegada_version? : integer
+    +activa : boolean
+    +aprobado_por? : ref usuario
+  }
+  class iot__comando_actuador["comando_actuador"] {
+    <<por finca · fase 4>>
+    +actuador_id : ref actuador
+    +accion : enum
+    +origen : enum
+    +regla_id? : ref regla_automatizacion
+    +solicitado_por? : ref usuario
+    +duracion_max_min : smallint
+    +estado : enum
+    +expira_en : momento
+    +ejecutado_en? : momento
+  }
+  class iot__prioridad_carga["prioridad_carga"] {
+    <<por finca · fase 4>>
+    +actuador_id : ref actuador
+    +prioridad : smallint
+    +esencial : boolean
+    +corte_bateria_pct? : smallint
+  }
+  class iot__evento_seguridad["evento_seguridad"] {
+    <<por finca · fase 4>>
+    +zona_seguridad_id : ref zona_seguridad
+    +tipo : enum
+    +detector : enum
+    +sensor_id? : ref sensor
+    +camara_id? : ref camara
+    +credencial_id? : ref credencial_acceso
+    +severidad : enum
+    +estado_alarma : texto
+    +acciones? : jsonb
+    +ocurrido_en : momento
+    +atendido_por? : ref usuario
+    +atendido_en? : momento
+    +… 1 campos más
+  }
+  class iot__camara["camara"] {
+    <<por finca · fase 4>>
+    +dispositivo_id : ref dispositivo
+    +zona_id? : ref zona
+    +zona_seguridad_id? : ref zona_seguridad
+    +tipo : enum
+    +graba_por_movimiento : boolean
+    +intervalo_timelapse_min? : smallint
+    +retencion_dias : smallint
+    +aviso_visible : boolean
+    +stream_secreto_ref? : texto
+    +activa : boolean
+  }
+  class iot__credencial_acceso["credencial_acceso"] {
+    <<por finca · fase 4>>
+    +tercero_id : ref tercero
+    +zona_seguridad_id? : ref zona_seguridad
+    +metodo : enum
+    +referencia_hash? : texto
+    +consentimiento_id? : ref consentimiento_datos
+    +vigente_desde : date
+    +vigente_hasta? : date
+    +activa : boolean
+  }
+  class iot__sensor["sensor"] {
+    <<por finca · fase 4>>
+    +dispositivo_id : ref dispositivo
+    +codigo : texto
+    +magnitud : enum
+    +unidad : texto
+    +valor_minimo_alerta? : decimal
+    +valor_maximo_alerta? : decimal
+  }
+  class iot__lectura["lectura"] {
+    <<por finca · fase 4>>
+    +sensor_id : ref sensor
+    +medido_en : momento
+    +recibido_en : momento
+    +valor : double
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace terceros {
+    class terceros__consentimiento_datos["terceros.consentimiento_datos"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  iot__actuador "*" --> "1" iot__dispositivo : dispositivo_id
+  iot__actuador "*" --> "0..1" iot__zona_seguridad : zona_seguridad_id
+  iot__zona_seguridad "*" --> "0..1" nucleo__zona : zona_id
+  iot__dispositivo "*" --> "0..1" iot__dispositivo : pasarela_id
+  iot__dispositivo "*" --> "0..1" nucleo__zona : zona_id
+  iot__regla_automatizacion "*" --> "1" iot__actuador : actuador_id
+  iot__comando_actuador "*" --> "1" iot__actuador : actuador_id
+  iot__comando_actuador "*" --> "0..1" iot__regla_automatizacion : regla_id
+  iot__prioridad_carga "0..1" --> "1" iot__actuador : actuador_id
+  iot__evento_seguridad "*" --> "1" iot__zona_seguridad : zona_seguridad_id
+  iot__evento_seguridad "*" --> "0..1" iot__sensor : sensor_id
+  iot__evento_seguridad "*" --> "0..1" iot__camara : camara_id
+  iot__evento_seguridad "*" --> "0..1" iot__credencial_acceso : credencial_id
+  iot__camara "*" --> "1" iot__dispositivo : dispositivo_id
+  iot__camara "*" --> "0..1" nucleo__zona : zona_id
+  iot__camara "*" --> "0..1" iot__zona_seguridad : zona_seguridad_id
+  iot__credencial_acceso "*" --> "1" terceros__tercero : tercero_id
+  iot__credencial_acceso "*" --> "0..1" iot__zona_seguridad : zona_seguridad_id
+  iot__credencial_acceso "*" --> "0..1" terceros__consentimiento_datos : consentimiento_id
+  iot__sensor "*" --> "1" iot__dispositivo : dispositivo_id
+  iot__lectura "*" --> "1" iot__sensor : sensor_id
+  style terceros__consentimiento_datos fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

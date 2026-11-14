@@ -1,0 +1,27 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Seguros (SGR)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "SCH"; "ENC";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Seguros"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "SGR-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SGR-01\nRegistrar una póliza y sus\nbienes asegurados"];
+  "SGR-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SGR-02\nAvisar pólizas próximas a\nvencer"];
+  "SGR-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SGR-03\nRegistrar y enviar un\naviso de siniestro"];
+  "SGR-04" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SGR-04\nVigilar el índice de una\npóliza paramétrica\n[función seguro_parametrico]"];
+}
+{rank=sink; "ASE"; "NOT"; "EST_M";}
+"ASE" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nAseguradora"];
+"NOT" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCorreo y SMS"];
+"EST_M" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nEstación\nmeteorológica"];
+"ADM" -> "SGR-01";
+"SGR-01" -> "ASE" [style=solid];
+"SCH" -> "SGR-02";
+"SGR-02" -> "NOT" [style=solid];
+"ENC" -> "SGR-03";
+"ADM" -> "SGR-03";
+"SGR-03" -> "ASE" [style=solid];
+"SCH" -> "SGR-04";
+"SGR-04" -> "EST_M" [style=solid];
+}

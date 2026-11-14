@@ -1,0 +1,205 @@
+erDiagram
+    usuario {
+        bigint id PK
+        varchar nombre_completo
+        citext correo
+        varchar telefono
+        varchar contrasena_hash
+        boolean es_superusuario
+        boolean activo
+        timestamptz ultimo_ingreso
+        bigint tercero_id FK
+    }
+    rol {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        text descripcion
+    }
+    permiso {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        varchar modulo
+    }
+    rol_permiso {
+        bigint id PK
+        bigint rol_id FK
+        bigint permiso_id FK
+    }
+    usuario_rol {
+        bigint id PK
+        bigint predio_id FK
+        bigint usuario_id FK
+        bigint rol_id FK
+    }
+    parametro {
+        bigint id PK
+        varchar clave
+        text valor
+        lista tipo_dato
+        date vigente_desde
+        date vigente_hasta
+        text descripcion
+    }
+    auditoria {
+        bigint id PK
+        varchar esquema_tabla
+        bigint registro_id
+        lista accion
+        jsonb datos_antes
+        jsonb datos_despues
+        bigint usuario_id FK
+        bigint agente_id FK
+        inet direccion_ip
+        timestamptz ocurrido_en
+    }
+    evento_salida {
+        bigint id PK
+        bigint predio_id FK
+        varchar tipo_evento
+        varchar entidad
+        bigint entidad_id
+        jsonb carga
+        lista estado
+        smallint intentos
+        timestamptz publicado_en
+    }
+    predio {
+        bigint id PK
+        varchar nombre
+        varchar matricula_inmobiliaria
+        varchar propietario
+        lista tenencia
+        numeric area_m2
+        char codigo_dane_municipio
+        varchar vereda
+        geometry geometria
+        boolean es_practica
+        lista regimen_tributario
+        bigint empleador_tercero_id FK
+    }
+    zona {
+        bigint id PK
+        bigint predio_id FK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo_zona
+        numeric area_m2
+        integer capacidad
+        geometry geometria
+        varchar modelo_3d_url
+        boolean activa
+    }
+    dispositivo_captura {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        lista tipo
+        lista conexion
+        varchar marca_modelo
+        varchar numero_serie
+        numeric capacidad_max_kg
+        numeric division_g
+        boolean uso_comercial
+        date ultima_verificacion
+        date proxima_verificacion
+        varchar certificado_url
+        bigint usuario_asignado_id FK
+        boolean activo
+    }
+    sincronizacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint dispositivo_captura_id FK
+        bigint usuario_id FK
+        varchar version_app
+        timestamptz iniciada_en
+        timestamptz terminada_en
+        integer registros_recibidos
+        integer registros_duplicados
+        integer registros_rechazados
+        jsonb detalle_rechazos
+    }
+    funcionalidad {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        text descripcion
+        smallint fase
+        varchar requiere_equipo
+        boolean activa
+        bigint activada_por FK
+        timestamptz activada_en
+    }
+    nota_voz {
+        bigint id PK
+        bigint predio_id FK
+        bigint usuario_id FK
+        varchar audio_url
+        smallint duracion_seg
+        text transcripcion
+        varchar proveedor_voz_texto
+        jsonb interpretacion
+        lista estado
+        varchar registro_tabla
+        bigint registro_id
+    }
+    llave_api {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        varchar nombre
+        varchar prefijo
+        char hash_llave
+        text[] alcances
+        smallint limite_por_minuto
+        boolean activa
+        date vence_en
+        timestamptz ultimo_uso
+    }
+    webhook_suscripcion {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        bigint tercero_id FK
+        varchar url
+        text[] eventos
+        varchar secreto_ref
+        boolean activa
+        smallint fallos_seguidos
+    }
+    webhook_entrega {
+        bigint id PK
+        bigint predio_id FK
+        bigint suscripcion_id FK
+        bigint evento_salida_id
+        lista estado
+        smallint intentos
+        smallint codigo_respuesta
+        timestamptz proximo_intento
+    }
+    ia_agente {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    dispositivo_captura ||--o{ sincronizacion : "dispositivo_captura_id"
+    ia_agente ||--o{ auditoria : "agente_id"
+    permiso ||--o{ rol_permiso : "permiso_id"
+    predio ||--o{ zona : "predio_id"
+    rol ||--o{ rol_permiso : "rol_id"
+    rol ||--o{ usuario_rol : "rol_id"
+    terceros_tercero ||--o{ llave_api : "tercero_id"
+    terceros_tercero ||--o{ predio : "empleador_tercero_id"
+    terceros_tercero ||--o{ usuario : "tercero_id"
+    terceros_tercero ||--o{ webhook_suscripcion : "tercero_id"
+    usuario ||--o{ auditoria : "usuario_id"
+    usuario ||--o{ dispositivo_captura : "usuario_asignado_id"
+    usuario ||--o{ funcionalidad : "activada_por"
+    usuario ||--o{ nota_voz : "usuario_id"
+    usuario ||--o{ sincronizacion : "usuario_id"
+    usuario ||--o{ usuario_rol : "usuario_id"
+    webhook_suscripcion ||--o{ webhook_entrega : "suscripcion_id"

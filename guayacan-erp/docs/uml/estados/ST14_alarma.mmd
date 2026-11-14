@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> desarmado
+  desarmado --> armado
+  desarmado --> noche
+  armado --> desarmado
+  noche --> desarmado
+  armado --> noche
+  noche --> armado
+  desarmado --> mantenimiento: solo desde desarmado
+  mantenimiento --> desarmado
+  note right of armado: solo cambia con iot.cambiar_estado_alarma(), con historial

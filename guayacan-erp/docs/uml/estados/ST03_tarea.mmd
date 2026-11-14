@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> pendiente: plan, manual, agente, orden, acción correctiva, proyecto, agenda
+  pendiente --> en_curso: el trabajador inicia
+  en_curso --> terminada: cantidad y evidencia
+  terminada --> aprobada: encargado o responsable del área
+  terminada --> devuelta: con comentario
+  devuelta --> en_curso
+  pendiente --> cancelada
+  en_curso --> cancelada
+  aprobada --> [*]: genera novedad de jornal o destajo
+  cancelada --> [*]
+  note right of aprobada: no se edita, nadie aprueba la propia

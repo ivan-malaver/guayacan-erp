@@ -1,0 +1,37 @@
+digraph A {
+graph [rankdir=BT, fontname="DejaVu Sans", nodesep=0.22, ranksep=0.8, pad=0.3, bgcolor=white, label="Actores humanos: todos heredan de Usuario autenticado; los de la derecha no tienen cuenta", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [color="#6B7280", arrowhead=empty, penwidth=1.1];
+"USR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Usuario\nautenticado", fontsize=11, fontcolor="#1F2933"];
+"PAT" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Patrocinador", fontsize=11, fontcolor="#1F2933"];
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"FAM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Familia", fontsize=11, fontcolor="#1F2933"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"CON" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Contador", fontsize=11, fontcolor="#1F2933"];
+"CLI" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Cliente", fontsize=11, fontcolor="#1F2933"];
+"POR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Portería", fontsize=11, fontcolor="#1F2933"];
+"INS" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Instructor", fontsize=11, fontcolor="#1F2933"];
+"EST" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Estudiante", fontsize=11, fontcolor="#1F2933"];
+"DIR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Director de\nproyecto", fontsize=11, fontcolor="#1F2933"];
+"ADM" -> "USR";
+"FAM" -> "USR";
+"ENC" -> "USR";
+"OPE" -> "USR";
+"VEN" -> "USR";
+"CON" -> "USR";
+"CLI" -> "USR";
+"POR" -> "USR";
+"INS" -> "USR";
+"EST" -> "USR";
+"DIR" -> "USR";
+"PAT" -> "FAM";
+subgraph cluster_sin {label="Sin cuenta en el sistema"; fontsize=12; color="#9CA3AF"; style="rounded,dashed";
+  "PRO" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Posible cliente", fontsize=11, fontcolor="#1F2933"];
+  "VIS" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Visitante o\nturista", fontsize=11, fontcolor="#1F2933"];
+  "AUD" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Auditor externo", fontsize=11, fontcolor="#1F2933"];
+  "TIT" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Titular de datos", fontsize=11, fontcolor="#1F2933"];
+  "OPR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operador\nturístico o\ninstitución", fontsize=11, fontcolor="#1F2933"];
+}
+{rank=same; "USR"; "PRO"; "VIS"; "AUD"; "TIT"; "OPR";}
+}

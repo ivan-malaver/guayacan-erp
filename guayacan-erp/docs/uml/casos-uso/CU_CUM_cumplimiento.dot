@@ -1,0 +1,29 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Cumplimiento y certificaciones (CUM)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "SCH"; "ENC";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Cumplimiento y certificaciones"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "CUM-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-01\nCargar normas y requisitos"];
+  "CUM-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-02\nAbrir un expediente de\ncumplimiento"];
+  "CUM-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-03\nEvaluar el expediente\ncontra su evidencia"];
+  "CUM-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-04\nAdjuntar evidencias a un\nrequisito"];
+  "CUM-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-05\nRegistrar una auditoría\nexterna y sus no\nconformidades"];
+  "CUM-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-06\nEjecutar y verificar\nacciones correctivas"];
+  "CUM-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="CUM-07\nVigilar la obligación de\ngranja avícola biosegura"];
+}
+{rank=sink; "AUD";}
+"AUD" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Auditor externo", fontsize=11, fontcolor="#1F2933"];
+"ADM" -> "CUM-01";
+"ADM" -> "CUM-02";
+"SCH" -> "CUM-03";
+"ENC" -> "CUM-04";
+"ADM" -> "CUM-05";
+"CUM-05" -> "AUD" [style=solid];
+"ENC" -> "CUM-06";
+"ADM" -> "CUM-06";
+"SCH" -> "CUM-07";
+"ADM" -> "CUM-07";
+}

@@ -1,0 +1,78 @@
+classDiagram
+  direction TB
+  class ia__modelo_pronostico["modelo_pronostico"] {
+    <<por finca · fase 2>>
+    +producto_id : ref producto
+    +algoritmo : enum
+    +version : texto
+    +entrenado_en : momento
+    +meses_historia : smallint
+    +error_mape? : decimal
+    +activo : boolean
+  }
+  class ia__pronostico_demanda["pronostico_demanda"] {
+    <<por finca · fase 2>>
+    +modelo_pronostico_id : ref modelo_pronostico
+    +producto_id : ref producto
+    +periodo_inicio : date
+    +periodo_fin : date
+    +cantidad : decimal
+    +limite_inferior? : decimal
+    +limite_superior? : decimal
+  }
+  class ia__regla_conversacion["regla_conversacion"] {
+    <<por finca · fase 1>>
+    +tipo : enum
+    +descripcion : text
+    +ejemplos? : jsonb
+    +respuesta_plantilla? : text
+    +prioridad_escalamiento? : enum
+    +activa : boolean
+  }
+  class ia__escalamiento["escalamiento"] {
+    <<por finca · fase 1>>
+    +conversacion_ref : texto
+    +canal : texto
+    +motivo : enum
+    +prioridad : enum
+    +asignado_a? : ref usuario
+    +estado : enum
+    +responder_antes_de : momento
+    +atendido_en? : momento
+  }
+  class ia__decision["decision"] {
+    <<por finca · fase 2>>
+    +titulo : texto
+    +contexto : text
+    +opciones : jsonb
+    +evidencia? : jsonb
+    +opcion_elegida? : texto
+    +decidido_por? : ref usuario
+    +decidido_en? : momento
+    +resultado_esperado? : text
+    +revisar_en? : date
+    +resultado_real? : text
+    +recomendacion_id? : ref recomendacion
+    +escenario_id? : ref escenario
+    +… 1 campos más
+  }
+  namespace estrategia {
+    class estrategia__iniciativa["estrategia.iniciativa"]
+  }
+  namespace ia_otra_parte {
+    class ia__escenario["ia.escenario"]
+    class ia__recomendacion["ia.recomendacion"]
+  }
+  namespace inventario {
+    class inventario__producto["inventario.producto"]
+  }
+  ia__modelo_pronostico "*" --> "1" inventario__producto : producto_id
+  ia__pronostico_demanda "*" --> "1" ia__modelo_pronostico : modelo_pronostico_id
+  ia__pronostico_demanda "*" --> "1" inventario__producto : producto_id
+  ia__decision "*" --> "0..1" ia__recomendacion : recomendacion_id
+  ia__decision "*" --> "0..1" ia__escenario : escenario_id
+  ia__decision "*" --> "0..1" estrategia__iniciativa : iniciativa_id
+  style ia__escenario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style estrategia__iniciativa fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__recomendacion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

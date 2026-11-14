@@ -1,0 +1,18 @@
+sequenceDiagram
+  autonumber
+  participant AM as Analista de mercados (IA)
+  participant MCP as Servidor MCP
+  participant API as Django
+  participant DB as PostgreSQL
+  actor A as Administrador
+  AM->>MCP: consultar_precios_mercado()
+  AM->>MCP: proponer_precio(producto, valor, evidencia)
+  MCP->>API: POST propuesta de precio
+  API->>DB: INSERT propuesta_precio pendiente y solicitud_aprobacion
+  DB-->>A: aparece en la bandeja de aprobaciones
+  A->>API: POST /propuestas-precio/{id}/aprobar
+  API->>DB: SELECT comercial.aplicar_propuesta_precio(id)
+  DB->>DB: exigir_persona(), cierra precio vigente y crea el nuevo
+  Note over DB: pedidos confirmados conservan su precio congelado
+  DB-->>API: aplicada
+  API-->>A: 200

@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> abierto
+  abierto --> prenomina: preparar_prenomina()
+  prenomina --> prenomina: liquidar()
+  prenomina --> cerrado: dos personas y comprobante contabilizado
+  abierto --> anulado
+  prenomina --> anulado
+  cerrado --> [*]: correcciones por nota de ajuste
+  anulado --> [*]

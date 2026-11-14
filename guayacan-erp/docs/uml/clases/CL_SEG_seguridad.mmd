@@ -1,0 +1,133 @@
+classDiagram
+  direction LR
+  class seguridad__factor_autenticacion["factor_autenticacion"] {
+    <<compartida>>
+    +usuario_id : ref usuario
+    +tipo : enum
+    +nombre : texto
+    +secreto_ref : texto
+    +activo : boolean
+    +ultimo_uso? : momento
+  }
+  class seguridad__sesion_usuario["sesion_usuario"] {
+    <<compartida>>
+    +usuario_id : ref usuario
+    +metodo : enum
+    +ip : inet
+    +agente_usuario? : texto
+    +iniciada_en : momento
+    +vence_en : momento
+    +revocada_en? : momento
+    +motivo_revocacion? : texto
+  }
+  class seguridad__intento_acceso["intento_acceso"] {
+    <<compartida>>
+    +correo : citext
+    +usuario_id? : ref usuario
+    +ip : inet
+    +exito : boolean
+    +motivo_fallo? : enum
+    +agente_usuario? : texto
+    +ocurrido_en : momento
+  }
+  class seguridad__regla_deteccion["regla_deteccion"] {
+    <<compartida>>
+    +codigo : texto
+    +descripcion : text
+    +umbral : smallint
+    +ventana_min : smallint
+    +severidad : enum
+    +respuesta : enum
+    +bloqueo_min : smallint
+    +activa : boolean
+  }
+  class seguridad__bloqueo["bloqueo"] {
+    <<compartida>>
+    +tipo : enum
+    +usuario_id? : ref usuario
+    +ip? : cidr
+    +regla_id? : ref regla_deteccion
+    +motivo : texto
+    +desde : momento
+    +hasta? : momento
+    +levantado_por? : ref usuario
+  }
+  class seguridad__senuelo["senuelo"] {
+    <<compartida>>
+    +tipo : enum
+    +valor : texto
+    +descripcion? : texto
+    +activo : boolean
+  }
+  class seguridad__alerta_seguridad["alerta_seguridad"] {
+    <<compartida>>
+    +tipo : enum
+    +severidad : enum
+    +fuente : enum
+    +regla_id? : ref regla_deteccion
+    +usuario_id? : ref usuario
+    +ip? : inet
+    +detalle? : jsonb
+    +ocurrido_en : momento
+    +estado : enum
+    +atendida_por? : ref usuario
+    +incidente_id? : ref incidente
+  }
+  class seguridad__incidente["incidente"] {
+    <<compartida>>
+    +titulo : texto
+    +severidad : enum
+    +estado : enum
+    +responsable_id : ref usuario
+    +datos_personales_afectados : boolean
+    +reportado_sic_en? : date
+    +abierto_en : momento
+    +cerrado_en? : momento
+    +lecciones? : text
+  }
+  class seguridad__ejecucion_prueba["ejecucion_prueba"] {
+    <<compartida>>
+    +tipo : enum
+    +suite : texto
+    +version_sistema : texto
+    +entorno : enum
+    +total : integer
+    +aprobadas : integer
+    +fallidas : integer
+    +hallazgos_criticos : integer
+    +herramienta? : texto
+    +informe_url? : texto
+    +ejecutada_en : momento
+    +ejecutada_por? : ref usuario
+  }
+  class seguridad__copia_seguridad["copia_seguridad"] {
+    <<compartida>>
+    +alcance : enum
+    +destino : enum
+    +inicio : momento
+    +fin? : momento
+    +tamano_mb? : decimal
+    +hash_sha256? : huella
+    +cifrada : boolean
+    +exitosa : boolean
+    +restauracion_probada_en? : momento
+  }
+  namespace nucleo {
+    class nucleo__predio["nucleo.predio"]
+    class nucleo__usuario["nucleo.usuario"]
+  }
+  seguridad__factor_autenticacion "*" --> "1" nucleo__usuario : usuario_id
+  seguridad__sesion_usuario "*" --> "1" nucleo__usuario : usuario_id
+  seguridad__intento_acceso "*" --> "0..1" nucleo__usuario : usuario_id
+  seguridad__bloqueo "*" --> "0..1" nucleo__usuario : usuario_id
+  seguridad__bloqueo "*" --> "0..1" seguridad__regla_deteccion : regla_id
+  seguridad__bloqueo "*" --> "0..1" nucleo__usuario : levantado_por
+  seguridad__alerta_seguridad "*" --> "0..1" seguridad__regla_deteccion : regla_id
+  seguridad__alerta_seguridad "*" --> "0..1" nucleo__usuario : usuario_id
+  seguridad__alerta_seguridad "*" --> "0..1" nucleo__predio : predio_id
+  seguridad__alerta_seguridad "*" --> "0..1" nucleo__usuario : atendida_por
+  seguridad__alerta_seguridad "*" --> "0..1" seguridad__incidente : incidente_id
+  seguridad__incidente "*" --> "1" nucleo__usuario : responsable_id
+  seguridad__ejecucion_prueba "*" --> "0..1" nucleo__usuario : ejecutada_por
+  style nucleo__predio fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__usuario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

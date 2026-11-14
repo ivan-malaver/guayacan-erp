@@ -1,0 +1,37 @@
+{
+  // Ajustes de VS Code para este proyecto (VS Code acepta comentarios en este archivo).
+  // Intérprete de Python: el entorno virtual del backend (cámbielo con Ctrl+Shift+P > "Python: Select Interpreter")
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  // Las pruebas de Python se corren con pytest desde la carpeta backend
+  "python.testing.pytestEnabled": true,
+  "python.testing.cwd": "${workspaceFolder}/backend",
+  "python.testing.pytestArgs": ["."],
+  // Formato y revisión de Python con Ruff al guardar
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+  },
+  // Finales de línea LF (coincide con .gitattributes) y archivos en UTF-8 (tildes y eñes)
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  // Ocultar del explorador carpetas generadas que no se editan
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/.angular": true
+  },
+  // Que la búsqueda (Ctrl+Shift+F) no recorra dependencias ni entornos virtuales
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true
+  },
+  // TypeScript: usar la versión instalada en frontend/node_modules
+  "typescript.tsdk": "frontend/node_modules/typescript/lib",
+  // Diccionario de español para el corrector ortográfico (extensión Code Spell Checker)
+  "cSpell.language": "es,en"
+}

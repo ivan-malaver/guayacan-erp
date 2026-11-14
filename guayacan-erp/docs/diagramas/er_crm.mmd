@@ -1,0 +1,134 @@
+erDiagram
+    segmento {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        jsonb criterios
+        text propuesta_valor
+    }
+    campana {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        lista canal
+        bigint segmento_id FK
+        text objetivo
+        date desde
+        date hasta
+        numeric presupuesto
+        numeric costo_real
+        bigint publicacion_id FK
+    }
+    formulario_captura {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista canal
+        jsonb campos
+        text texto_autorizacion
+        text finalidad
+        bigint campana_id FK
+        boolean activo
+    }
+    prospecto {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        varchar nombre
+        varchar nit
+        lista sector
+        varchar municipio
+        varchar telefono
+        citext correo
+        lista canal_origen
+        bigint formulario_id FK
+        bigint campana_id FK
+        bigint segmento_id FK
+        text[] intereses
+        numeric volumen_estimado_mes
+        lista etapa
+        smallint puntaje
+        bigint responsable_id FK
+        bigint consentimiento_id FK
+        bigint tercero_id FK
+        varchar motivo_perdida
+        date proximo_contacto
+    }
+    contacto_empresa {
+        bigint id PK
+        bigint predio_id FK
+        bigint prospecto_id FK
+        varchar nombre
+        varchar cargo
+        varchar telefono
+        citext correo
+        bigint consentimiento_id FK
+    }
+    interaccion {
+        bigint id PK
+        bigint predio_id FK
+        bigint prospecto_id FK
+        bigint tercero_id FK
+        lista tipo
+        timestamptz fecha
+        text resumen
+        varchar proximo_paso
+        bigint usuario_id FK
+        bigint agente_id FK
+    }
+    oportunidad {
+        bigint id PK
+        bigint predio_id FK
+        bigint prospecto_id FK
+        bigint tercero_id FK
+        varchar titulo
+        jsonb productos
+        numeric valor_estimado
+        smallint probabilidad_pct
+        date cierre_estimado
+        lista estado
+        bigint pedido_id FK
+        bigint linea_negocio_id FK
+    }
+    comercial_pedido {
+        bigint id PK
+    }
+    estrategia_linea_negocio {
+        bigint id PK
+    }
+    ia_agente {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    redes_publicacion {
+        bigint id PK
+    }
+    terceros_consentimiento_datos {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    campana ||--o{ formulario_captura : "campana_id"
+    campana ||--o{ prospecto : "campana_id"
+    comercial_pedido ||--o{ oportunidad : "pedido_id"
+    estrategia_linea_negocio ||--o{ oportunidad : "linea_negocio_id"
+    formulario_captura ||--o{ prospecto : "formulario_id"
+    ia_agente ||--o{ interaccion : "agente_id"
+    nucleo_usuario ||--o{ interaccion : "usuario_id"
+    nucleo_usuario ||--o{ prospecto : "responsable_id"
+    prospecto ||--o{ contacto_empresa : "prospecto_id"
+    prospecto ||--o{ interaccion : "prospecto_id"
+    prospecto ||--o{ oportunidad : "prospecto_id"
+    redes_publicacion ||--o{ campana : "publicacion_id"
+    segmento ||--o{ campana : "segmento_id"
+    segmento ||--o{ prospecto : "segmento_id"
+    terceros_consentimiento_datos ||--o{ contacto_empresa : "consentimiento_id"
+    terceros_consentimiento_datos ||--o{ prospecto : "consentimiento_id"
+    terceros_tercero ||--o{ interaccion : "tercero_id"
+    terceros_tercero ||--o{ oportunidad : "tercero_id"
+    terceros_tercero ||--o{ prospecto : "tercero_id"

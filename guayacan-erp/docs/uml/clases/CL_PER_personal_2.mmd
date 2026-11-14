@@ -1,0 +1,135 @@
+classDiagram
+  direction LR
+  class personal__patron_turno["patron_turno"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +tipo : enum
+    +ciclo_dias : smallint
+  }
+  class personal__asignacion_patron["asignacion_patron"] {
+    <<por finca · fase 2>>
+    +cronograma_id : ref cronograma
+    +empleado_id : ref empleado
+    +patron_id : ref patron_turno
+    +desfase_dias : smallint
+  }
+  class personal__patron_turno_detalle["patron_turno_detalle"] {
+    <<por finca · fase 2>>
+    +patron_id : ref patron_turno
+    +dia_ciclo : smallint
+    +hora_inicio? : time
+    +hora_fin? : time
+    +tipo : enum
+  }
+  class personal__cuadrilla_miembro["cuadrilla_miembro"] {
+    <<por finca · fase 2>>
+    +cuadrilla_id : ref cuadrilla
+    +empleado_id : ref empleado
+    +desde : date
+    +hasta? : date
+  }
+  class personal__ausencia["ausencia"] {
+    <<por finca · fase 2>>
+    +empleado_id : ref empleado
+    +tipo : enum
+    +desde : date
+    +hasta : date
+    +remunerada : boolean
+    +soporte_documento_id? : ref documento
+    +aprobada_por? : ref usuario
+  }
+  class personal__paso_tarea["paso_tarea"] {
+    <<por finca · fase 2>>
+    +tarea_id : ref tarea
+    +orden : smallint
+    +descripcion : texto
+    +hecho : boolean
+    +hecho_en? : momento
+  }
+  class personal__matriz_responsabilidad["matriz_responsabilidad"] {
+    <<por finca · fase 2>>
+    +proceso : texto
+    +rol_id : ref rol
+    +responsabilidad : enum
+  }
+  class personal__asignacion_equipo["asignacion_equipo"] {
+    <<por finca · fase 2>>
+    +activo_id : ref activo
+    +empleado_id : ref empleado
+    +entregado_en : momento
+    +estado_entrega : enum
+    +devuelto_en? : momento
+    +estado_devolucion? : enum
+  }
+  class personal__credencial_trabajo["credencial_trabajo"] {
+    <<por finca · fase 2>>
+    +empleado_id : ref empleado
+    +tipo : enum
+    +codigo_hash : huella
+    +emitida_en : date
+    +revocada_en? : momento
+  }
+  class personal__jornada["jornada"] {
+    <<por finca · fase 2>>
+    +empleado_id : ref empleado
+    +fecha : date
+    +entrada : momento
+    +salida? : momento
+    +horas? : decimal
+    +labor? : texto
+    +zona_id? : ref zona
+    +metodo_registro : enum
+    +aprobada_por? : ref usuario
+    +aprobada_en? : momento
+  }
+  class personal__disponibilidad["disponibilidad"] {
+    <<por finca · fase 2>>
+    +empleado_id : ref empleado
+    +dia_semana : smallint
+    +hora_inicio : time
+    +hora_fin : time
+    +preferencia : enum
+  }
+  namespace activos {
+    class activos__activo["activos.activo"]
+  }
+  namespace documental {
+    class documental__documento["documental.documento"]
+  }
+  namespace nucleo {
+    class nucleo__rol["nucleo.rol"]
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace personal_otra_parte {
+    class personal__cronograma["personal.cronograma"]
+    class personal__cuadrilla["personal.cuadrilla"]
+    class personal__tarea["personal.tarea"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+  }
+  personal__asignacion_patron "*" --> "1" personal__cronograma : cronograma_id
+  personal__asignacion_patron "*" --> "1" terceros__empleado : empleado_id
+  personal__asignacion_patron "*" --> "1" personal__patron_turno : patron_id
+  personal__patron_turno_detalle "*" --> "1" personal__patron_turno : patron_id
+  personal__cuadrilla_miembro "*" --> "1" personal__cuadrilla : cuadrilla_id
+  personal__cuadrilla_miembro "*" --> "1" terceros__empleado : empleado_id
+  personal__ausencia "*" --> "1" terceros__empleado : empleado_id
+  personal__ausencia "*" --> "0..1" documental__documento : soporte_documento_id
+  personal__paso_tarea "*" --> "1" personal__tarea : tarea_id
+  personal__matriz_responsabilidad "*" --> "1" nucleo__rol : rol_id
+  personal__asignacion_equipo "*" --> "1" activos__activo : activo_id
+  personal__asignacion_equipo "*" --> "1" terceros__empleado : empleado_id
+  personal__credencial_trabajo "*" --> "1" terceros__empleado : empleado_id
+  personal__jornada "*" --> "1" terceros__empleado : empleado_id
+  personal__jornada "*" --> "0..1" nucleo__zona : zona_id
+  personal__disponibilidad "*" --> "1" terceros__empleado : empleado_id
+  style documental__documento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__cuadrilla fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style activos__activo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__rol fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__cronograma fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

@@ -1,0 +1,109 @@
+classDiagram
+direction TB
+class Plan {
+  codigo
+  tipo: frutal / maderable / ovino / caprino / ave
+  precio_compra
+  precio_readopcion
+  cuota_mensual
+  costo_bien
+  costo_cuidado_mensual
+  meses_madurez
+  garantia_meses
+  requiere_permiso
+}
+class Sitio {
+  codigo
+  tipo: hoyo_siembra / corral / galpon
+  lat
+  lon
+  estado
+}
+class Bien {
+  codigo
+  nombre_dado
+  fecha_inicio
+  estado
+  reemplaza_id
+}
+class Contrato {
+  numero
+  tipo: compra / readopcion / cesion
+  fecha
+  precio
+  cuota_mensual
+  modalidad_siembra
+  estado
+  decision_madurez
+}
+class Cuota {
+  periodo
+  valor
+  vence_en
+  estado
+}
+class Seguimiento {
+  tipo
+  fecha
+  descripcion
+  evidencia_url
+  enviado_al_adoptante
+}
+class Liquidacion {
+  tipo
+  ingresos
+  gastos
+  utilidad_neta
+  comision_pct
+  comision
+  abono_adoptante
+  estado
+}
+class MovimientoSaldo {
+  tipo
+  valor
+  referencia
+  «solo inserción»
+}
+class Tercero {
+  «terceros» es_adoptante
+}
+class Animal {
+  «produccion»
+}
+class Cultivo {
+  «produccion»
+}
+class Zona {
+  «produccion»
+}
+class Pago {
+  «comercial»
+}
+class Tarea {
+  «personal»
+}
+class Documento {
+  «documental»
+}
+class Consentimiento {
+  «terceros» finalidad seguimiento_adopcion
+}
+Plan "1" --> "*" Bien
+Plan --> Cultivo : frutal y maderable
+Zona "1" --> "*" Sitio
+Sitio "1" --> "0..1" Bien : vivo
+Bien --> Animal : ovino, caprino, ave
+Bien "1" --> "*" Contrato
+Bien "0..1" --> "0..1" Bien : reemplaza
+Tercero "1" --> "*" Contrato : adoptante
+Contrato --> Consentimiento
+Contrato "1" --> "*" Cuota
+Cuota --> Pago
+Bien "1" --> "*" Seguimiento
+Seguimiento --> Tarea
+Contrato "1" --> "*" Liquidacion
+Liquidacion --> Documento : permiso o acta
+Tercero "1" --> "*" MovimientoSaldo
+MovimientoSaldo --> Liquidacion
+MovimientoSaldo --> Cuota

@@ -1,0 +1,230 @@
+erDiagram
+    agente {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        text rol
+        lista nivel_autonomia
+        varchar proveedor_modelo
+        varchar modelo
+        varchar modelo_respaldo
+        varchar version_instrucciones
+        text instrucciones
+        numeric limite_costo_diario_usd
+        boolean activo
+    }
+    herramienta {
+        bigint id PK
+        varchar codigo
+        text descripcion
+        lista tipo
+        boolean requiere_aprobacion
+        jsonb esquema_entrada
+    }
+    agente_herramienta {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        bigint herramienta_id FK
+    }
+    solicitud_aprobacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        bigint herramienta_id FK
+        varchar entidad
+        bigint entidad_id
+        text resumen
+        jsonb carga
+        lista estado
+        timestamptz vence_en
+        bigint resuelto_por FK
+        timestamptz resuelto_en
+        text motivo
+    }
+    documento_conocimiento {
+        bigint id PK
+        bigint predio_id FK
+        varchar titulo
+        lista tipo
+        text contenido
+        varchar fuente
+        smallint version
+        boolean vigente
+        bigint aprobado_por FK
+    }
+    fragmento_conocimiento {
+        bigint id PK
+        bigint predio_id FK
+        bigint documento_id FK
+        integer orden
+        text texto
+        vector vector
+        jsonb metadatos
+    }
+    recomendacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        lista tipo
+        varchar titulo
+        text descripcion
+        jsonb evidencia
+        varchar indicador
+        lista prioridad
+        lista estado
+        bigint responsable_id FK
+        date fecha_limite
+        text resultado
+    }
+    evaluacion_respuesta {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        varchar mensaje_ref
+        lista origen
+        smallint calificacion
+        lista motivo
+        text comentario
+    }
+    consumo_ia {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        date fecha
+        varchar proveedor_modelo
+        varchar modelo
+        integer solicitudes
+        bigint tokens_entrada
+        bigint tokens_salida
+        numeric costo_usd
+    }
+    regla_conversacion {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        text descripcion
+        jsonb ejemplos
+        text respuesta_plantilla
+        lista prioridad_escalamiento
+        boolean activa
+    }
+    escalamiento {
+        bigint id PK
+        bigint predio_id FK
+        varchar conversacion_ref
+        varchar canal
+        lista motivo
+        lista prioridad
+        bigint asignado_a FK
+        lista estado
+        timestamptz responder_antes_de
+        timestamptz atendido_en
+    }
+    modelo_pronostico {
+        bigint id PK
+        bigint predio_id FK
+        bigint producto_id FK
+        lista algoritmo
+        varchar version
+        timestamptz entrenado_en
+        smallint meses_historia
+        numeric error_mape
+        boolean activo
+    }
+    pronostico_demanda {
+        bigint id PK
+        bigint predio_id FK
+        bigint modelo_pronostico_id FK
+        bigint producto_id FK
+        date periodo_inicio
+        date periodo_fin
+        numeric cantidad
+        numeric limite_inferior
+        numeric limite_superior
+    }
+    diagnostico_imagen {
+        bigint id PK
+        bigint predio_id FK
+        bigint agente_id FK
+        varchar foto_url
+        lista objetivo
+        bigint siembra_id FK
+        bigint lote_animal_id FK
+        bigint tomada_por FK
+        varchar diagnostico_propuesto
+        numeric confianza
+        jsonb resultado
+        lista estado
+        varchar diagnostico_final
+        bigint revisado_por FK
+        timestamptz revisado_en
+    }
+    escenario {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        jsonb supuestos
+        jsonb resultado
+        bigint creado_por FK
+        bigint agente_id FK
+    }
+    decision {
+        bigint id PK
+        bigint predio_id FK
+        varchar titulo
+        text contexto
+        jsonb opciones
+        jsonb evidencia
+        varchar opcion_elegida
+        bigint decidido_por FK
+        timestamptz decidido_en
+        text resultado_esperado
+        date revisar_en
+        text resultado_real
+        bigint recomendacion_id FK
+        bigint escenario_id FK
+        bigint iniciativa_id FK
+    }
+    estrategia_iniciativa {
+        bigint id PK
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    produccion_lote_animal {
+        bigint id PK
+    }
+    produccion_siembra {
+        bigint id PK
+    }
+    agente ||--o{ agente_herramienta : "agente_id"
+    agente ||--o{ consumo_ia : "agente_id"
+    agente ||--o{ diagnostico_imagen : "agente_id"
+    agente ||--o{ escenario : "agente_id"
+    agente ||--o{ evaluacion_respuesta : "agente_id"
+    agente ||--o{ recomendacion : "agente_id"
+    agente ||--o{ solicitud_aprobacion : "agente_id"
+    documento_conocimiento ||--o{ fragmento_conocimiento : "documento_id"
+    escenario ||--o{ decision : "escenario_id"
+    estrategia_iniciativa ||--o{ decision : "iniciativa_id"
+    herramienta ||--o{ agente_herramienta : "herramienta_id"
+    herramienta ||--o{ solicitud_aprobacion : "herramienta_id"
+    inventario_producto ||--o{ modelo_pronostico : "producto_id"
+    inventario_producto ||--o{ pronostico_demanda : "producto_id"
+    modelo_pronostico ||--o{ pronostico_demanda : "modelo_pronostico_id"
+    nucleo_usuario ||--o{ decision : "decidido_por"
+    nucleo_usuario ||--o{ diagnostico_imagen : "revisado_por"
+    nucleo_usuario ||--o{ diagnostico_imagen : "tomada_por"
+    nucleo_usuario ||--o{ documento_conocimiento : "aprobado_por"
+    nucleo_usuario ||--o{ escalamiento : "asignado_a"
+    nucleo_usuario ||--o{ escenario : "creado_por"
+    nucleo_usuario ||--o{ recomendacion : "responsable_id"
+    nucleo_usuario ||--o{ solicitud_aprobacion : "resuelto_por"
+    produccion_lote_animal ||--o{ diagnostico_imagen : "lote_animal_id"
+    produccion_siembra ||--o{ diagnostico_imagen : "siembra_id"
+    recomendacion ||--o{ decision : "recomendacion_id"

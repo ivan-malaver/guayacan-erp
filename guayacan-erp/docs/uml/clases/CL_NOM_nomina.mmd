@@ -1,0 +1,142 @@
+classDiagram
+  direction TB
+  class nomina__concepto_nomina["concepto_nomina"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +tipo : enum
+    +base : enum
+    +parametro_clave? : texto
+    +constitutivo_salario : boolean
+    +cuenta_contable_id? : ref cuenta_contable
+    +codigo_dian? : texto
+    +activo : boolean
+  }
+  class nomina__periodo_nomina["periodo_nomina"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +tipo : enum
+    +desde : date
+    +hasta : date
+    +estado : enum
+    +preparado_por? : ref usuario
+    +cerrado_por? : ref usuario
+    +aprobado_por? : ref usuario
+    +cerrado_en? : momento
+    +comprobante_id? : ref comprobante
+    +ajusta_periodo_id? : ref periodo_nomina
+  }
+  class nomina__novedad["novedad"] {
+    <<por finca · fase 2>>
+    +periodo_id : ref periodo_nomina
+    +empleado_id : ref empleado
+    +concepto_id : ref concepto_nomina
+    +cantidad : decimal
+    +valor_unitario : dinero
+    +valor : dinero
+    +origen : enum
+    +tarea_id? : ref tarea
+    +jornada_id? : ref jornada
+    +ausencia_id? : ref ausencia
+    +observacion? : texto
+  }
+  class nomina__liquidacion["liquidacion"] {
+    <<por finca · fase 2>>
+    +periodo_id : ref periodo_nomina
+    +empleado_id : ref empleado
+    +total_devengado : dinero
+    +total_deducciones : dinero
+    +neto : dinero
+    +estado : enum
+  }
+  class nomina__liquidacion_detalle["liquidacion_detalle"] {
+    <<por finca · fase 2>>
+    +liquidacion_id : ref liquidacion
+    +concepto_id : ref concepto_nomina
+    +cantidad : decimal
+    +valor : dinero
+  }
+  class nomina__provision_prestacion["provision_prestacion"] {
+    <<por finca · fase 2>>
+    +periodo_id : ref periodo_nomina
+    +empleado_id : ref empleado
+    +tipo : enum
+    +base : dinero
+    +valor : dinero
+  }
+  class nomina__documento_nomina_electronica["documento_nomina_electronica"] {
+    <<por finca · fase 2>>
+    +liquidacion_id : ref liquidacion
+    +tipo : enum
+    +proveedor : enum
+    +cune? : texto
+    +estado : enum
+    +enviado_en? : momento
+    +respuesta? : jsonb
+    +xml_url? : texto
+  }
+  class nomina__planilla_pila["planilla_pila"] {
+    <<por finca · fase 2>>
+    +periodo_id : ref periodo_nomina
+    +tipo_planilla : texto
+    +archivo_url : texto
+    +operador? : texto
+    +numero_planilla? : texto
+    +pagada_por? : ref usuario
+    +pagada_en? : momento
+  }
+  class nomina__pago_nomina["pago_nomina"] {
+    <<por finca · fase 2>>
+    +liquidacion_id : ref liquidacion
+    +medio : enum
+    +valor : dinero
+    +preparado_por : ref usuario
+    +aprobado_por? : ref usuario
+    +segunda_aprobacion_por? : ref usuario
+    +pagado_en? : momento
+    +referencia? : texto
+  }
+  class nomina__exportacion_nomina["exportacion_nomina"] {
+    <<por finca · fase 2>>
+    +periodo_id : ref periodo_nomina
+    +formato : enum
+    +archivo_url : texto
+    +generado_por : ref usuario
+  }
+  namespace finanzas {
+    class finanzas__comprobante["finanzas.comprobante"]
+    class finanzas__cuenta_contable["finanzas.cuenta_contable"]
+  }
+  namespace personal {
+    class personal__ausencia["personal.ausencia"]
+    class personal__jornada["personal.jornada"]
+    class personal__tarea["personal.tarea"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+  }
+  nomina__concepto_nomina "*" --> "0..1" finanzas__cuenta_contable : cuenta_contable_id
+  nomina__periodo_nomina "*" --> "0..1" finanzas__comprobante : comprobante_id
+  nomina__periodo_nomina "*" --> "0..1" nomina__periodo_nomina : ajusta_periodo_id
+  nomina__novedad "*" --> "1" nomina__periodo_nomina : periodo_id
+  nomina__novedad "*" --> "1" terceros__empleado : empleado_id
+  nomina__novedad "*" --> "1" nomina__concepto_nomina : concepto_id
+  nomina__novedad "*" --> "0..1" personal__tarea : tarea_id
+  nomina__novedad "*" --> "0..1" personal__jornada : jornada_id
+  nomina__novedad "*" --> "0..1" personal__ausencia : ausencia_id
+  nomina__liquidacion "*" --> "1" nomina__periodo_nomina : periodo_id
+  nomina__liquidacion "*" --> "1" terceros__empleado : empleado_id
+  nomina__liquidacion_detalle "*" --> "1" nomina__liquidacion : liquidacion_id
+  nomina__liquidacion_detalle "*" --> "1" nomina__concepto_nomina : concepto_id
+  nomina__provision_prestacion "*" --> "1" nomina__periodo_nomina : periodo_id
+  nomina__provision_prestacion "*" --> "1" terceros__empleado : empleado_id
+  nomina__documento_nomina_electronica "*" --> "1" nomina__liquidacion : liquidacion_id
+  nomina__planilla_pila "*" --> "1" nomina__periodo_nomina : periodo_id
+  nomina__pago_nomina "*" --> "1" nomina__liquidacion : liquidacion_id
+  nomina__exportacion_nomina "*" --> "1" nomina__periodo_nomina : periodo_id
+  style finanzas__cuenta_contable fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__jornada fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__comprobante fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__ausencia fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

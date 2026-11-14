@@ -1,0 +1,27 @@
+classDiagram
+  direction LR
+  class inventario__unidad_medida["unidad_medida"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +unidad_base? : texto
+    +factor_base : decimal
+  }
+  class inventario__categoria_producto["categoria_producto"] {
+    <<compartida>>
+    +nombre : texto
+    +padre_id? : ref categoria_producto
+  }
+  class inventario__conteo_fisico["conteo_fisico"] {
+    <<por finca · fase 1>>
+    +bodega_id : ref bodega
+    +fecha : date
+    +estado : enum
+    +responsable_id : ref usuario
+  }
+  namespace inventario_otra_parte {
+    class inventario__bodega["inventario.bodega"]
+  }
+  inventario__categoria_producto "*" --> "0..1" inventario__categoria_producto : padre_id
+  inventario__conteo_fisico "*" --> "1" inventario__bodega : bodega_id
+  style inventario__bodega fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

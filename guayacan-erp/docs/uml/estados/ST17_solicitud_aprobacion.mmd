@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> pendiente: un agente pide permiso
+  pendiente --> aprobada: una persona
+  pendiente --> rechazada: una persona
+  pendiente --> vencida
+  aprobada --> ejecutada
+  aprobada --> fallida
+  ejecutada --> [*]
+  fallida --> [*]
+  rechazada --> [*]
+  vencida --> [*]

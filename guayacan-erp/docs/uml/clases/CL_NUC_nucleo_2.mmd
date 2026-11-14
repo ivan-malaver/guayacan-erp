@@ -1,0 +1,84 @@
+classDiagram
+  direction LR
+  class nucleo__parametro["parametro"] {
+    <<compartida>>
+    +clave : texto
+    +valor : text
+    +tipo_dato : enum
+    +vigente_desde : date
+    +vigente_hasta? : date
+    +descripcion? : text
+  }
+  class nucleo__auditoria["auditoria"] {
+    <<compartida>>
+    +esquema_tabla : texto
+    +registro_id : bigint
+    +accion : enum
+    +datos_antes? : jsonb
+    +datos_despues? : jsonb
+    +usuario_id? : ref usuario
+    +agente_id? : ref agente
+    +direccion_ip? : inet
+    +ocurrido_en : momento
+  }
+  class nucleo__evento_salida["evento_salida"] {
+    <<por finca · fase 1>>
+    +tipo_evento : texto
+    +entidad : texto
+    +entidad_id : bigint
+    +carga : jsonb
+    +estado : enum
+    +intentos : smallint
+    +publicado_en? : momento
+  }
+  class nucleo__funcionalidad["funcionalidad"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +descripcion : text
+    +fase : smallint
+    +requiere_equipo? : texto
+    +activa : boolean
+    +activada_por? : ref usuario
+    +activada_en? : momento
+  }
+  class nucleo__nota_voz["nota_voz"] {
+    <<por finca · fase 2>>
+    +usuario_id : ref usuario
+    +audio_url : texto
+    +duracion_seg? : smallint
+    +transcripcion? : text
+    +proveedor_voz_texto? : texto
+    +interpretacion? : jsonb
+    +estado : enum
+    +registro_tabla? : texto
+    +registro_id? : bigint
+  }
+  class nucleo__llave_api["llave_api"] {
+    <<por finca · fase 3>>
+    +tercero_id : ref tercero
+    +nombre : texto
+    +prefijo : texto
+    +hash_llave : huella
+    +alcances : text lista
+    +limite_por_minuto : smallint
+    +activa : boolean
+    +vence_en : date
+    +ultimo_uso? : momento
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+  }
+  namespace nucleo_otra_parte {
+    class nucleo__usuario["nucleo.usuario"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  nucleo__auditoria "*" --> "0..1" nucleo__usuario : usuario_id
+  nucleo__auditoria "*" --> "0..1" ia__agente : agente_id
+  nucleo__funcionalidad "*" --> "0..1" nucleo__usuario : activada_por
+  nucleo__nota_voz "*" --> "1" nucleo__usuario : usuario_id
+  nucleo__llave_api "*" --> "1" terceros__tercero : tercero_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__usuario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

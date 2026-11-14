@@ -1,0 +1,149 @@
+classDiagram
+  direction TB
+  class personal__area_responsabilidad["area_responsabilidad"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +descripcion? : text
+    +zonas? : bigint lista
+    +centro_costo_id? : ref centro_costo
+    +opera_24_7 : boolean
+    +activa : boolean
+  }
+  class personal__tarea["tarea"] {
+    <<por finca · fase 2>>
+    +plantilla_tarea_id? : ref plantilla_tarea
+    +titulo : texto
+    +proceso? : texto
+    +fecha : date
+    +hora_limite? : momento
+    +prioridad : enum
+    +zona_id? : ref zona
+    +area_id? : ref area_responsabilidad
+    +lote_animal_id? : ref lote_animal
+    +siembra_id? : ref siembra
+    +activo_id? : ref activo
+    +empleado_id? : ref empleado
+    +… 11 campos más
+  }
+  class personal__cronograma["cronograma"] {
+    <<por finca · fase 2>>
+    +nombre : texto
+    +area_id : ref area_responsabilidad
+    +desde : date
+    +hasta : date
+    +estado : enum
+    +permitir_huecos : boolean
+    +publicado_por? : ref usuario
+    +publicado_en? : momento
+  }
+  class personal__plantilla_tarea["plantilla_tarea"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +proceso : texto
+    +recurrencia : enum
+    +dias_semana? : smallint lista
+    +hora_limite? : time
+    +zona_id? : ref zona
+    +duracion_estimada_min? : smallint
+    +competencia_id? : ref competencia
+    +forma_pago : enum
+    +valor_unitario? : dinero
+    +unidad_destajo? : texto
+    +… 5 campos más
+  }
+  class personal__turno["turno"] {
+    <<por finca · fase 2>>
+    +empleado_id : ref empleado
+    +fecha : date
+    +hora_inicio : time
+    +hora_fin : time
+    +tipo : enum
+    +area_id? : ref area_responsabilidad
+    +cronograma_id? : ref cronograma
+    +horas? : decimal
+  }
+  class personal__miembro_area["miembro_area"] {
+    <<por finca · fase 2>>
+    +area_id : ref area_responsabilidad
+    +empleado_id : ref empleado
+    +es_responsable : boolean
+    +desde : date
+    +hasta? : date
+  }
+  class personal__requerimiento_cobertura["requerimiento_cobertura"] {
+    <<por finca · fase 2>>
+    +area_id : ref area_responsabilidad
+    +dia_semana? : smallint
+    +hora_inicio : time
+    +hora_fin : time
+    +personas_min : smallint
+  }
+  class personal__cuadrilla["cuadrilla"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +lider_id? : ref empleado
+    +activa : boolean
+  }
+  class personal__evidencia_tarea["evidencia_tarea"] {
+    <<por finca · fase 2>>
+    +tarea_id : ref tarea
+    +tipo : enum
+    +archivo_url? : texto
+    +registro_tabla? : texto
+    +registro_id? : bigint
+  }
+  namespace activos {
+    class activos__activo["activos.activo"]
+  }
+  namespace finanzas {
+    class finanzas__centro_costo["finanzas.centro_costo"]
+  }
+  namespace formacion {
+    class formacion__competencia["formacion.competencia"]
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace produccion {
+    class produccion__lote_animal["produccion.lote_animal"]
+    class produccion__siembra["produccion.siembra"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+  }
+  personal__area_responsabilidad "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  personal__tarea "*" --> "0..1" personal__plantilla_tarea : plantilla_tarea_id
+  personal__tarea "*" --> "0..1" nucleo__zona : zona_id
+  personal__tarea "*" --> "0..1" personal__area_responsabilidad : area_id
+  personal__tarea "*" --> "0..1" produccion__lote_animal : lote_animal_id
+  personal__tarea "*" --> "0..1" produccion__siembra : siembra_id
+  personal__tarea "*" --> "0..1" activos__activo : activo_id
+  personal__tarea "*" --> "0..1" terceros__empleado : empleado_id
+  personal__tarea "*" --> "0..1" personal__cuadrilla : cuadrilla_id
+  personal__tarea "*" --> "0..1" ia__agente : agente_id
+  personal__cronograma "*" --> "1" personal__area_responsabilidad : area_id
+  personal__plantilla_tarea "*" --> "0..1" nucleo__zona : zona_id
+  personal__plantilla_tarea "*" --> "0..1" formacion__competencia : competencia_id
+  personal__plantilla_tarea "*" --> "0..1" personal__area_responsabilidad : area_id
+  personal__turno "*" --> "1" terceros__empleado : empleado_id
+  personal__turno "*" --> "0..1" personal__area_responsabilidad : area_id
+  personal__turno "*" --> "0..1" personal__cronograma : cronograma_id
+  personal__miembro_area "*" --> "1" personal__area_responsabilidad : area_id
+  personal__miembro_area "*" --> "1" terceros__empleado : empleado_id
+  personal__requerimiento_cobertura "*" --> "1" personal__area_responsabilidad : area_id
+  personal__cuadrilla "*" --> "0..1" terceros__empleado : lider_id
+  personal__evidencia_tarea "*" --> "1" personal__tarea : tarea_id
+  style produccion__siembra fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__centro_costo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style produccion__lote_animal fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style activos__activo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style formacion__competencia fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

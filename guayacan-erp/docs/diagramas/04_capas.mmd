@@ -1,0 +1,7 @@
+flowchart TB
+  A[API REST · vistas DRF y serializers<br/>solo validan formato y llaman casos de uso]
+  B[Servicios · casos de uso<br/>ej. confirmar_pedido, aplicar_propuesta_precio]
+  C[Dominio · reglas de negocio<br/>ej. un precio aprobado no toca lo vendido]
+  D[Adaptadores · ORM, MongoDB, DIAN, WhatsApp, LLM]
+  A --> B --> C
+  B --> D

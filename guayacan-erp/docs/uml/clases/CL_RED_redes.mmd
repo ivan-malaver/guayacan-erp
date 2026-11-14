@@ -1,0 +1,108 @@
+classDiagram
+  direction TB
+  class redes__cuenta_red["cuenta_red"] {
+    <<por finca · fase 1>>
+    +plataforma : fk_codigo:redes.politica_canal
+    +nombre_cuenta : texto
+    +identificador_externo : texto
+    +secreto_ref : texto
+    +activa : boolean
+  }
+  class redes__publicacion["publicacion"] {
+    <<por finca · fase 2>>
+    +cuenta_red_id : ref cuenta_red
+    +texto : text
+    +medios? : jsonb
+    +estado : enum
+    +programada_para? : momento
+    +publicada_en? : momento
+    +id_externo? : texto
+    +agente_id? : ref agente
+    +aprobado_por? : ref usuario
+    +recomendacion_id? : ref recomendacion
+  }
+  class redes__politica_canal["politica_canal"] {
+    <<compartida>>
+    +plataforma : texto
+    +ventana_horas? : smallint
+    +ventana_agente_humano_horas? : smallint
+    +ventana_anuncio_horas? : smallint
+    +max_mensajes_por_ventana? : smallint
+    +empresa_puede_iniciar : boolean
+    +requiere_plantilla_fuera_ventana : boolean
+    +cobra_por_mensaje : boolean
+    +mensajes_servicio_gratis_mes? : integer
+    +solo_bot_del_negocio : boolean
+    +disponible : boolean
+    +fuente_url? : texto
+    +… 1 campos más
+  }
+  class redes__plantilla_mensaje["plantilla_mensaje"] {
+    <<por finca · fase 1>>
+    +cuenta_red_id : ref cuenta_red
+    +nombre : texto
+    +categoria : enum
+    +idioma : texto
+    +cuerpo : text
+    +variables? : jsonb
+    +estado_meta : enum
+    +id_externo? : texto
+    +finalidad_requerida : enum
+  }
+  class redes__mensaje_saliente["mensaje_saliente"] {
+    <<por finca · fase 1>>
+    +cuenta_red_id : ref cuenta_red
+    +tercero_id? : ref tercero
+    +conversacion_ref? : texto
+    +tipo : enum
+    +plantilla_id? : ref plantilla_mensaje
+    +autor : enum
+    +dentro_ventana : boolean
+    +consentimiento_id? : ref consentimiento_datos
+    +costo_estimado_usd : decimal
+    +estado_entrega : enum
+    +enviado_en : momento
+  }
+  class redes__pieza_audiovisual["pieza_audiovisual"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +clips? : jsonb
+    +guion? : text
+    +texto_publicacion? : text
+    +musica_ref? : texto
+    +archivo_url? : texto
+    +personas_identificables : boolean
+    +estado : enum
+    +agente_id? : ref agente
+    +aprobado_por? : ref usuario
+    +publicacion_id? : ref publicacion
+  }
+  class redes__pieza_persona["pieza_persona"] {
+    <<por finca · fase 2>>
+    +pieza_audiovisual_id : ref pieza_audiovisual
+    +tercero_id : ref tercero
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+    class ia__recomendacion["ia.recomendacion"]
+  }
+  namespace terceros {
+    class terceros__consentimiento_datos["terceros.consentimiento_datos"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  redes__publicacion "*" --> "1" redes__cuenta_red : cuenta_red_id
+  redes__publicacion "*" --> "0..1" ia__agente : agente_id
+  redes__publicacion "*" --> "0..1" ia__recomendacion : recomendacion_id
+  redes__plantilla_mensaje "*" --> "1" redes__cuenta_red : cuenta_red_id
+  redes__mensaje_saliente "*" --> "1" redes__cuenta_red : cuenta_red_id
+  redes__mensaje_saliente "*" --> "0..1" terceros__tercero : tercero_id
+  redes__mensaje_saliente "*" --> "0..1" redes__plantilla_mensaje : plantilla_id
+  redes__mensaje_saliente "*" --> "0..1" terceros__consentimiento_datos : consentimiento_id
+  redes__pieza_audiovisual "*" --> "0..1" ia__agente : agente_id
+  redes__pieza_audiovisual "*" --> "0..1" redes__publicacion : publicacion_id
+  redes__pieza_persona "*" --> "1" redes__pieza_audiovisual : pieza_audiovisual_id
+  redes__pieza_persona "*" --> "1" terceros__tercero : tercero_id
+  style terceros__consentimiento_datos fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__recomendacion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

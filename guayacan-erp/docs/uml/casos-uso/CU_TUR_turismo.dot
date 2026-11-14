@@ -1,0 +1,43 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Turismo (TUR)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "CLI"; "VEN"; "POR"; "OPR";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"CLI" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Cliente", fontsize=11, fontcolor="#1F2933"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"POR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Portería", fontsize=11, fontcolor="#1F2933"];
+"OPR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operador\nturístico o\ninstitución", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Turismo"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "TUR-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-01\nGestionar alojamientos y\nplanes turísticos"];
+  "TUR-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-02\nReservar una cabaña o un\nplan"];
+  "TUR-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-03\nPagar anticipadamente una\nreserva"];
+  "TUR-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-04\nHacer check-in y check-out\nde huéspedes"];
+  "TUR-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-05\nAtender la solicitud de un\ngrupo"];
+  "TUR-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="TUR-06\nBloquear fechas del\ncalendario"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "AGD-02" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="AGD-02\nAgendar una cita en un\nrecurso\n(Agenda y portería)"];
+  "AGD-04" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="AGD-04\nRegistrar entradas y\nsalidas en portería\n(Agenda y portería)"];
+  "AGD-03" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="AGD-03\nProgramar y aprobar\nuna visita\n(Agenda y portería)"];
+}
+{rank=sink; "AG_GUI"; "PAG"; "VIS";}
+"AG_GUI" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nGuía virtual"];
+"PAG" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela de pagos"];
+"VIS" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Visitante o\nturista", fontsize=11, fontcolor="#1F2933"];
+"ADM" -> "TUR-01";
+"CLI" -> "TUR-02";
+"VEN" -> "TUR-02";
+"TUR-02" -> "AG_GUI" [style=solid];
+"TUR-02" -> "AGD-02" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"TUR-03" -> "TUR-02" [style=dashed, arrowhead=vee, xlabel="«extend»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"CLI" -> "TUR-03";
+"TUR-03" -> "PAG" [style=solid];
+"POR" -> "TUR-04";
+"VEN" -> "TUR-04";
+"TUR-04" -> "VIS" [style=solid];
+"TUR-04" -> "AGD-04" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"OPR" -> "TUR-05";
+"TUR-05" -> "VEN" [style=solid];
+"TUR-05" -> "AGD-03" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"ADM" -> "TUR-06";
+}

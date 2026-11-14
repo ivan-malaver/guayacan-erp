@@ -1,0 +1,44 @@
+classDiagram
+  direction TB
+  class documental__documento["documento"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +titulo : texto
+    +tipo : enum
+    +entidad_emisora? : texto
+    +numero? : texto
+    +responsable_id? : ref usuario
+    +nivel_acceso : enum
+    +rol_id? : ref rol
+    +contiene_datos_personales : boolean
+    +finalidad? : text
+    +conservar_hasta? : date
+    +uso_agentes : boolean
+  }
+  class documental__version_documento["version_documento"] {
+    <<por finca · fase 1>>
+    +documento_id : ref documento
+    +version : smallint
+    +archivo_url : texto
+    +hash_sha256 : huella
+    +estado : enum
+    +aprobada_por? : ref usuario
+    +aprobada_en? : momento
+    +vigente_desde? : date
+    +vence_en? : date
+    +avisar_dias : smallint
+    +cambios? : text
+  }
+  class documental__vinculo_documento["vinculo_documento"] {
+    <<por finca · fase 1>>
+    +documento_id : ref documento
+    +registro_tabla : texto
+    +registro_id : bigint
+  }
+  namespace nucleo {
+    class nucleo__rol["nucleo.rol"]
+  }
+  documental__documento "*" --> "0..1" nucleo__rol : rol_id
+  documental__version_documento "*" --> "1" documental__documento : documento_id
+  documental__vinculo_documento "*" --> "1" documental__documento : documento_id
+  style nucleo__rol fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

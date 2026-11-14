@@ -1,0 +1,25 @@
+flowchart LR
+  subgraph Operacion["Operación"]
+    PROD[produccion] --- INV[inventario] --- COM[comercial]
+    PER[personal<br/>tareas, áreas, turnos 24/7] --- ACT[activos]
+    AGE[agenda<br/>cabañas, visitas, portería]
+  end
+  subgraph Gente["Gente y conocimiento"]
+    FOR[formacion<br/>ISO 21001] --> PER
+    NOM[nomina] 
+    DOC[documental] --> CUM[cumplimiento]
+  end
+  subgraph Dinero["Dinero y decisiones"]
+    FIN[finanzas<br/>costos, estados, indicadores] --> EST[estrategia<br/>VPN, TIR, reinversión]
+    CRM[crm<br/>prospectos] --> COM
+    EST --> PRY[proyectos<br/>PMBOK 8]
+    SEG2[seguros]
+  end
+  SEGI[seguridad<br/>doble factor, detector, pruebas] -.vigila.-> Operacion
+  SEGI -.vigila.-> Dinero
+  PER -- jornales y destajo --> NOM --> FIN
+  COM --> FIN
+  PRY -- tareas --> PER
+  AGE -- jornada por carné --> PER
+  IA[agentes de IA<br/>solo proponen] -.propuestas.-> PER
+  IA -.propuestas.-> EST

@@ -1,0 +1,21 @@
+erDiagram
+    factor_emision {
+        bigint id PK
+        varchar magnitud
+        numeric factor_kgco2e
+        varchar fuente
+        date vigente_desde
+    }
+    registro_ambiental {
+        bigint id PK
+        bigint predio_id FK
+        lista magnitud
+        numeric cantidad
+        date fecha
+        lista origen
+        bigint sensor_id FK
+    }
+    iot_sensor {
+        bigint id PK
+    }
+    iot_sensor ||--o{ registro_ambiental : "sensor_id"

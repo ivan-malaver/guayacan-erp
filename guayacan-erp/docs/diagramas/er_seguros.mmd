@@ -1,0 +1,92 @@
+erDiagram
+    poliza {
+        bigint id PK
+        bigint predio_id FK
+        varchar numero
+        bigint aseguradora_id FK
+        bigint corredor_id FK
+        lista tipo
+        date desde
+        date hasta
+        numeric prima
+        numeric incentivo_pct
+        numeric valor_subsidiado
+        numeric suma_asegurada
+        varchar deducible
+        lista estado
+        smallint avisar_dias
+        bigint documento_id FK
+    }
+    bien_asegurado {
+        bigint id PK
+        bigint predio_id FK
+        bigint poliza_id FK
+        bigint activo_id FK
+        bigint siembra_id FK
+        bigint lote_animal_id FK
+        bigint zona_id FK
+        varchar descripcion
+        numeric valor_asegurado
+    }
+    indice_poliza {
+        bigint id PK
+        bigint predio_id FK
+        bigint poliza_id FK
+        lista variable
+        varchar fuente_oficial
+        lista comparador
+        numeric umbral
+        smallint ventana_dias
+        bigint sensor_id FK
+    }
+    aviso_siniestro {
+        bigint id PK
+        bigint predio_id FK
+        bigint poliza_id FK
+        bigint indice_id FK
+        timestamptz detectado_en
+        text descripcion
+        jsonb serie_datos
+        lista estado
+        bigint revisado_por FK
+        timestamptz enviado_en
+        numeric valor_reclamado
+        numeric valor_pagado
+    }
+    activos_activo {
+        bigint id PK
+    }
+    documental_documento {
+        bigint id PK
+    }
+    iot_sensor {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    produccion_lote_animal {
+        bigint id PK
+    }
+    produccion_siembra {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    activos_activo ||--o{ bien_asegurado : "activo_id"
+    documental_documento ||--o{ poliza : "documento_id"
+    indice_poliza ||--o{ aviso_siniestro : "indice_id"
+    iot_sensor ||--o{ indice_poliza : "sensor_id"
+    nucleo_usuario ||--o{ aviso_siniestro : "revisado_por"
+    nucleo_zona ||--o{ bien_asegurado : "zona_id"
+    poliza ||--o{ aviso_siniestro : "poliza_id"
+    poliza ||--o{ bien_asegurado : "poliza_id"
+    poliza ||--o{ indice_poliza : "poliza_id"
+    produccion_lote_animal ||--o{ bien_asegurado : "lote_animal_id"
+    produccion_siembra ||--o{ bien_asegurado : "siembra_id"
+    terceros_tercero ||--o{ poliza : "aseguradora_id"
+    terceros_tercero ||--o{ poliza : "corredor_id"

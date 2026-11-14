@@ -1,0 +1,35 @@
+/* Estilos globales de GuayacanERP (RNF-07 interfaz para campo, RNF-09 identidad de la marca).
+   Los estilos propios de cada pantalla van dentro de su componente; aquí solo lo común.
+   Ajuste los colores con la paleta oficial de la marca cuando esté definida. */
+
+/* Variables de color (CSS custom properties). Los componentes usan var(--gy-...) en vez de colores fijos,
+   así cambiar el tema es cambiar solo estas líneas. */
+:root {
+  --gy-primario: #2e6b4f;    /* verde de la marca: barra, botones */
+  --gy-fondo: #ffffff;
+  --gy-texto: #1f2937;
+  --gy-texto-suave: #4b5563; /* textos secundarios */
+  --gy-borde: #d1d5db;
+  --gy-alerta: #b42318;      /* errores y rechazos */
+  color-scheme: light dark;  /* el navegador adapta barras de desplazamiento y controles al tema */
+}
+
+/* Tema oscuro automático si el celular o computador lo tiene activado */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gy-primario: #3f8f6a;
+    --gy-fondo: #111827;
+    --gy-texto: #f3f4f6;
+    --gy-texto-suave: #9ca3af;
+    --gy-borde: #374151;
+    --gy-alerta: #f97066;
+  }
+}
+
+html, body { margin: 0; background: var(--gy-fondo); color: var(--gy-texto); font-family: system-ui, 'Segoe UI', Roboto, sans-serif; font-size: 16px; }
+/* Evita el retraso del doble toque para hacer zoom en pantallas táctiles */
+button, a, input, select { touch-action: manipulation; }
+/* Botones de al menos 3rem (48 px) de alto: fáciles de tocar con guantes o manos mojadas en el campo */
+button { min-height: 3rem; padding: 0 1rem; border-radius: 8px; border: 0; background: var(--gy-primario); color: #fff; font-weight: 600; }
+button:disabled { opacity: 0.6; }
+input, select { padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--gy-borde); background: var(--gy-fondo); color: var(--gy-texto); }

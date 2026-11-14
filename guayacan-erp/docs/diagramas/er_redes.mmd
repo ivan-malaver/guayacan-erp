@@ -1,0 +1,119 @@
+erDiagram
+    cuenta_red {
+        bigint id PK
+        bigint predio_id FK
+        varchar plataforma FK
+        varchar nombre_cuenta
+        varchar identificador_externo
+        varchar secreto_ref
+        boolean activa
+    }
+    publicacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint cuenta_red_id FK
+        text texto
+        jsonb medios
+        lista estado
+        timestamptz programada_para
+        timestamptz publicada_en
+        varchar id_externo
+        bigint agente_id FK
+        bigint aprobado_por FK
+        bigint recomendacion_id FK
+    }
+    politica_canal {
+        bigint id PK
+        varchar plataforma
+        smallint ventana_horas
+        smallint ventana_agente_humano_horas
+        smallint ventana_anuncio_horas
+        smallint max_mensajes_por_ventana
+        boolean empresa_puede_iniciar
+        boolean requiere_plantilla_fuera_ventana
+        boolean cobra_por_mensaje
+        integer mensajes_servicio_gratis_mes
+        boolean solo_bot_del_negocio
+        boolean disponible
+        varchar fuente_url
+        date verificado_en
+    }
+    plantilla_mensaje {
+        bigint id PK
+        bigint predio_id FK
+        bigint cuenta_red_id FK
+        varchar nombre
+        lista categoria
+        varchar idioma
+        text cuerpo
+        jsonb variables
+        lista estado_meta
+        varchar id_externo
+        lista finalidad_requerida
+    }
+    mensaje_saliente {
+        bigint id PK
+        bigint predio_id FK
+        bigint cuenta_red_id FK
+        bigint tercero_id FK
+        varchar conversacion_ref
+        lista tipo
+        bigint plantilla_id FK
+        lista autor
+        boolean dentro_ventana
+        bigint consentimiento_id FK
+        numeric costo_estimado_usd
+        lista estado_entrega
+        timestamptz enviado_en
+    }
+    pieza_audiovisual {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        jsonb clips
+        text guion
+        text texto_publicacion
+        varchar musica_ref
+        varchar archivo_url
+        boolean personas_identificables
+        lista estado
+        bigint agente_id FK
+        bigint aprobado_por FK
+        bigint publicacion_id FK
+    }
+    pieza_persona {
+        bigint id PK
+        bigint predio_id FK
+        bigint pieza_audiovisual_id FK
+        bigint tercero_id FK
+    }
+    ia_agente {
+        bigint id PK
+    }
+    ia_recomendacion {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    terceros_consentimiento_datos {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    cuenta_red ||--o{ mensaje_saliente : "cuenta_red_id"
+    cuenta_red ||--o{ plantilla_mensaje : "cuenta_red_id"
+    cuenta_red ||--o{ publicacion : "cuenta_red_id"
+    ia_agente ||--o{ pieza_audiovisual : "agente_id"
+    ia_agente ||--o{ publicacion : "agente_id"
+    ia_recomendacion ||--o{ publicacion : "recomendacion_id"
+    nucleo_usuario ||--o{ pieza_audiovisual : "aprobado_por"
+    nucleo_usuario ||--o{ publicacion : "aprobado_por"
+    pieza_audiovisual ||--o{ pieza_persona : "pieza_audiovisual_id"
+    plantilla_mensaje ||--o{ mensaje_saliente : "plantilla_id"
+    politica_canal ||--o{ cuenta_red : "plataforma"
+    publicacion ||--o{ pieza_audiovisual : "publicacion_id"
+    terceros_consentimiento_datos ||--o{ mensaje_saliente : "consentimiento_id"
+    terceros_tercero ||--o{ mensaje_saliente : "tercero_id"
+    terceros_tercero ||--o{ pieza_persona : "tercero_id"

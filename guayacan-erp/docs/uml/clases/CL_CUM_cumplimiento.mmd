@@ -1,0 +1,111 @@
+classDiagram
+  direction TB
+  class cumplimiento__norma["norma"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +entidad : texto
+    +referencia : texto
+    +obligatoria : boolean
+    +condicion_obligatoria? : text
+    +funcion_codigo? : texto
+    +vigencia_certificado_meses? : smallint
+    +url_fuente? : texto
+  }
+  class cumplimiento__requisito["requisito"] {
+    <<compartida>>
+    +norma_id : ref norma
+    +codigo : texto
+    +descripcion : text
+    +tipo_evidencia : enum
+    +regla_evidencia? : texto
+    +vigencia_dias? : smallint
+    +critico : boolean
+  }
+  class cumplimiento__expediente["expediente"] {
+    <<por finca · fase 1>>
+    +norma_id : ref norma
+    +estado : enum
+    +rspa_numero? : texto
+    +numero_certificado? : texto
+    +organismo? : texto
+    +solicitado_en? : date
+    +certificado_en? : date
+    +vence_en? : date
+    +responsable_id? : ref usuario
+  }
+  class cumplimiento__evaluacion_requisito["evaluacion_requisito"] {
+    <<por finca · fase 1>>
+    +expediente_id : ref expediente
+    +requisito_id : ref requisito
+    +estado : enum
+    +origen : enum
+    +evaluado_por? : ref usuario
+    +evaluado_en? : momento
+    +vence_en? : date
+    +observacion? : text
+  }
+  class cumplimiento__evidencia_requisito["evidencia_requisito"] {
+    <<por finca · fase 1>>
+    +evaluacion_id : ref evaluacion_requisito
+    +documento_id? : ref documento
+    +registro_tabla? : texto
+    +registro_id? : bigint
+    +descripcion : texto
+    +vence_en? : date
+  }
+  class cumplimiento__auditoria_externa["auditoria_externa"] {
+    <<por finca · fase 1>>
+    +expediente_id : ref expediente
+    +tipo : enum
+    +organismo? : texto
+    +fecha_programada : date
+    +fecha_realizada? : date
+    +resultado : enum
+    +informe_documento_id? : ref documento
+  }
+  class cumplimiento__no_conformidad["no_conformidad"] {
+    <<por finca · fase 1>>
+    +expediente_id : ref expediente
+    +auditoria_id? : ref auditoria_externa
+    +requisito_id? : ref requisito
+    +descripcion : text
+    +severidad : enum
+    +detectada_en : date
+    +estado : enum
+    +verificacion? : text
+    +cerrada_por? : ref usuario
+    +cerrada_en? : momento
+  }
+  class cumplimiento__accion_correctiva["accion_correctiva"] {
+    <<por finca · fase 1>>
+    +no_conformidad_id : ref no_conformidad
+    +descripcion : text
+    +responsable_id : ref usuario
+    +plazo : date
+    +tarea_id? : ref tarea
+    +estado : enum
+    +verificada_por? : ref usuario
+    +verificada_en? : momento
+  }
+  namespace documental {
+    class documental__documento["documental.documento"]
+  }
+  namespace personal {
+    class personal__tarea["personal.tarea"]
+  }
+  cumplimiento__requisito "*" --> "1" cumplimiento__norma : norma_id
+  cumplimiento__expediente "0..1" --> "1" cumplimiento__norma : norma_id
+  cumplimiento__evaluacion_requisito "*" --> "1" cumplimiento__expediente : expediente_id
+  cumplimiento__evaluacion_requisito "*" --> "1" cumplimiento__requisito : requisito_id
+  cumplimiento__evidencia_requisito "*" --> "1" cumplimiento__evaluacion_requisito : evaluacion_id
+  cumplimiento__evidencia_requisito "*" --> "0..1" documental__documento : documento_id
+  cumplimiento__auditoria_externa "*" --> "1" cumplimiento__expediente : expediente_id
+  cumplimiento__auditoria_externa "*" --> "0..1" documental__documento : informe_documento_id
+  cumplimiento__no_conformidad "*" --> "1" cumplimiento__expediente : expediente_id
+  cumplimiento__no_conformidad "*" --> "0..1" cumplimiento__auditoria_externa : auditoria_id
+  cumplimiento__no_conformidad "*" --> "0..1" cumplimiento__requisito : requisito_id
+  cumplimiento__accion_correctiva "*" --> "1" cumplimiento__no_conformidad : no_conformidad_id
+  cumplimiento__accion_correctiva "*" --> "0..1" personal__tarea : tarea_id
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style documental__documento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

@@ -1,0 +1,70 @@
+classDiagram
+  direction TB
+  class terceros__tercero["tercero"] {
+    <<por finca · fase 1>>
+    +tipo_persona : enum
+    +tipo_documento? : enum
+    +numero_documento? : texto
+    +digito_verificacion? : char(1)
+    +nombres? : texto
+    +apellidos? : texto
+    +razon_social? : texto
+    +correo? : citext
+    +telefono? : texto
+    +whatsapp? : texto
+    +direccion? : texto
+    +codigo_dane_municipio? : char(5)
+    +… 3 campos más
+  }
+  class terceros__consentimiento_datos["consentimiento_datos"] {
+    <<por finca · fase 1>>
+    +tercero_id : ref tercero
+    +finalidad : enum
+    +version_politica : texto
+    +otorgado : boolean
+    +medio : enum
+    +evidencia_url? : texto
+    +otorgado_en : momento
+    +revocado_en? : momento
+  }
+  class terceros__cliente["cliente"] {
+    <<por finca · fase 1>>
+    +tercero_id : ref tercero
+    +segmento : enum
+    +canal_origen? : enum
+    +frecuencia_compra_dias? : smallint
+    +fecha_primera_compra? : date
+    +cupo_credito : dinero
+    +dias_plazo : smallint
+    +bloqueado_por_mora : boolean
+    +lista_precios_id? : ref lista_precios
+    +perfil_interes_ref? : texto
+  }
+  class terceros__proveedor["proveedor"] {
+    <<por finca · fase 1>>
+    +tercero_id : ref tercero
+    +categoria : enum
+    +dias_credito : smallint
+    +calificacion? : decimal
+  }
+  class terceros__empleado["empleado"] {
+    <<por finca · fase 1>>
+    +tercero_id : ref tercero
+    +cargo : texto
+    +tipo_vinculacion : enum
+    +salario_base? : dinero
+    +forma_pago : enum
+    +valor_jornal? : dinero
+    +ruta_aprendizaje? : texto
+    +fecha_ingreso : date
+    +fecha_retiro? : date
+  }
+  namespace comercial {
+    class comercial__lista_precios["comercial.lista_precios"]
+  }
+  terceros__consentimiento_datos "*" --> "1" terceros__tercero : tercero_id
+  terceros__cliente "0..1" --> "1" terceros__tercero : tercero_id
+  terceros__cliente "*" --> "0..1" comercial__lista_precios : lista_precios_id
+  terceros__proveedor "0..1" --> "1" terceros__tercero : tercero_id
+  terceros__empleado "0..1" --> "1" terceros__tercero : tercero_id
+  style comercial__lista_precios fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

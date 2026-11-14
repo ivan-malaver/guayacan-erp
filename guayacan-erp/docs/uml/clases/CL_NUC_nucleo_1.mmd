@@ -1,0 +1,122 @@
+classDiagram
+  direction TB
+  class nucleo__rol["rol"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +descripcion? : text
+  }
+  class nucleo__rol_permiso["rol_permiso"] {
+    <<compartida>>
+    +rol_id : ref rol
+    +permiso_id : ref permiso
+  }
+  class nucleo__usuario_rol["usuario_rol"] {
+    <<por finca · fase 1>>
+    +usuario_id : ref usuario
+    +rol_id : ref rol
+  }
+  class nucleo__permiso["permiso"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +modulo : texto
+  }
+  class nucleo__predio["predio"] {
+    <<compartida>>
+    +nombre : texto
+    +matricula_inmobiliaria? : texto
+    +propietario? : texto
+    +tenencia : enum
+    +area_m2? : decimal
+    +codigo_dane_municipio? : char(5)
+    +vereda? : texto
+    +geometria? : geometry(MultiPolygon,
+    +es_practica : boolean
+    +regimen_tributario : enum
+    +empleador_tercero_id? : ref tercero
+  }
+  class nucleo__zona["zona"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+    +tipo_zona : enum
+    +area_m2? : decimal
+    +capacidad? : integer
+    +geometria? : geometry(Polygon,
+    +modelo_3d_url? : texto
+    +activa : boolean
+  }
+  class nucleo__dispositivo_captura["dispositivo_captura"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +tipo : enum
+    +conexion : enum
+    +marca_modelo? : texto
+    +numero_serie? : texto
+    +capacidad_max_kg? : decimal
+    +division_g? : decimal
+    +uso_comercial : boolean
+    +ultima_verificacion? : date
+    +proxima_verificacion? : date
+    +certificado_url? : texto
+    +usuario_asignado_id? : ref usuario
+    +… 1 campos más
+  }
+  class nucleo__sincronizacion["sincronizacion"] {
+    <<por finca · fase 1>>
+    +usuario_id : ref usuario
+    +version_app : texto
+    +iniciada_en : momento
+    +terminada_en? : momento
+    +registros_recibidos : integer
+    +registros_duplicados : integer
+    +registros_rechazados : integer
+    +detalle_rechazos? : jsonb
+  }
+  class nucleo__webhook_suscripcion["webhook_suscripcion"] {
+    <<por finca · fase 3>>
+    +nombre : texto
+    +tercero_id? : ref tercero
+    +url : texto
+    +eventos : text lista
+    +secreto_ref : texto
+    +activa : boolean
+    +fallos_seguidos : smallint
+  }
+  class nucleo__webhook_entrega["webhook_entrega"] {
+    <<por finca · fase 3>>
+    +suscripcion_id : ref webhook_suscripcion
+    +evento_salida_id : bigint
+    +estado : enum
+    +intentos : smallint
+    +codigo_respuesta? : smallint
+    +proximo_intento? : momento
+  }
+  class nucleo__usuario["usuario"] {
+    <<compartida>>
+    +nombre_completo : texto
+    +correo : citext
+    +telefono? : texto
+    +contrasena_hash : texto
+    +es_superusuario : boolean
+    +activo : boolean
+    +ultimo_ingreso? : momento
+    +tercero_id? : ref tercero
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  nucleo__rol_permiso "*" --> "1" nucleo__rol : rol_id
+  nucleo__rol_permiso "*" --> "1" nucleo__permiso : permiso_id
+  nucleo__usuario_rol "*" --> "1" nucleo__usuario : usuario_id
+  nucleo__usuario_rol "*" --> "1" nucleo__rol : rol_id
+  nucleo__predio "*" --> "0..1" terceros__tercero : empleador_tercero_id
+  nucleo__zona "*" --> "1" nucleo__predio : predio_id
+  nucleo__dispositivo_captura "*" --> "0..1" nucleo__usuario : usuario_asignado_id
+  nucleo__sincronizacion "*" --> "1" nucleo__dispositivo_captura : dispositivo_captura_id
+  nucleo__sincronizacion "*" --> "1" nucleo__usuario : usuario_id
+  nucleo__webhook_suscripcion "*" --> "0..1" terceros__tercero : tercero_id
+  nucleo__webhook_entrega "*" --> "1" nucleo__webhook_suscripcion : suscripcion_id
+  nucleo__usuario "*" --> "0..1" terceros__tercero : tercero_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

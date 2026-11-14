@@ -1,0 +1,12 @@
+flowchart TD
+  A([Último día del mes]) --> B[Contador revisa comprobantes en borrador]
+  B --> C[activos.depreciar_mes]
+  C --> D[finanzas.distribuir_costos por actividades]
+  D --> E[Causación de nómina contabilizada]
+  E --> F{¿Todo cuadra?}
+  F -- no --> B
+  F -- sí --> G[finanzas.calcular_indicadores del mes]
+  G --> H[estado_financiero congelado: resultados y balance]
+  H --> I[Familia revisa tablero y semáforos]
+  I --> J[Cerrar periodo contable]
+  J --> K([Mes siguiente abierto])

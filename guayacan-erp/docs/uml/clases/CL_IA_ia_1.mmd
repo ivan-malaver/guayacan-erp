@@ -1,0 +1,137 @@
+classDiagram
+  direction LR
+  class ia__agente["agente"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+    +rol : text
+    +nivel_autonomia : enum
+    +proveedor_modelo : texto
+    +modelo : texto
+    +modelo_respaldo? : texto
+    +version_instrucciones : texto
+    +instrucciones : text
+    +limite_costo_diario_usd? : decimal
+    +activo : boolean
+  }
+  class ia__agente_herramienta["agente_herramienta"] {
+    <<por finca · fase 1>>
+    +agente_id : ref agente
+    +herramienta_id : ref herramienta
+  }
+  class ia__escenario["escenario"] {
+    <<por finca · fase 2>>
+    +nombre : texto
+    +supuestos : jsonb
+    +resultado? : jsonb
+    +creado_por : ref usuario
+    +agente_id? : ref agente
+  }
+  class ia__recomendacion["recomendacion"] {
+    <<por finca · fase 1>>
+    +agente_id : ref agente
+    +tipo : enum
+    +titulo : texto
+    +descripcion : text
+    +evidencia : jsonb
+    +indicador? : texto
+    +prioridad : enum
+    +estado : enum
+    +responsable_id? : ref usuario
+    +fecha_limite? : date
+    +resultado? : text
+  }
+  class ia__solicitud_aprobacion["solicitud_aprobacion"] {
+    <<por finca · fase 1>>
+    +agente_id : ref agente
+    +herramienta_id : ref herramienta
+    +entidad : texto
+    +entidad_id? : bigint
+    +resumen : text
+    +carga : jsonb
+    +estado : enum
+    +vence_en : momento
+    +resuelto_por? : ref usuario
+    +resuelto_en? : momento
+    +motivo? : text
+  }
+  class ia__evaluacion_respuesta["evaluacion_respuesta"] {
+    <<por finca · fase 1>>
+    +agente_id : ref agente
+    +mensaje_ref : texto
+    +origen : enum
+    +calificacion : smallint
+    +motivo? : enum
+    +comentario? : text
+  }
+  class ia__diagnostico_imagen["diagnostico_imagen"] {
+    <<por finca · fase 2>>
+    +agente_id : ref agente
+    +foto_url : texto
+    +objetivo : enum
+    +siembra_id? : ref siembra
+    +lote_animal_id? : ref lote_animal
+    +tomada_por : ref usuario
+    +diagnostico_propuesto? : texto
+    +confianza? : decimal
+    +resultado? : jsonb
+    +estado : enum
+    +diagnostico_final? : texto
+    +revisado_por? : ref usuario
+    +… 1 campos más
+  }
+  class ia__consumo_ia["consumo_ia"] {
+    <<por finca · fase 1>>
+    +agente_id : ref agente
+    +fecha : date
+    +proveedor_modelo : texto
+    +modelo : texto
+    +solicitudes : integer
+    +tokens_entrada : bigint
+    +tokens_salida : bigint
+    +costo_usd : decimal
+  }
+  class ia__herramienta["herramienta"] {
+    <<compartida>>
+    +codigo : texto
+    +descripcion : text
+    +tipo : enum
+    +requiere_aprobacion : boolean
+    +esquema_entrada : jsonb
+  }
+  class ia__documento_conocimiento["documento_conocimiento"] {
+    <<por finca · fase 1>>
+    +titulo : texto
+    +tipo : enum
+    +contenido : text
+    +fuente? : texto
+    +version : smallint
+    +vigente : boolean
+    +aprobado_por? : ref usuario
+  }
+  class ia__fragmento_conocimiento["fragmento_conocimiento"] {
+    <<por finca · fase 1>>
+    +documento_id : ref documento_conocimiento
+    +orden : integer
+    +texto : text
+    +vector : vector(1024)
+    +metadatos? : jsonb
+  }
+  namespace produccion {
+    class produccion__lote_animal["produccion.lote_animal"]
+    class produccion__siembra["produccion.siembra"]
+  }
+  ia__agente_herramienta "*" --> "1" ia__agente : agente_id
+  ia__agente_herramienta "*" --> "1" ia__herramienta : herramienta_id
+  ia__escenario "*" --> "0..1" ia__agente : agente_id
+  ia__recomendacion "*" --> "1" ia__agente : agente_id
+  ia__solicitud_aprobacion "*" --> "1" ia__agente : agente_id
+  ia__solicitud_aprobacion "*" --> "1" ia__herramienta : herramienta_id
+  ia__evaluacion_respuesta "*" --> "1" ia__agente : agente_id
+  ia__diagnostico_imagen "*" --> "1" ia__agente : agente_id
+  ia__diagnostico_imagen "*" --> "0..1" produccion__siembra : siembra_id
+  ia__diagnostico_imagen "*" --> "0..1" produccion__lote_animal : lote_animal_id
+  ia__consumo_ia "*" --> "1" ia__agente : agente_id
+  ia__fragmento_conocimiento "*" --> "1" ia__documento_conocimiento : documento_id
+  style produccion__siembra fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style produccion__lote_animal fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

@@ -1,0 +1,149 @@
+erDiagram
+    linea_negocio {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        bigint centro_costo_id FK
+        lista estado
+        lista palanca_dominante
+        text descripcion
+    }
+    factor_dofa {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        bigint linea_negocio_id FK
+        text descripcion
+        smallint impacto
+        varchar fuente
+        boolean vigente
+    }
+    estudio_mercado {
+        bigint id PK
+        bigint predio_id FK
+        varchar mercado
+        bigint segmento_id FK
+        numeric tamano_estimado
+        numeric precio_referencia
+        text competidores
+        text barreras
+        varchar fuente
+        date fecha
+    }
+    iniciativa {
+        bigint id PK
+        bigint predio_id FK
+        varchar titulo
+        text descripcion
+        lista ansoff
+        lista tipo
+        lista palanca
+        bigint linea_negocio_id FK
+        bigint segmento_id FK
+        text hipotesis
+        lista estado
+        bigint propuesta_por FK
+        bigint agente_id FK
+        bigint aprobada_por FK
+        timestamptz aprobada_en
+        numeric puntaje
+    }
+    evaluacion_proyecto {
+        bigint id PK
+        bigint predio_id FK
+        bigint iniciativa_id FK
+        smallint version
+        numeric inversion_inicial
+        smallint horizonte_meses
+        numeric tasa_descuento_anual
+        numeric precio_unitario
+        numeric costo_variable_unitario
+        numeric costos_fijos_mes
+        numeric intereses_mes
+        numeric unidades_mes
+        lista fuente_fondos
+        numeric vpn
+        numeric tir_anual
+        numeric roi_pct
+        smallint recuperacion_meses
+        numeric punto_equilibrio_unidades
+        numeric margen_seguridad_pct
+        numeric gpo
+        numeric gpf
+        numeric gpt
+        text riesgos
+        timestamptz calculado_en
+    }
+    flujo_proyecto {
+        bigint id PK
+        bigint predio_id FK
+        bigint evaluacion_id FK
+        smallint mes
+        numeric ingresos
+        numeric egresos
+        numeric inversion
+    }
+    reinversion {
+        bigint id PK
+        bigint predio_id FK
+        smallint anio
+        smallint mes
+        bigint linea_origen_id FK
+        numeric utilidad_linea
+        numeric valor
+        bigint iniciativa_id FK
+        lista estado
+        bigint aprobada_por FK
+    }
+    seguimiento_iniciativa {
+        bigint id PK
+        bigint predio_id FK
+        bigint iniciativa_id FK
+        date mes
+        numeric ingresos_reales
+        numeric egresos_reales
+        numeric unidades_reales
+        text nota
+    }
+    objetivo {
+        bigint id PK
+        bigint predio_id FK
+        lista perspectiva
+        text descripcion
+        bigint indicador_id FK
+        numeric meta
+        date fecha_meta
+        bigint responsable_id FK
+    }
+    crm_segmento {
+        bigint id PK
+    }
+    finanzas_centro_costo {
+        bigint id PK
+    }
+    finanzas_indicador {
+        bigint id PK
+    }
+    ia_agente {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    crm_segmento ||--o{ estudio_mercado : "segmento_id"
+    crm_segmento ||--o{ iniciativa : "segmento_id"
+    evaluacion_proyecto ||--o{ flujo_proyecto : "evaluacion_id"
+    finanzas_centro_costo ||--o{ linea_negocio : "centro_costo_id"
+    finanzas_indicador ||--o{ objetivo : "indicador_id"
+    ia_agente ||--o{ iniciativa : "agente_id"
+    iniciativa ||--o{ evaluacion_proyecto : "iniciativa_id"
+    iniciativa ||--o{ reinversion : "iniciativa_id"
+    iniciativa ||--o{ seguimiento_iniciativa : "iniciativa_id"
+    linea_negocio ||--o{ factor_dofa : "linea_negocio_id"
+    linea_negocio ||--o{ iniciativa : "linea_negocio_id"
+    linea_negocio ||--o{ reinversion : "linea_origen_id"
+    nucleo_usuario ||--o{ iniciativa : "aprobada_por"
+    nucleo_usuario ||--o{ iniciativa : "propuesta_por"
+    nucleo_usuario ||--o{ objetivo : "responsable_id"
+    nucleo_usuario ||--o{ reinversion : "aprobada_por"

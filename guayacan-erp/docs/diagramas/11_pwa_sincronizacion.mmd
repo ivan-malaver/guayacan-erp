@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant O as Operario
+  participant A as App PWA
+  participant I as IndexedDB del celular
+  participant S as API de sincronización
+  participant P as PostgreSQL
+  O->>A: Registra postura, escanea un lote o pesa una canastilla
+  A->>I: Guarda el registro con id_cliente UUIDv7 y capturado_en
+  Note over A,I: Funciona sin señal, la app y el catálogo están en caché
+  A-->>O: Confirmado en el celular, pendiente de subir
+  A->>S: Al volver la señal, envía el lote de pendientes
+  S->>P: Inserta cada registro con ON CONFLICT id_cliente DO NOTHING
+  P-->>S: Aceptados, duplicados y rechazados por regla
+  S-->>A: Resultado por registro y datos nuevos del servidor
+  A->>I: Marca enviados, muestra rechazos para corregir

@@ -1,0 +1,33 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Seguridad informática (SEG)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "USR"; "SCH"; "ADM"; "CI";}
+"USR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Usuario\nautenticado", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"CI" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nIntegración\ncontinua"];
+subgraph cluster_sistema { label="GuayacanERP · Seguridad informática"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "SEG-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-01\nIniciar sesión con doble\nfactor"];
+  "SEG-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-02\nInscribir el segundo\nfactor y recuperar la\ncontraseña"];
+  "SEG-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-03\nDetectar y bloquear\nataques de acceso"];
+  "SEG-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-04\nAtender una alerta o un\nincidente de seguridad"];
+  "SEG-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-05\nRevocar sesiones y\nlevantar bloqueos"];
+  "SEG-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-06\nRegistrar una corrida de\npruebas"];
+  "SEG-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="SEG-07\nVerificar copias de\nseguridad y restauraciones"];
+}
+{rank=sink; "NOT"; "AG_VIG";}
+"NOT" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCorreo y SMS"];
+"AG_VIG" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nVigía de seguridad"];
+"USR" -> "SEG-01";
+"SEG-01" -> "SEG-03" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"USR" -> "SEG-02";
+"SEG-02" -> "NOT" [style=solid];
+"SCH" -> "SEG-03";
+"SEG-03" -> "AG_VIG" [style=solid];
+"ADM" -> "SEG-04";
+"SEG-04" -> "AG_VIG" [style=solid];
+"ADM" -> "SEG-05";
+"CI" -> "SEG-06";
+"SCH" -> "SEG-07";
+"ADM" -> "SEG-07";
+}

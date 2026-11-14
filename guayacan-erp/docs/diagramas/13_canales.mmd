@@ -1,0 +1,14 @@
+flowchart LR
+  WA[WhatsApp] --> CON
+  IG[Instagram DM] --> CON
+  FB[Messenger] --> CON
+  TT[TikTok] --> CON
+  WC[Chat de la web] --> CON
+  CON[Conector de canales<br/>firma del webhook · formato común] --> ORQ{Orquestador<br/>guardia de dominio}
+  ORQ -- tema de la finca --> AGT[Asesor o vendedor]
+  ORQ -- tema ajeno --> CORT[Respuesta de cortesía<br/>y oferta de persona]
+  ORQ -- queja, pago o pedido grande --> HUM[Escalamiento a persona<br/>antes de que cierre la ventana]
+  AGT --> VER{verificar_envio<br/>ventana, plantilla, consentimiento, tope}
+  HUM --> VER
+  VER -- permitido --> OUT[Envío y registro en mensaje_saliente]
+  VER -- bloqueado --> BLQ[No se envía · queda registrado]

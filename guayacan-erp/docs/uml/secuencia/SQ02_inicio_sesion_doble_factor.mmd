@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  actor U as Usuario
+  participant API as Django · auth
+  participant DB as PostgreSQL
+  participant SEG as seguridad.registrar_intento()
+  U->>API: POST /auth/token (correo, contraseña)
+  API->>DB: buscar usuario y verificar hash Argon2
+  API->>SEG: registrar_intento(correo, ip, exito, motivo)
+  alt IP o cuenta bloqueada, o cuenta señuelo
+    SEG-->>API: ip_bloqueada, cuenta_bloqueada o senuelo
+    API-->>U: 401 genérico (sin decir por qué)
+  else fallo número 5 en 15 minutos
+    SEG-->>API: cuenta_bloqueada_ahora y alerta alta
+    API-->>U: 401 genérico
+  else contraseña correcta
+    SEG-->>API: aceptado
+    API->>DB: requiere_doble_factor(usuario)
+    alt administrador, contador o superusuario
+      API-->>U: 200 con desafío de segundo factor
+      U->>API: POST /auth/doble-factor/verificar (TOTP o llave)
+      API->>DB: INSERT sesion_usuario metodo doble_factor, vence en 12 h o menos
+    else otros roles
+      API->>DB: INSERT sesion_usuario metodo contrasena
+    end
+    API-->>U: JWT de acceso y de refresco
+  end

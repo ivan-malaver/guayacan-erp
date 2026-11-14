@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  participant B as Celery Beat
+  participant M as Analista de mercados
+  participant H as Herramientas MCP
+  participant E as Núcleo ERP
+  participant A as Administrador
+  B->>M: Tarea semanal de análisis
+  M->>H: consultar_precios_mercado y consultar_catalogo
+  H->>E: GET precios, costos y existencias disponibles
+  E-->>M: Datos
+  M->>M: Compara mercado, costo y margen mínimo
+  M->>H: proponer_precio con justificación y evidencia
+  H->>E: Crea propuesta_precio y solicitud_aprobacion pendientes
+  E-->>A: Notificación en el panel y por WhatsApp
+  alt Aprueba
+    A->>E: Aprueba con comentario
+    E->>E: aplicar_propuesta_precio cierra el precio vigente y crea el nuevo
+    Note over E: Pedidos confirmados y facturas conservan su precio congelado
+    E->>E: Auditoría y evento precio.aplicado
+  else Rechaza o vence a las 72 h
+    A->>E: Rechaza con motivo
+    E->>M: El motivo queda como aprendizaje
+  end

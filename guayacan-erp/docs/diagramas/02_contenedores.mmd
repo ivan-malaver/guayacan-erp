@@ -1,0 +1,44 @@
+flowchart TB
+  subgraph Canales
+    PWA[App de campo PWA<br/>Angular · funciona sin conexión]
+    WEB[Panel y tienda web<br/>Angular + chat web]
+    MSG[WhatsApp, Instagram,<br/>Messenger, TikTok]
+  end
+  subgraph Nube
+    GW[Puerta de entrada<br/>Nginx · HTTPS]
+    ERP[Núcleo ERP<br/>Django + DRF]
+    AG[Servicio de agentes<br/>FastAPI + LangGraph]
+    CAN[Conector de canales<br/>verifica ventana y plantillas]
+    MCP[Servidor MCP]
+    WRK[Celery<br/>tareas y outbox]
+    PG[(PostgreSQL<br/>RLS por finca)]
+    MG[(MongoDB)]
+    RD[(Redis)]
+    S3[(MinIO)]
+    TS[(TimescaleDB)]
+    MQC[Broker MQTT nube]
+  end
+  subgraph Finca[Red local de la finca]
+    PAS[Pasarela local<br/>reglas de riego sin internet]
+    MQL[Broker MQTT local]
+    NOD[Nodos ESP32 o PLC<br/>válvulas y sensores]
+    BAS[Báscula de banco]
+  end
+  PWA -- sincroniza cuando hay señal --> GW
+  WEB --> GW
+  MSG -- webhooks firmados --> CAN
+  GW --> ERP
+  GW --> AG
+  CAN --> AG
+  AG --> MCP --> ERP
+  ERP --> PG
+  ERP --> S3
+  AG --> MG
+  AG --> RD
+  WRK --> PG
+  WRK --> MG
+  NOD <--> MQL <--> PAS
+  BAS --> PAS
+  PAS -- sube datos y baja reglas cuando hay internet --> MQC
+  MQC --> TS
+  MQC --> ERP

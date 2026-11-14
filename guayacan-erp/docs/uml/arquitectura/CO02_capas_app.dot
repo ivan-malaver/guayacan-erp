@@ -1,0 +1,9 @@
+digraph K {graph [fontname="DejaVu Sans", pad=0.3, bgcolor=white, labelloc=t, fontsize=16, nodesep=0.35, ranksep=0.7, compound=true];node [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#4B5563"];edge [fontname="DejaVu Sans", fontsize=9.5, color="#6B7280", fontcolor="#4B5563", arrowhead=vee];
+label="Cuatro capas dentro de cada app de Django: cada capa solo llama a la de abajo";
+rankdir=TB; node [width=6.5, fixedsize=false];
+a [label="API · views.py y serializers.py\nvalida formato, permisos de DRF, pagina, documenta OpenAPI", fillcolor="#EAF3EE"];
+s [label="Servicios · services.py\nun método por caso de uso, abre la transacción, coordina, publica el evento", fillcolor="#EAF3EE"];
+d [label="Dominio · reglas en PostgreSQL (reglas_negocio.sql)\nlas reglas críticas viven en la base; Python no las duplica", fillcolor="#FFF7ED"];
+r [label="Adaptadores · models.py (managed=False), clientes de DIAN, MinIO, canales, IA\nPatrón puerto y adaptador: se cambian sin tocar los servicios", fillcolor="#EEF2FF"];
+a -> s -> d -> r;
+}

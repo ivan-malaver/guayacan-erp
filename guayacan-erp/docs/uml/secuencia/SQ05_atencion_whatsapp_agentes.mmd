@@ -1,0 +1,31 @@
+sequenceDiagram
+  autonumber
+  actor CL as Cliente
+  participant WA as WhatsApp Cloud API
+  participant AG as FastAPI · agentes
+  participant ORQ as Orquestador
+  participant AS as Asesor virtual
+  participant MCP as Servidor MCP
+  participant API as Django API
+  participant MG as MongoDB
+  CL->>WA: Hola, ¿tienen huevo AA?
+  WA->>AG: webhook firmado
+  AG->>MG: guarda mensaje y conversación
+  AG->>ORQ: clasifica intención y revisa reglas de conversación
+  ORQ->>AS: intención consultar_catalogo
+  AS->>MCP: consultar_catalogo()
+  MCP->>API: GET catálogo disponible (token del agente)
+  API-->>MCP: precio vigente y cantidad vendible
+  MCP-->>AS: datos
+  AS->>API: verificar envío (ventana de 24 h, consentimiento)
+  API-->>AS: permitido
+  AS-->>WA: respuesta con precio y disponibilidad
+  WA-->>CL: mensaje
+  opt el cliente pide comprar
+    AS->>MCP: crear_pedido_borrador()
+    MCP->>API: POST pedido en borrador
+    Note over API: un vendedor lo revisa y confirma (CU VTA-03)
+  end
+  opt tema no permitido o cliente molesto
+    ORQ->>API: crea escalamiento a una persona
+  end

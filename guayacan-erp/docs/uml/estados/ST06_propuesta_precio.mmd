@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> pendiente: la crea el analista de mercados (IA)
+  pendiente --> aprobada: administrador
+  pendiente --> rechazada: administrador
+  pendiente --> vencida: pasa su fecha
+  aprobada --> aplicada: aplicar_propuesta_precio()
+  aplicada --> [*]
+  rechazada --> [*]
+  vencida --> [*]

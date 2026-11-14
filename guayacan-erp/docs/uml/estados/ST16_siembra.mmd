@@ -1,0 +1,10 @@
+stateDiagram-v2
+  [*] --> planeada
+  planeada --> sembrada
+  sembrada --> en_produccion
+  sembrada --> recuperacion: mortalidad alta, resiembra
+  recuperacion --> en_produccion
+  recuperacion --> perdida
+  en_produccion --> finalizada
+  perdida --> [*]
+  finalizada --> [*]

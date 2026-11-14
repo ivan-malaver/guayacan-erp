@@ -1,0 +1,122 @@
+erDiagram
+    norma {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        varchar entidad
+        varchar referencia
+        boolean obligatoria
+        text condicion_obligatoria
+        varchar funcion_codigo
+        smallint vigencia_certificado_meses
+        varchar url_fuente
+    }
+    requisito {
+        bigint id PK
+        bigint norma_id FK
+        varchar codigo
+        text descripcion
+        lista tipo_evidencia
+        varchar regla_evidencia
+        smallint vigencia_dias
+        boolean critico
+    }
+    expediente {
+        bigint id PK
+        bigint predio_id FK
+        bigint norma_id FK
+        lista estado
+        varchar rspa_numero
+        varchar numero_certificado
+        varchar organismo
+        date solicitado_en
+        date certificado_en
+        date vence_en
+        bigint responsable_id FK
+    }
+    evaluacion_requisito {
+        bigint id PK
+        bigint predio_id FK
+        bigint expediente_id FK
+        bigint requisito_id FK
+        lista estado
+        lista origen
+        bigint evaluado_por FK
+        timestamptz evaluado_en
+        date vence_en
+        text observacion
+    }
+    evidencia_requisito {
+        bigint id PK
+        bigint predio_id FK
+        bigint evaluacion_id FK
+        bigint documento_id FK
+        varchar registro_tabla
+        bigint registro_id
+        varchar descripcion
+        date vence_en
+    }
+    auditoria_externa {
+        bigint id PK
+        bigint predio_id FK
+        bigint expediente_id FK
+        lista tipo
+        varchar organismo
+        date fecha_programada
+        date fecha_realizada
+        lista resultado
+        bigint informe_documento_id FK
+    }
+    no_conformidad {
+        bigint id PK
+        bigint predio_id FK
+        bigint expediente_id FK
+        bigint auditoria_id FK
+        bigint requisito_id FK
+        text descripcion
+        lista severidad
+        date detectada_en
+        lista estado
+        text verificacion
+        bigint cerrada_por FK
+        timestamptz cerrada_en
+    }
+    accion_correctiva {
+        bigint id PK
+        bigint predio_id FK
+        bigint no_conformidad_id FK
+        text descripcion
+        bigint responsable_id FK
+        date plazo
+        bigint tarea_id FK
+        lista estado
+        bigint verificada_por FK
+        timestamptz verificada_en
+    }
+    documental_documento {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    auditoria_externa ||--o{ no_conformidad : "auditoria_id"
+    documental_documento ||--o{ auditoria_externa : "informe_documento_id"
+    documental_documento ||--o{ evidencia_requisito : "documento_id"
+    evaluacion_requisito ||--o{ evidencia_requisito : "evaluacion_id"
+    expediente ||--o{ auditoria_externa : "expediente_id"
+    expediente ||--o{ evaluacion_requisito : "expediente_id"
+    expediente ||--o{ no_conformidad : "expediente_id"
+    no_conformidad ||--o{ accion_correctiva : "no_conformidad_id"
+    norma ||--o{ requisito : "norma_id"
+    norma ||--o| expediente : "norma_id"
+    nucleo_usuario ||--o{ accion_correctiva : "responsable_id"
+    nucleo_usuario ||--o{ accion_correctiva : "verificada_por"
+    nucleo_usuario ||--o{ evaluacion_requisito : "evaluado_por"
+    nucleo_usuario ||--o{ expediente : "responsable_id"
+    nucleo_usuario ||--o{ no_conformidad : "cerrada_por"
+    personal_tarea ||--o{ accion_correctiva : "tarea_id"
+    requisito ||--o{ evaluacion_requisito : "requisito_id"
+    requisito ||--o{ no_conformidad : "requisito_id"

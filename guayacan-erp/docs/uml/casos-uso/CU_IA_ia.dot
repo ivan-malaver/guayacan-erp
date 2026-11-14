@@ -1,0 +1,49 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Inteligencia artificial (IA)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "FAM"; "CLI"; "SCH"; "OPE";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"FAM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Familia", fontsize=11, fontcolor="#1F2933"];
+"CLI" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Cliente", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"OPE" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario de\ncampo", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Inteligencia artificial"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "IA-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-01\nConfigurar un agente y sus\nherramientas"];
+  "IA-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-02\nResolver la bandeja de\naprobaciones"];
+  "IA-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-03\nAlimentar la base de\nconocimiento"];
+  "IA-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-04\nRecibir y seguir\nrecomendaciones de mejora"];
+  "IA-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-05\nEvaluar las respuestas de\nlos agentes"];
+  "IA-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-06\nControlar el consumo y el\ncosto de la IA"];
+  "IA-07" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-07\nPronosticar la demanda\n[función pronostico_demanda]"];
+  "IA-08" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-08\nDiagnosticar una foto de\ncampo\n[función diagnostico_imagen]"];
+  "IA-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IA-09\nSimular un escenario y\nregistrar la decisión"];
+}
+{rank=sink; "AG_MER"; "AG_RED"; "AG_NEG"; "VEN"; "AG_AGR"; "ENC"; "AG_EST";}
+"AG_MER" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAnalista de\nmercados"];
+"AG_RED" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nGestor de redes"];
+"AG_NEG" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAnalista de\nnegocio"];
+"VEN" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Vendedor", fontsize=11, fontcolor="#1F2933"];
+"AG_AGR" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAgrónomo"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+"AG_EST" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nEstratega"];
+"ADM" -> "IA-01";
+"ADM" -> "IA-02";
+"IA-02" -> "AG_MER" [style=solid];
+"IA-02" -> "AG_RED" [style=solid];
+"ADM" -> "IA-03";
+"ADM" -> "IA-04";
+"FAM" -> "IA-04";
+"IA-04" -> "AG_NEG" [style=solid];
+"CLI" -> "IA-05";
+"ADM" -> "IA-05";
+"ADM" -> "IA-06";
+"IA-06" -> "SCH" [style=solid];
+"SCH" -> "IA-07";
+"IA-07" -> "VEN" [style=solid];
+"OPE" -> "IA-08";
+"IA-08" -> "AG_AGR" [style=solid];
+"IA-08" -> "ENC" [style=solid];
+"FAM" -> "IA-09";
+"IA-09" -> "AG_NEG" [style=solid];
+"IA-09" -> "AG_EST" [style=solid];
+}

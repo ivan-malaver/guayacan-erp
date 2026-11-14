@@ -1,0 +1,17 @@
+flowchart TB
+  E[Entrada: cosecha, postura, abono o compra<br/>escaneo o báscula] --> L[Lote con fecha de producción<br/>y su huella de trazabilidad]
+  L --> V[Vencimiento estimado<br/>vida útil según ambiente o nevera]
+  V --> FL[Fecha límite de venta<br/>vencimiento menos margen]
+  FL --> S{Semáforo diario}
+  S -- verde --> C[Catálogo normal]
+  S -- amarillo --> Q[Vender primero<br/>precio de liquidación aprobado]
+  S -- rojo --> M[No vender<br/>revisar y registrar merma con causa]
+  L -. excursión de frío, sanidad o retiro .-> B[Lote bloqueado<br/>sale del catálogo y de la reserva]
+  B --> H{Decide una persona}
+  H -- liberar --> C
+  H -- descartar --> M
+  C --> R[Pedido confirmado<br/>reserva FEFO: se puede vender]
+  Q --> R
+  R --> D[Despacho<br/>salida desde lo reservado]
+  D --> T[Trazabilidad: qué cliente recibió cada lote]
+  M --> AJ[El analista ajusta la vida útil<br/>con las mermas reales]

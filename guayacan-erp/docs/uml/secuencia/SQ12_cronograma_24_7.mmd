@@ -1,0 +1,18 @@
+sequenceDiagram
+  autonumber
+  actor E as Encargado
+  participant CO as Coordinador (IA)
+  participant DB as PostgreSQL
+  actor O as Trabajadores
+  O->>DB: disponibilidad y ausencias
+  E->>DB: cronograma en borrador del área de vigilancia
+  E->>DB: asignación de patrón cíclico con desfase por persona
+  E->>DB: personal.generar_turnos(cronograma)
+  DB->>DB: validar_turno() en cada turno: cruces, descanso, máximo diario
+  CO->>DB: consulta huecos y propone ajustes
+  E->>DB: personal.huecos_cobertura(cronograma)
+  DB-->>E: horas sin cobertura
+  E->>DB: agrega turnos que faltan
+  E->>DB: cronograma publicado
+  DB->>DB: publicar_cronograma(): 42 h + extras, descanso cada 7 días, sin huecos
+  DB-->>O: turnos visibles en la app

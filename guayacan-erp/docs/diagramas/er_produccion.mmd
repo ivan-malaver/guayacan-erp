@@ -1,0 +1,243 @@
+erDiagram
+    especie {
+        bigint id PK
+        varchar codigo
+        varchar nombre_comun
+        varchar nombre_cientifico
+        lista grupo
+        boolean manejo_individual
+    }
+    lote_animal {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        bigint especie_id FK
+        bigint zona_id FK
+        varchar raza_linea
+        lista proposito
+        date fecha_ingreso
+        smallint edad_ingreso_semanas
+        integer cantidad_inicial
+        integer cantidad_actual
+        numeric costo_ingreso
+        lista estado
+        date fecha_cierre
+    }
+    animal {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_animal_id FK
+        varchar identificador
+        lista sexo
+        date fecha_nacimiento
+        bigint madre_id FK
+        bigint padre_id FK
+        lista estado
+    }
+    registro_postura {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_animal_id FK
+        date fecha
+        integer huevos_recogidos
+        integer huevos_rotos
+        bigint registrado_por FK
+    }
+    registro_alimentacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_animal_id FK
+        date fecha
+        bigint producto_id FK
+        numeric cantidad_kg
+        lista origen
+    }
+    evento_sanitario {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_animal_id FK
+        bigint animal_id FK
+        date fecha
+        lista tipo
+        bigint producto_id FK
+        varchar dosis
+        integer cantidad_afectada
+        varchar causa
+        varchar responsable
+    }
+    registro_pesaje {
+        bigint id PK
+        bigint predio_id FK
+        bigint lote_animal_id FK
+        bigint animal_id FK
+        date fecha
+        integer animales_muestreados
+        numeric peso_promedio_kg
+    }
+    evento_reproductivo {
+        bigint id PK
+        bigint predio_id FK
+        bigint hembra_id FK
+        bigint macho_id FK
+        lista tipo
+        date fecha
+        smallint crias_vivas
+        smallint crias_muertas
+    }
+    calidad_agua_estanque {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_id FK
+        timestamptz medido_en
+        numeric oxigeno_mg_l
+        numeric temperatura_c
+        numeric ph
+        numeric amonio_mg_l
+    }
+    cultivo {
+        bigint id PK
+        varchar codigo
+        varchar nombre_comun
+        varchar nombre_cientifico
+        lista tipo_ciclo
+        integer dias_a_primera_cosecha
+    }
+    siembra {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_id FK
+        bigint cultivo_id FK
+        varchar variedad
+        date fecha_siembra
+        integer plantas_previstas
+        integer plantas_sembradas
+        integer plantas_vivas
+        numeric semilla_kg
+        numeric area_m2
+        date fecha_estimada_cosecha
+        lista estado
+        text observaciones
+    }
+    labor_cultural {
+        bigint id PK
+        bigint predio_id FK
+        bigint siembra_id FK
+        date fecha
+        lista tipo
+        bigint producto_id FK
+        numeric cantidad
+        numeric jornales
+        lista metodo
+        bigint tarea_id FK
+        bigint mision_robot_id FK
+        text observaciones
+    }
+    cosecha {
+        bigint id PK
+        bigint predio_id FK
+        bigint siembra_id FK
+        date fecha
+        bigint producto_id FK
+        numeric cantidad
+        lista destino
+        bigint lote_inventario_id FK
+    }
+    analisis_suelo {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_id FK
+        date fecha_muestreo
+        varchar laboratorio
+        numeric ph
+        numeric materia_organica_pct
+        numeric aluminio_cmol_kg
+        jsonb resultados
+        text recomendacion
+        varchar archivo_url
+    }
+    categoria_huevo {
+        bigint id PK
+        varchar codigo
+        numeric peso_min_g
+        numeric peso_max_g
+        varchar norma
+        date vigente_desde
+    }
+    clasificacion_postura {
+        bigint id PK
+        bigint predio_id FK
+        bigint registro_postura_id FK
+        bigint categoria_huevo_id FK
+        integer cantidad
+        lista metodo
+    }
+    registro_bioseguridad {
+        bigint id PK
+        bigint predio_id FK
+        bigint zona_id FK
+        date fecha
+        lista tipo
+        bigint producto_id FK
+        varchar responsable
+        text observaciones
+    }
+    produccion_abono {
+        bigint id PK
+        bigint predio_id FK
+        lista origen
+        bigint zona_id FK
+        date fecha
+        numeric kg
+        bigint lote_inventario_id FK
+    }
+    inventario_lote_inventario {
+        bigint id PK
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    iot_mision_robot {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    nucleo_zona {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    animal ||--o{ animal : "madre_id"
+    animal ||--o{ animal : "padre_id"
+    animal ||--o{ evento_reproductivo : "hembra_id"
+    animal ||--o{ evento_reproductivo : "macho_id"
+    animal ||--o{ evento_sanitario : "animal_id"
+    animal ||--o{ registro_pesaje : "animal_id"
+    categoria_huevo ||--o{ clasificacion_postura : "categoria_huevo_id"
+    cultivo ||--o{ siembra : "cultivo_id"
+    especie ||--o{ lote_animal : "especie_id"
+    inventario_lote_inventario ||--o{ cosecha : "lote_inventario_id"
+    inventario_lote_inventario ||--o{ produccion_abono : "lote_inventario_id"
+    inventario_producto ||--o{ cosecha : "producto_id"
+    inventario_producto ||--o{ evento_sanitario : "producto_id"
+    inventario_producto ||--o{ labor_cultural : "producto_id"
+    inventario_producto ||--o{ registro_alimentacion : "producto_id"
+    inventario_producto ||--o{ registro_bioseguridad : "producto_id"
+    iot_mision_robot ||--o{ labor_cultural : "mision_robot_id"
+    lote_animal ||--o{ animal : "lote_animal_id"
+    lote_animal ||--o{ evento_sanitario : "lote_animal_id"
+    lote_animal ||--o{ registro_alimentacion : "lote_animal_id"
+    lote_animal ||--o{ registro_pesaje : "lote_animal_id"
+    lote_animal ||--o{ registro_postura : "lote_animal_id"
+    nucleo_usuario ||--o{ registro_postura : "registrado_por"
+    nucleo_zona ||--o{ analisis_suelo : "zona_id"
+    nucleo_zona ||--o{ calidad_agua_estanque : "zona_id"
+    nucleo_zona ||--o{ lote_animal : "zona_id"
+    nucleo_zona ||--o{ produccion_abono : "zona_id"
+    nucleo_zona ||--o{ registro_bioseguridad : "zona_id"
+    nucleo_zona ||--o{ siembra : "zona_id"
+    personal_tarea ||--o{ labor_cultural : "tarea_id"
+    registro_postura ||--o{ clasificacion_postura : "registro_postura_id"
+    siembra ||--o{ cosecha : "siembra_id"
+    siembra ||--o{ labor_cultural : "siembra_id"

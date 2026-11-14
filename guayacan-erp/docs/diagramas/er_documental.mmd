@@ -1,0 +1,50 @@
+erDiagram
+    documento {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar titulo
+        lista tipo
+        varchar entidad_emisora
+        varchar numero
+        bigint responsable_id FK
+        lista nivel_acceso
+        bigint rol_id FK
+        boolean contiene_datos_personales
+        text finalidad
+        date conservar_hasta
+        boolean uso_agentes
+    }
+    version_documento {
+        bigint id PK
+        bigint predio_id FK
+        bigint documento_id FK
+        smallint version
+        varchar archivo_url
+        char hash_sha256
+        lista estado
+        bigint aprobada_por FK
+        timestamptz aprobada_en
+        date vigente_desde
+        date vence_en
+        smallint avisar_dias
+        text cambios
+    }
+    vinculo_documento {
+        bigint id PK
+        bigint predio_id FK
+        bigint documento_id FK
+        varchar registro_tabla
+        bigint registro_id
+    }
+    nucleo_rol {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    documento ||--o{ version_documento : "documento_id"
+    documento ||--o{ vinculo_documento : "documento_id"
+    nucleo_rol ||--o{ documento : "rol_id"
+    nucleo_usuario ||--o{ documento : "responsable_id"
+    nucleo_usuario ||--o{ version_documento : "aprobada_por"

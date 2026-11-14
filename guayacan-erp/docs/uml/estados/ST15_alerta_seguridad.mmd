@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> nueva: detector, señuelo o vigilancia de privilegios
+  nueva --> en_analisis: atendida_por queda registrado
+  en_analisis --> contenida
+  en_analisis --> falso_positivo
+  contenida --> cerrada
+  falso_positivo --> cerrada
+  cerrada --> [*]
+  note right of nueva: la API no puede cambiar severidad ni borrarla

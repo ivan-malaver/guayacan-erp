@@ -1,0 +1,63 @@
+classDiagram
+  direction TB
+  class turismo__alojamiento["alojamiento"] {
+    <<por finca · fase 3>>
+    +codigo : texto
+    +nombre : texto
+    +capacidad_personas : smallint
+    +zona_id? : ref zona
+    +tarifa_noche : dinero
+    +activo : boolean
+  }
+  class turismo__plan_turistico["plan_turistico"] {
+    <<por finca · fase 3>>
+    +codigo : texto
+    +nombre : texto
+    +descripcion : text
+    +duracion_horas? : decimal
+    +cupo_maximo? : smallint
+    +precio_persona : dinero
+  }
+  class turismo__reserva["reserva"] {
+    <<por finca · fase 3>>
+    +codigo : texto
+    +cliente_id : ref cliente
+    +alojamiento_id? : ref alojamiento
+    +plan_turistico_id? : ref plan_turistico
+    +fecha_inicio : date
+    +fecha_fin : date
+    +personas : smallint
+    +estado : enum
+    +total : dinero
+    +valor_deposito : dinero
+    +checkin_en? : momento
+    +checkout_en? : momento
+    +… 1 campos más
+  }
+  class turismo__bloqueo_calendario["bloqueo_calendario"] {
+    <<por finca · fase 3>>
+    +alojamiento_id? : ref alojamiento
+    +plan_turistico_id? : ref plan_turistico
+    +desde : date
+    +hasta : date
+    +motivo : texto
+  }
+  namespace comercial {
+    class comercial__pedido["comercial.pedido"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace terceros {
+    class terceros__cliente["terceros.cliente"]
+  }
+  turismo__alojamiento "*" --> "0..1" nucleo__zona : zona_id
+  turismo__reserva "*" --> "1" terceros__cliente : cliente_id
+  turismo__reserva "*" --> "0..1" turismo__alojamiento : alojamiento_id
+  turismo__reserva "*" --> "0..1" turismo__plan_turistico : plan_turistico_id
+  turismo__reserva "*" --> "0..1" comercial__pedido : pedido_id
+  turismo__bloqueo_calendario "*" --> "0..1" turismo__alojamiento : alojamiento_id
+  turismo__bloqueo_calendario "*" --> "0..1" turismo__plan_turistico : plan_turistico_id
+  style comercial__pedido fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__cliente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

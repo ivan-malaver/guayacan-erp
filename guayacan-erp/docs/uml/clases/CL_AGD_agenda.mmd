@@ -1,0 +1,97 @@
+classDiagram
+  direction TB
+  class agenda__recurso["recurso"] {
+    <<por finca · fase 3>>
+    +codigo : texto
+    +nombre : texto
+    +tipo : enum
+    +alojamiento_id? : ref alojamiento
+    +activo_id? : ref activo
+    +zona_id? : ref zona
+    +capacidad? : smallint
+    +minutos_preparacion : smallint
+    +activo : boolean
+  }
+  class agenda__cita["cita"] {
+    <<por finca · fase 3>>
+    +recurso_id : ref recurso
+    +titulo : texto
+    +tipo : enum
+    +inicio : momento
+    +fin : momento
+    +fin_con_preparacion? : momento
+    +estado : enum
+    +reserva_id? : ref reserva
+    +bloqueo_id? : ref bloqueo_calendario
+    +tarea_id? : ref tarea
+    +responsable_id? : ref usuario
+    +notas? : text
+  }
+  class agenda__visita["visita"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +nombre : texto
+    +tercero_id? : ref tercero
+    +personas : smallint
+    +vehiculo_placa? : texto
+    +vehiculo_tipo? : enum
+    +motivo : texto
+    +zona_destino_id? : ref zona
+    +ingreso_programado : momento
+    +salida_programada : momento
+    +anfitrion_id : ref usuario
+    +requiere_bioseguridad : boolean
+    +… 6 campos más
+  }
+  class agenda__registro_acceso["registro_acceso"] {
+    <<por finca · fase 2>>
+    +sentido : enum
+    +tipo : enum
+    +visita_id? : ref visita
+    +empleado_id? : ref empleado
+    +nombre? : texto
+    +placa? : texto
+    +punto : texto
+    +metodo : enum
+    +desinfeccion : boolean
+    +ocurrido_en : momento
+    +registrado_por? : ref usuario
+  }
+  namespace activos {
+    class activos__activo["activos.activo"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace personal {
+    class personal__tarea["personal.tarea"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  namespace turismo {
+    class turismo__alojamiento["turismo.alojamiento"]
+    class turismo__bloqueo_calendario["turismo.bloqueo_calendario"]
+    class turismo__reserva["turismo.reserva"]
+  }
+  agenda__recurso "0..1" --> "0..1" turismo__alojamiento : alojamiento_id
+  agenda__recurso "*" --> "0..1" activos__activo : activo_id
+  agenda__recurso "*" --> "0..1" nucleo__zona : zona_id
+  agenda__cita "*" --> "1" agenda__recurso : recurso_id
+  agenda__cita "*" --> "0..1" turismo__reserva : reserva_id
+  agenda__cita "*" --> "0..1" turismo__bloqueo_calendario : bloqueo_id
+  agenda__cita "*" --> "0..1" personal__tarea : tarea_id
+  agenda__visita "*" --> "0..1" terceros__tercero : tercero_id
+  agenda__visita "*" --> "0..1" nucleo__zona : zona_destino_id
+  agenda__visita "*" --> "0..1" agenda__cita : cita_id
+  agenda__registro_acceso "*" --> "0..1" agenda__visita : visita_id
+  agenda__registro_acceso "*" --> "0..1" terceros__empleado : empleado_id
+  style turismo__bloqueo_calendario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style activos__activo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style turismo__alojamiento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style turismo__reserva fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

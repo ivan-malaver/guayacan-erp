@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> solicitada
+  solicitada --> confirmada: ocupa la agenda sin cruces
+  solicitada --> pagada: pago anticipado
+  confirmada --> pagada
+  confirmada --> cancelada: libera la agenda
+  pagada --> cancelada: según la política de reembolso
+  pagada --> cumplida: checkout crea la limpieza
+  confirmada --> cumplida
+  cumplida --> [*]
+  cancelada --> [*]

@@ -1,0 +1,134 @@
+erDiagram
+    factor_autenticacion {
+        bigint id PK
+        bigint usuario_id FK
+        lista tipo
+        varchar nombre
+        varchar secreto_ref
+        boolean activo
+        timestamptz ultimo_uso
+    }
+    sesion_usuario {
+        bigint id PK
+        bigint usuario_id FK
+        lista metodo
+        inet ip
+        varchar agente_usuario
+        bigint dispositivo_captura_id
+        timestamptz iniciada_en
+        timestamptz vence_en
+        timestamptz revocada_en
+        varchar motivo_revocacion
+    }
+    intento_acceso {
+        bigint id PK
+        citext correo
+        bigint usuario_id FK
+        inet ip
+        boolean exito
+        lista motivo_fallo
+        varchar agente_usuario
+        timestamptz ocurrido_en
+    }
+    regla_deteccion {
+        bigint id PK
+        varchar codigo
+        text descripcion
+        smallint umbral
+        smallint ventana_min
+        lista severidad
+        lista respuesta
+        smallint bloqueo_min
+        boolean activa
+    }
+    bloqueo {
+        bigint id PK
+        lista tipo
+        bigint usuario_id FK
+        cidr ip
+        bigint regla_id FK
+        varchar motivo
+        timestamptz desde
+        timestamptz hasta
+        bigint levantado_por FK
+    }
+    senuelo {
+        bigint id PK
+        lista tipo
+        varchar valor
+        varchar descripcion
+        boolean activo
+    }
+    alerta_seguridad {
+        bigint id PK
+        lista tipo
+        lista severidad
+        lista fuente
+        bigint regla_id FK
+        bigint usuario_id FK
+        inet ip
+        bigint predio_id FK
+        jsonb detalle
+        timestamptz ocurrido_en
+        lista estado
+        bigint atendida_por FK
+        bigint incidente_id FK
+    }
+    incidente {
+        bigint id PK
+        varchar titulo
+        lista severidad
+        lista estado
+        bigint responsable_id FK
+        boolean datos_personales_afectados
+        date reportado_sic_en
+        timestamptz abierto_en
+        timestamptz cerrado_en
+        text lecciones
+    }
+    ejecucion_prueba {
+        bigint id PK
+        lista tipo
+        varchar suite
+        varchar version_sistema
+        lista entorno
+        integer total
+        integer aprobadas
+        integer fallidas
+        integer hallazgos_criticos
+        varchar herramienta
+        varchar informe_url
+        timestamptz ejecutada_en
+        bigint ejecutada_por FK
+    }
+    copia_seguridad {
+        bigint id PK
+        lista alcance
+        lista destino
+        timestamptz inicio
+        timestamptz fin
+        numeric tamano_mb
+        char hash_sha256
+        boolean cifrada
+        boolean exitosa
+        timestamptz restauracion_probada_en
+    }
+    nucleo_predio {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    incidente ||--o{ alerta_seguridad : "incidente_id"
+    nucleo_predio ||--o{ alerta_seguridad : "predio_id"
+    nucleo_usuario ||--o{ alerta_seguridad : "atendida_por"
+    nucleo_usuario ||--o{ alerta_seguridad : "usuario_id"
+    nucleo_usuario ||--o{ bloqueo : "levantado_por"
+    nucleo_usuario ||--o{ bloqueo : "usuario_id"
+    nucleo_usuario ||--o{ ejecucion_prueba : "ejecutada_por"
+    nucleo_usuario ||--o{ factor_autenticacion : "usuario_id"
+    nucleo_usuario ||--o{ incidente : "responsable_id"
+    nucleo_usuario ||--o{ intento_acceso : "usuario_id"
+    nucleo_usuario ||--o{ sesion_usuario : "usuario_id"
+    regla_deteccion ||--o{ alerta_seguridad : "regla_id"
+    regla_deteccion ||--o{ bloqueo : "regla_id"

@@ -1,0 +1,143 @@
+classDiagram
+  direction TB
+  class formacion__curso["curso"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +descripcion? : text
+    +publico : enum
+    +modalidad : enum
+    +competencia_id? : ref competencia
+    +nota_minima : decimal
+    +duracion_horas? : decimal
+    +origen : enum
+    +url_externa? : texto
+    +ruta_cargo? : texto
+    +activo : boolean
+  }
+  class formacion__sesion_presencial["sesion_presencial"] {
+    <<por finca · fase 2>>
+    +curso_id : ref curso
+    +instructor_id : ref tercero
+    +fecha : date
+    +lugar? : texto
+    +duracion_horas : decimal
+  }
+  class formacion__competencia["competencia"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +vigencia_meses? : smallint
+    +descripcion? : text
+  }
+  class formacion__inscripcion["inscripcion"] {
+    <<por finca · fase 2>>
+    +curso_id : ref curso
+    +tercero_id : ref tercero
+    +inscrito_en : date
+    +estado : enum
+    +nota? : decimal
+    +aprobado_en? : date
+  }
+  class formacion__necesidad_formacion["necesidad_formacion"] {
+    <<por finca · fase 2>>
+    +origen : enum
+    +descripcion : text
+    +tercero_id? : ref tercero
+    +competencia_id? : ref competencia
+    +curso_id? : ref curso
+    +estado : enum
+  }
+  class formacion__queja_apelacion["queja_apelacion"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +tercero_id : ref tercero
+    +curso_id? : ref curso
+    +certificado_id? : ref certificado
+    +descripcion : text
+    +presentada_en : date
+    +responder_antes : date
+    +estado : enum
+    +respuesta? : text
+    +resuelta_por? : ref usuario
+  }
+  class formacion__encuesta["encuesta"] {
+    <<por finca · fase 2>>
+    +curso_id? : ref curso
+    +sesion_id? : ref sesion_presencial
+    +tercero_id? : ref tercero
+    +satisfaccion : smallint
+    +utilidad : smallint
+    +instructor? : smallint
+    +comentario? : text
+  }
+  class formacion__leccion["leccion"] {
+    <<por finca · fase 2>>
+    +curso_id : ref curso
+    +orden : smallint
+    +titulo : texto
+    +tipo : enum
+    +contenido_url? : texto
+    +pantalla? : texto
+    +documento_id? : ref documento
+    +descargable : boolean
+  }
+  class formacion__evaluacion["evaluacion"] {
+    <<por finca · fase 2>>
+    +curso_id : ref curso
+    +titulo : texto
+    +intentos_max : smallint
+  }
+  class formacion__certificado["certificado"] {
+    <<por finca · fase 2>>
+    +tercero_id : ref tercero
+    +competencia_id : ref competencia
+    +inscripcion_id? : ref inscripcion
+    +sesion_id? : ref sesion_presencial
+    +emitido_en : date
+    +vence_en? : date
+    +nota? : decimal
+    +codigo_verificacion : texto
+  }
+  class formacion__habilitacion["habilitacion"] {
+    <<por finca · fase 2>>
+    +tercero_id : ref tercero
+    +competencia_id : ref competencia
+    +certificado_id : ref certificado
+    +desde : date
+    +hasta? : date
+    +activa : boolean
+    +retirada_en? : momento
+  }
+  namespace documental {
+    class documental__documento["documental.documento"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  formacion__curso "*" --> "0..1" formacion__competencia : competencia_id
+  formacion__sesion_presencial "*" --> "1" formacion__curso : curso_id
+  formacion__sesion_presencial "*" --> "1" terceros__tercero : instructor_id
+  formacion__inscripcion "*" --> "1" formacion__curso : curso_id
+  formacion__inscripcion "*" --> "1" terceros__tercero : tercero_id
+  formacion__necesidad_formacion "*" --> "0..1" terceros__tercero : tercero_id
+  formacion__necesidad_formacion "*" --> "0..1" formacion__competencia : competencia_id
+  formacion__necesidad_formacion "*" --> "0..1" formacion__curso : curso_id
+  formacion__queja_apelacion "*" --> "1" terceros__tercero : tercero_id
+  formacion__queja_apelacion "*" --> "0..1" formacion__curso : curso_id
+  formacion__queja_apelacion "*" --> "0..1" formacion__certificado : certificado_id
+  formacion__encuesta "*" --> "0..1" formacion__curso : curso_id
+  formacion__encuesta "*" --> "0..1" formacion__sesion_presencial : sesion_id
+  formacion__encuesta "*" --> "0..1" terceros__tercero : tercero_id
+  formacion__leccion "*" --> "1" formacion__curso : curso_id
+  formacion__leccion "*" --> "0..1" documental__documento : documento_id
+  formacion__evaluacion "*" --> "1" formacion__curso : curso_id
+  formacion__certificado "*" --> "1" terceros__tercero : tercero_id
+  formacion__certificado "*" --> "1" formacion__competencia : competencia_id
+  formacion__certificado "*" --> "0..1" formacion__inscripcion : inscripcion_id
+  formacion__certificado "*" --> "0..1" formacion__sesion_presencial : sesion_id
+  formacion__habilitacion "*" --> "1" terceros__tercero : tercero_id
+  formacion__habilitacion "*" --> "1" formacion__competencia : competencia_id
+  formacion__habilitacion "*" --> "1" formacion__certificado : certificado_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style documental__documento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

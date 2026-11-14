@@ -1,0 +1,117 @@
+classDiagram
+  direction TB
+  class activos__activo["activo"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +nombre : texto
+    +tipo : enum
+    +marca? : texto
+    +modelo? : texto
+    +serie? : texto
+    +fecha_compra? : date
+    +valor_compra? : dinero
+    +valor_residual : dinero
+    +vida_util_meses? : smallint
+    +metodo_depreciacion : enum
+    +zona_id? : ref zona
+    +… 9 campos más
+  }
+  class activos__plan_mantenimiento["plan_mantenimiento"] {
+    <<por finca · fase 2>>
+    +activo_id : ref activo
+    +nombre : texto
+    +tipo : enum
+    +frecuencia_tipo : enum
+    +frecuencia_valor : decimal
+    +ultima_lectura : decimal
+    +ultima_fecha? : date
+    +activo : boolean
+  }
+  class activos__orden_trabajo["orden_trabajo"] {
+    <<por finca · fase 2>>
+    +activo_id : ref activo
+    +plan_id? : ref plan_mantenimiento
+    +tipo : enum
+    +descripcion : text
+    +estado : enum
+    +tarea_id? : ref tarea
+    +lectura_cierre? : decimal
+    +costo_mano_obra : dinero
+    +costo_repuestos : dinero
+    +cerrada_en? : momento
+  }
+  class activos__repuesto_orden["repuesto_orden"] {
+    <<por finca · fase 2>>
+    +orden_id : ref orden_trabajo
+    +producto_id : ref producto
+    +cantidad : decimal
+    +movimiento_id? : ref movimiento_inventario
+  }
+  class activos__uso_activo["uso_activo"] {
+    <<por finca · fase 2>>
+    +activo_id : ref activo
+    +fecha : date
+    +empleado_id? : ref empleado
+    +horas : decimal
+    +km : decimal
+    +combustible_litros? : decimal
+    +costo_combustible? : dinero
+    +centro_costo_id? : ref centro_costo
+    +tarea_id? : ref tarea
+  }
+  class activos__depreciacion["depreciacion"] {
+    <<por finca · fase 2>>
+    +activo_id : ref activo
+    +mes : date
+    +valor : dinero
+    +acumulada : dinero
+    +comprobante_id? : ref comprobante
+  }
+  namespace finanzas {
+    class finanzas__centro_costo["finanzas.centro_costo"]
+    class finanzas__comprobante["finanzas.comprobante"]
+  }
+  namespace inventario {
+    class inventario__movimiento_inventario["inventario.movimiento_inventario"]
+    class inventario__producto["inventario.producto"]
+    class inventario__vehiculo["inventario.vehiculo"]
+  }
+  namespace iot {
+    class iot__dispositivo["iot.dispositivo"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace personal {
+    class personal__tarea["personal.tarea"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+  }
+  activos__activo "*" --> "0..1" nucleo__zona : zona_id
+  activos__activo "*" --> "0..1" terceros__empleado : responsable_id
+  activos__activo "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  activos__activo "*" --> "0..1" inventario__vehiculo : vehiculo_id
+  activos__activo "*" --> "0..1" iot__dispositivo : dispositivo_id
+  activos__plan_mantenimiento "*" --> "1" activos__activo : activo_id
+  activos__orden_trabajo "*" --> "1" activos__activo : activo_id
+  activos__orden_trabajo "*" --> "0..1" activos__plan_mantenimiento : plan_id
+  activos__orden_trabajo "*" --> "0..1" personal__tarea : tarea_id
+  activos__repuesto_orden "*" --> "1" activos__orden_trabajo : orden_id
+  activos__repuesto_orden "*" --> "1" inventario__producto : producto_id
+  activos__repuesto_orden "*" --> "0..1" inventario__movimiento_inventario : movimiento_id
+  activos__uso_activo "*" --> "1" activos__activo : activo_id
+  activos__uso_activo "*" --> "0..1" terceros__empleado : empleado_id
+  activos__uso_activo "*" --> "0..1" finanzas__centro_costo : centro_costo_id
+  activos__uso_activo "*" --> "0..1" personal__tarea : tarea_id
+  activos__depreciacion "*" --> "1" activos__activo : activo_id
+  activos__depreciacion "*" --> "0..1" finanzas__comprobante : comprobante_id
+  style finanzas__centro_costo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__movimiento_inventario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__dispositivo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__comprobante fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__vehiculo fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

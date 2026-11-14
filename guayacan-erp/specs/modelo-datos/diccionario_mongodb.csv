@@ -1,0 +1,101 @@
+﻿coleccion,fase,campo,tipo,obligatorio,valores,significado
+conversaciones,Fase 1,_id,objectId,sí,,Identificador que asigna MongoDB
+conversaciones,Fase 1,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+conversaciones,Fase 1,canal,string,sí,"whatsapp, web_chat, instagram, messenger, tiktok",Canal de la conversación (redes.politica_canal)
+conversaciones,Fase 1,origen_entrada,string,no,"organico, anuncio, qr, enlace_perfil, comentario",Cómo llegó el cliente; un anuncio que abre chat amplía la ventana
+conversaciones,Fase 1,ultimo_mensaje_cliente_en,date,no,,Último mensaje del cliente: desde aquí corre la ventana del canal
+conversaciones,Fase 1,ventana_cierra_en,date,no,,Hasta cuándo puede responder el agente de IA sin plantilla
+conversaciones,Fase 1,ventana_humano_cierra_en,date,no,,Hasta cuándo puede responder una persona (Instagram y Messenger: 7 días)
+conversaciones,Fase 1,mensajes_en_ventana,int,no,,Mensajes enviados en la ventana actual (TikTok permite 10)
+conversaciones,Fase 1,escalamiento_id,long,no,,Escalamiento abierto (ia.escalamiento.id)
+conversaciones,Fase 1,identificador_canal,string,sí,,Número de WhatsApp o id del usuario en la plataforma (cifrado si es personal)
+conversaciones,Fase 1,tercero_id,long,no,,"Tercero en PostgreSQL, cuando se identifica al cliente"
+conversaciones,Fase 1,estado,string,sí,"abierta, en_espera_humano, atendida_humano, fuera_de_ventana, cerrada",Situación
+conversaciones,Fase 1,agente_actual,string,no,,Código del agente que atiende (ia.agente.codigo)
+conversaciones,Fase 1,intencion,string,no,"consulta_producto, pedido, estado_pedido, turismo, queja, proveedor, otro",Intención detectada por el orquestador
+conversaciones,Fase 1,resumen,string,no,,Resumen corto que actualiza el agente al cerrar (memoria de corto plazo)
+conversaciones,Fase 1,pedido_ids,array,no,,Pedidos creados en esta conversación (comercial.pedido.id)
+conversaciones,Fase 1,consentimiento_vigente,bool,sí,,Copia de control: si el cliente autorizó personalización al iniciar
+conversaciones,Fase 1,iniciada_en,date,sí,,Primer mensaje
+conversaciones,Fase 1,ultima_actividad_en,date,sí,,Último mensaje
+mensajes,Fase 1,_id,objectId,sí,,Identificador que asigna MongoDB
+mensajes,Fase 1,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+mensajes,Fase 1,conversacion_id,objectId,sí,,Conversación
+mensajes,Fase 1,autor,string,sí,"cliente, agente, humano, sistema",Quién escribe
+mensajes,Fase 1,agente,string,no,,"Código del agente, si lo escribió un agente"
+mensajes,Fase 1,usuario_id,long,no,,"Usuario del equipo, si lo escribió una persona"
+mensajes,Fase 1,tipo,string,sí,"texto, imagen, audio, ubicacion, plantilla, botones",Tipo de contenido
+mensajes,Fase 1,texto,string,no,,Contenido de texto (o transcripción del audio)
+mensajes,Fase 1,audio_url,string,no,,Nota de voz del cliente en el almacén de archivos (se conserva hasta su vencimiento)
+mensajes,Fase 1,transcripcion,string,no,,Texto obtenido del audio por el servicio de voz a texto
+mensajes,Fase 1,confianza_transcripcion,double,no,,"Confianza del servicio de voz a texto, de 0 a 1; si es baja, el agente pide confirmar"
+mensajes,Fase 1,proveedor_voz_texto,string,no,,Servicio de voz a texto usado (intercambiable)
+mensajes,Fase 1,pieza_audiovisual_id,long,no,,Video aprobado que el asesor adjuntó (redes.pieza_audiovisual)
+mensajes,Fase 1,adjuntos,array,no,,Rutas en MinIO de imágenes o audios
+mensajes,Fase 1,herramientas_usadas,array,no,,Herramientas que el agente invocó para responder (códigos)
+mensajes,Fase 1,ejecucion_id,objectId,no,,Registro en bitacora_agentes con el detalle
+mensajes,Fase 1,enviado_en,date,sí,,Momento
+perfiles_interes,Fase 1,_id,objectId,sí,,Identificador que asigna MongoDB
+perfiles_interes,Fase 1,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+perfiles_interes,Fase 1,tercero_id,long,sí,,Cliente (terceros.tercero.id)
+perfiles_interes,Fase 1,intereses,array,sí,,"Lista de productos o temas con puntaje: {producto_id, tema, puntaje 0-1, fuente, actualizado_en}"
+perfiles_interes,Fase 1,intereses.fuente,string,no,"compra, conversacion, interaccion_pagina_finca, declarado",De dónde salió el interés
+perfiles_interes,Fase 1,preferencias_declaradas,object,no,,"Lo que el cliente dijo explícitamente (presentación, día de entrega, alergias que mencione)"
+perfiles_interes,Fase 1,canal_preferido,string,no,,Canal por el que más responde
+perfiles_interes,Fase 1,horario_preferido,string,no,,Franja en que suele comprar
+perfiles_interes,Fase 1,segmentos,array,no,,Segmentos calculados (ej. comprador_semanal_huevo)
+perfiles_interes,Fase 1,resumen_memoria,string,no,,Memoria de largo plazo en lenguaje natural que lee el vendedor personalizado
+perfiles_interes,Fase 1,consentimiento_id,long,sí,,Consentimiento que lo autoriza (terceros.consentimiento_datos.id)
+perfiles_interes,Fase 1,actualizado_en,date,sí,,Última actualización
+eventos_redes,Fase 2,_id,objectId,sí,,Identificador que asigna MongoDB
+eventos_redes,Fase 2,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+eventos_redes,Fase 2,plataforma,string,sí,"facebook_pagina, instagram, messenger, tiktok, whatsapp",Red social
+eventos_redes,Fase 2,tipo,string,sí,"comentario, reaccion, mensaje, mencion, compartido, resena",Tipo de interacción
+eventos_redes,Fase 2,respuesta_privada_hasta,date,no,,Instagram: plazo de 7 días para la única respuesta privada a un comentario
+eventos_redes,Fase 2,publicacion_id,long,no,,Publicación de la finca (redes.publicacion.id)
+eventos_redes,Fase 2,autor_hash,string,sí,,Identificador del autor cifrado con hash (no se guarda el nombre)
+eventos_redes,Fase 2,tercero_id,long,no,,"Cliente, si se pudo vincular con su autorización"
+eventos_redes,Fase 2,texto,string,no,,Texto del comentario o mensaje
+eventos_redes,Fase 2,sentimiento,string,no,"positivo, neutro, negativo",Sentimiento calculado
+eventos_redes,Fase 2,temas,array,no,,"Temas detectados (huevo, precio, entrega, turismo...)"
+eventos_redes,Fase 2,respondido,bool,sí,,Si ya se respondió
+eventos_redes,Fase 2,ocurrido_en,date,sí,,Momento
+metricas_redes,Fase 2,_id,objectId,sí,,Identificador que asigna MongoDB
+metricas_redes,Fase 2,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+metricas_redes,Fase 2,plataforma,string,sí,,Red social
+metricas_redes,Fase 2,cuenta_red_id,long,sí,,Cuenta (redes.cuenta_red.id)
+metricas_redes,Fase 2,publicacion_id,long,no,,"Publicación, si es métrica de una publicación"
+metricas_redes,Fase 2,fecha,date,sí,,Día
+metricas_redes,Fase 2,metricas,object,sí,,"Valores: alcance, impresiones, me_gusta, comentarios, compartidos, clics, seguidores_nuevos"
+bitacora_agentes,Fase 1,_id,objectId,sí,,Identificador que asigna MongoDB
+bitacora_agentes,Fase 1,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+bitacora_agentes,Fase 1,agente,string,sí,,Código del agente
+bitacora_agentes,Fase 1,version_instrucciones,string,sí,,Versión de instrucciones usada
+bitacora_agentes,Fase 1,modelo,string,sí,,Modelo usado
+bitacora_agentes,Fase 1,disparador,string,sí,"mensaje, tarea_programada, evento, humano",Qué la inició
+bitacora_agentes,Fase 1,entrada_resumen,string,sí,,Resumen de la entrada (sin datos sensibles)
+bitacora_agentes,Fase 1,pasos,array,sí,,"Secuencia {herramienta, parametros, resultado_resumen, duracion_ms}"
+bitacora_agentes,Fase 1,salida_resumen,string,no,,Resumen de la respuesta
+bitacora_agentes,Fase 1,tokens_entrada,int,sí,,Tokens enviados
+bitacora_agentes,Fase 1,tokens_salida,int,sí,,Tokens generados
+bitacora_agentes,Fase 1,costo_usd,double,sí,,Costo
+bitacora_agentes,Fase 1,latencia_ms,int,sí,,Duración total
+bitacora_agentes,Fase 1,error,string,no,,"Error, si lo hubo"
+bitacora_agentes,Fase 1,ejecutado_en,date,sí,,Momento
+informes_mercado,Fase 1,_id,objectId,sí,,Identificador que asigna MongoDB
+informes_mercado,Fase 1,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+informes_mercado,Fase 1,periodo,string,sí,,"Periodo analizado, ej. 2026-10-S4"
+informes_mercado,Fase 1,productos,array,sí,,"Por producto: {producto_id, precio_finca, precio_mercado, costo_unitario, margen, tendencia}"
+informes_mercado,Fase 1,proveedores,array,no,,"Comparación de proveedores: {producto_id, proveedor, precio, fecha, fuente}"
+informes_mercado,Fase 1,fuentes,array,sí,,Fuentes consultadas con enlace y fecha
+informes_mercado,Fase 1,conclusiones,string,sí,,Conclusiones en lenguaje claro
+informes_mercado,Fase 1,propuestas_precio_ids,array,no,,Propuestas creadas (comercial.propuesta_precio.id)
+informes_mercado,Fase 1,generado_en,date,sí,,Momento
+tendencias,Fase 2,_id,objectId,sí,,Identificador que asigna MongoDB
+tendencias,Fase 2,predio_id,long,sí,,Finca dueña del documento (nucleo.predio.id). MongoDB no tiene seguridad por filas: el servicio de agentes filtra siempre por este campo
+tendencias,Fase 2,periodo,string,sí,,Periodo
+tendencias,Fase 2,temas,array,sí,,"{tema, menciones, variacion, sentimiento}"
+tendencias,Fase 2,productos_consultados,array,sí,,"{producto_id, consultas, conversion_pedido}"
+tendencias,Fase 2,preguntas_frecuentes,array,no,,Preguntas que más se repiten (para la base de conocimiento)
+tendencias,Fase 2,recomendacion_ids,array,no,,Recomendaciones creadas (ia.recomendacion.id)
+tendencias,Fase 2,generado_en,date,sí,,Momento

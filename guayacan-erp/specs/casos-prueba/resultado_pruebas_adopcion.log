@@ -1,0 +1,35 @@
+OK  La adopción nace apagada -> "La función adopcion no está activa en esta finca"
+OK  Siembra por trabajador sin autorización: rechazada -> "Para enviar el video de siembra se necesita la autorización de datos del adoptante (seguimiento_adopcion)"
+OK  Un árbol exige elegir quién lo siembra -> "Indique si el adoptante siembra el árbol en persona o lo siembra un trabajador"
+OK  Comprado y sin sembrar: el árbol queda reservado
+OK  El comprador queda marcado como adoptante
+OK  No se vende dos veces el mismo árbol -> "El bien AGU-0001 no está disponible para compra (estado reservado)"
+OK  Siembra por trabajador sin video: rechazada -> "La siembra por un trabajador exige el video para el adoptante"
+OK  Sembrado: árbol activo y sitio ocupado
+OK  Queda el video en la bitácora y el evento para enviarlo
+OK  El mes de compra no genera cuota
+OK  Tres meses, tres cuotas (idempotente)
+OK  Con 2 cuotas vencidas: aviso, el contrato sigue
+OK  Con 3 cuotas vencidas el contrato termina por abandono
+OK  El árbol pasa a readopción y las cuotas pendientes se anulan
+OK  Solo se readopta lo abandonado -> "El bien GUA-0001 no está en readopción"
+OK  Readoptado: el árbol vuelve a tener dueño
+OK  Muerte en garantía: reposición sin costo y el contrato pasa al árbol nuevo
+OK  Un animal no tiene modalidad de siembra -> "La modalidad de siembra solo aplica a árboles"
+OK  El animal comprado queda activo desde la compra
+OK  No se decide antes de la madurez -> "El bien todavía no llega a su madurez"
+OK  A los 12 meses la cordera llega a su madurez
+OK  Un agente no decide por el dueño -> "Un agente de IA no puede decidir sobre un bien adoptado: lo hace una persona"
+OK  Sacrificio sin certificado de planta de beneficio: rechazado -> "Para liquidar por sacrificio se exige el soporte (planta_beneficio): permiso de tala, remisión ICA o certificado de la planta de beneficio"
+OK  Liquidación: utilidad 422.500, comisión 5 % = 21.125, abono 401.375
+OK  Liquidado: bien y contrato cerrados
+OK  Una liquidación aprobada no cambia -> "La liquidación 2 ya fue aprobada"
+OK  El abono de la liquidación paga las cuotas del otro árbol de John
+OK  No se paga más que el saldo -> "Saldo insuficiente del adoptante: tiene 376375.00, se intentan descontar 99999999.00"
+OK  La cuenta del adoptante es de solo inserción -> "permission denied for table movimiento_saldo"
+OK  Con pérdida no se cobra el 5 % ni se abona
+OK  No se tala sin la decisión del dueño -> "El dueño no ha decidido liquidar el bien GUA-0001"
+OK  Ceder: el contrato anterior queda cedido y el nuevo activo
+OK  RLS: otra finca no ve bienes ni contratos
+OK  Tablero por tipo
+ TODAS LAS PRUEBAS PASARON

@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant ES as Estratega (IA)
+  actor F as Familia
+  participant DB as PostgreSQL
+  actor D as Director del proyecto
+  ES->>DB: consulta v_matriz_lineas y estados financieros
+  ES->>DB: INSERT iniciativa estado idea (desarrollo de mercado HORECA)
+  F->>DB: evaluación: inversión, precio, costo variable, fijos, unidades
+  F->>DB: estrategia.evaluar_proyecto(id)
+  DB-->>F: VPN, TIR, ROI, recuperación, equilibrio, palancas
+  F->>DB: iniciativa aprobada (solo con evaluación calculada)
+  F->>DB: reinversion desde la línea avícola
+  DB->>DB: validar_reinversion(): utilidad positiva y tope del 30 %
+  D->>DB: proyecto ligado a la iniciativa (acta)
+  F->>DB: aprueba como patrocinador, nace la línea base 1

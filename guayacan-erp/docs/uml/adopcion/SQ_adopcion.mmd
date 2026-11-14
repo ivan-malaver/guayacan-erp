@@ -1,0 +1,25 @@
+sequenceDiagram
+autonumber
+actor A as Adoptante
+participant W as PWA / sitio web
+participant API as API Django
+participant DB as PostgreSQL (adopcion)
+participant P as Pasarela
+participant E as Encargado
+actor O as Operario
+participant R as Gestor de redes (IA)
+A->>W: Elige plan, sitio y modalidad «trabajador»
+W->>API: POST /adopcion/contratos/
+API->>DB: insert contrato (validar_contrato)
+DB-->>API: bien → reservado, consentimiento verificado
+API->>P: Crear cobro (precio de compra)
+P-->>API: Pago aprobado (webhook)
+API->>DB: comercial.pago + preparar_factura()
+E->>API: Asignar tarea de siembra (CU-093)
+O->>W: Siembra y graba el video (sin conexión)
+W->>API: Sincroniza evidencia de la tarea
+API->>DB: registrar_siembra(bien, fecha, tarea, video)
+DB-->>DB: bien → activo, sitio → ocupado, evento adopcion.sembrado
+DB-->>R: nucleo.evento_salida
+R->>API: verificar_envio(adoptante, consentimiento)
+R-->>A: Video y ubicación del árbol por WhatsApp o correo

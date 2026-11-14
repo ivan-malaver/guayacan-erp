@@ -1,0 +1,15 @@
+flowchart TB
+  A[Áreas de responsabilidad<br/>miembros y responsable] --> C[Cronograma en borrador]
+  P[Patrones: semanal, cíclico 24/7, flexible] --> C
+  D[Disponibilidad de cada persona] --> C
+  C -->|generar_turnos| T[Turnos por persona y día]
+  T -->|validar_turno| V{¿Cruce, descanso menor a 10 h,<br/>más de 11 h o ausencia?}
+  V -- sí --> X[Rechazado]
+  V -- no --> T2[Turno guardado]
+  T2 --> H[huecos_cobertura]
+  H --> PUB{Publicar}
+  PUB -->|más de 42 + 12 h semana| X2[Rechazado]
+  PUB -->|7 días sin descanso| X2
+  PUB -->|huecos y no se permiten| X2
+  PUB -->|cumple| OK[Publicado por una persona]
+  OK --> N[Carga semanal: domingos y noches<br/>para recargos de nómina]

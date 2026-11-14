@@ -1,0 +1,23 @@
+sequenceDiagram
+  autonumber
+  actor CL as Cliente
+  participant API as Django · turismo
+  participant DB as PostgreSQL
+  participant PG as Pasarela de pagos
+  actor P as Portería
+  CL->>API: GET disponibilidad de la cabaña
+  API->>DB: agenda.recurso_libre(recurso, desde, hasta)
+  CL->>API: POST reserva (fechas, personas)
+  API->>DB: INSERT turismo.reserva solicitada
+  DB->>DB: validar_reserva(): capacidad y al menos una noche
+  CL->>PG: paga el anticipo
+  PG->>API: webhook de pago confirmado
+  API->>DB: reserva confirmada o pagada
+  DB->>DB: sincronizar_agenda(): cita de 15:00 a 12:00 más limpieza
+  alt la cabaña ya está ocupada o bloqueada
+    DB-->>API: exclusion_violation
+    API-->>CL: 409 fechas no disponibles, se reembolsa
+  end
+  P->>DB: check-in con autorización de datos
+  P->>DB: checkout_en
+  DB->>DB: crea tarea de limpieza del área de turismo

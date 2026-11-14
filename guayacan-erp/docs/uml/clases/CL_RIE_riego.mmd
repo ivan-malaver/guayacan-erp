@@ -1,0 +1,67 @@
+classDiagram
+  direction TB
+  class riego__fuente_agua["fuente_agua"] {
+    <<por finca · fase 1>>
+    +nombre : texto
+    +tipo : enum
+    +caudal_l_s? : decimal
+    +requiere_concesion : boolean
+    +numero_concesion? : texto
+    +concesion_vence? : date
+    +apta_consumo_humano : boolean
+  }
+  class riego__tanque["tanque"] {
+    <<por finca · fase 1>>
+    +codigo : texto
+    +capacidad_litros : integer
+    +fuente_agua_id? : ref fuente_agua
+    +zona_id? : ref zona
+    +sensor_nivel_id? : ref sensor
+  }
+  class riego__sistema_riego["sistema_riego"] {
+    <<por finca · fase 1>>
+    +nombre : texto
+    +tipo : enum
+    +tanque_id? : ref tanque
+    +caudal_l_min? : decimal
+    +modo_control : enum
+  }
+  class riego__valvula["valvula"] {
+    <<por finca · fase 1>>
+    +sistema_riego_id : ref sistema_riego
+    +codigo : texto
+    +zona_id : ref zona
+    +tipo : enum
+    +actuador_id? : ref actuador
+  }
+  class riego__evento_riego["evento_riego"] {
+    <<por finca · fase 1>>
+    +valvula_id : ref valvula
+    +inicio : momento
+    +fin? : momento
+    +litros_estimados? : decimal
+    +modo : enum
+    +registrado_por? : ref usuario
+    +regla_id? : ref regla_automatizacion
+  }
+  namespace iot {
+    class iot__actuador["iot.actuador"]
+    class iot__regla_automatizacion["iot.regla_automatizacion"]
+    class iot__sensor["iot.sensor"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  riego__tanque "*" --> "0..1" riego__fuente_agua : fuente_agua_id
+  riego__tanque "*" --> "0..1" nucleo__zona : zona_id
+  riego__tanque "*" --> "0..1" iot__sensor : sensor_nivel_id
+  riego__sistema_riego "*" --> "0..1" riego__tanque : tanque_id
+  riego__valvula "*" --> "1" riego__sistema_riego : sistema_riego_id
+  riego__valvula "*" --> "1" nucleo__zona : zona_id
+  riego__valvula "*" --> "0..1" iot__actuador : actuador_id
+  riego__evento_riego "*" --> "1" riego__valvula : valvula_id
+  riego__evento_riego "*" --> "0..1" iot__regla_automatizacion : regla_id
+  style iot__regla_automatizacion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__actuador fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__sensor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

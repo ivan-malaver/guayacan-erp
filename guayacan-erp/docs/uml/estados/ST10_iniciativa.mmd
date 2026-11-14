@@ -1,0 +1,10 @@
+stateDiagram-v2
+  [*] --> idea: persona o Estratega (IA)
+  idea --> en_evaluacion: se arma la evaluación
+  en_evaluacion --> aprobada: VPN, TIR y ROI calculados, decide la familia
+  en_evaluacion --> descartada
+  aprobada --> piloto
+  piloto --> escalada: el retorno real lo justifica
+  piloto --> descartada
+  escalada --> [*]
+  descartada --> [*]

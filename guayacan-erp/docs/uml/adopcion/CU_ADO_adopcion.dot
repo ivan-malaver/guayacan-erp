@@ -1,0 +1,35 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.25, ranksep=1.0, pad=0.3, bgcolor=white, label="Casos de uso · Adopción de árboles y animales (SUB12)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; ADO; ADM; ENC; OPE;}
+ADO [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Adoptante\n(turista o en línea)", fontsize=11];
+ADM [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11];
+ENC [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado\nde finca", fontsize=11];
+OPE [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Operario\nde campo", fontsize=11];
+subgraph cluster_s { label="GuayacanERP · Adopción"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=16;
+ node [shape=ellipse, style=filled, fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5];
+ "240" [label="CU-240\nConfigurar catálogo\ny sitios"]; "241" [label="CU-241\nComprar un árbol\no un animal"];
+ "242" [label="CU-242\nSembrar en persona"]; "243" [label="CU-243\nSembrar por un trabajador\ny enviar el video"];
+ "244" [label="CU-244\nCobrar y pagar\nla cuota mensual"]; "245" [label="CU-245\nSeguir mi árbol\no mi animal"];
+ "246" [label="CU-246\nDetectar abandono y\nponer en readopción"]; "247" [label="CU-247\nReadoptar"];
+ "248" [label="CU-248\nRegistrar y vender\nproductos del bien"]; "249" [label="CU-249\nLiquidar productos\ncon el 5 %"];
+ "250" [label="CU-250\nDecidir en la madurez:\nmantener o liquidar"]; "251" [label="CU-251\nTalar o sacrificar\ny liquidar"];
+ "252" [label="CU-252\nReponer un bien\nmuerto en garantía"]; "253" [label="CU-253\nCeder o regalar\nla adopción"];
+ "254" [label="CU-254\nConsultar el tablero\nde adopción"];
+}
+subgraph cluster_o { label="Casos de otros subsistemas"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+ node [shape=ellipse, style=dashed, color="#6B7280", fontcolor="#6B7280", fontsize=10];
+ V195 [label="CU-195\nAprobar visita\ny emitir pase"]; T093 [label="CU-093\nAsignar tarea"]; R074 [label="CU-074\nAtender cliente\npor WhatsApp"]; C160 [label="CU-160\nContabilizar\ncomprobante"];
+}
+{rank=sink; PAG; AGT; PLB; FAM;}
+PAG [shape=box, color="#6B7280", fontsize=10.5, label="«sistema»\nPasarela de pagos"];
+AGT [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nVendedor y Gestor de redes"];
+PLB [shape=box, color="#6B7280", fontsize=10.5, label="«sistema externo»\nPlanta de beneficio · CAR · ICA"];
+FAM [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Familia\n(contador)", fontsize=11];
+ADM -> "240"; ADO -> "241"; ADO -> "242"; ENC -> "243"; OPE -> "243"; ADO -> "244"; ADO -> "245"; ADO -> "247"; OPE -> "248"; ADO -> "250"; ADM -> "251"; ENC -> "252"; ADO -> "253";
+"241" -> PAG; "241" -> AGT; "244" -> PAG; "243" -> AGT; "251" -> PLB; "249" -> FAM; "254" -> FAM;
+edge [style=dashed, arrowhead=vee, fontsize=9.5, fontcolor="#6B7280"];
+"242" -> V195 [xlabel="«include»"]; "243" -> T093 [xlabel="«include»"]; "241" -> R074 [xlabel="«extend»", dir=back, arrowtail=vee, arrowhead=none];
+"249" -> C160 [xlabel="«include»"]; "251" -> "249" [xlabel="«include»"]; "246" -> "244" [xlabel="«extend»"]; "252" -> "245" [xlabel="«extend»"];
+"242" -> "241" [xlabel="«extend»"]; "243" -> "241" [xlabel="«extend»"];
+}

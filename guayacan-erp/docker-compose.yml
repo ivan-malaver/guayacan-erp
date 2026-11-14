@@ -1,0 +1,125 @@
+# Entorno de desarrollo de GuayacanERP con Docker.
+#
+# QUÉ ES: un archivo que describe los «contenedores» (programas aislados) que necesita el sistema: bases de datos,
+# colas y, opcionalmente, la propia aplicación. Docker los descarga, los configura y los conecta entre sí.
+#
+# LAS CLAVES van en el archivo .env (copie .env.ejemplo como .env). Nunca en este archivo ni en Git.
+# La sintaxis ${VARIABLE:?mensaje} hace que Docker se detenga con ese mensaje si falta la variable en .env.
+#
+# COMANDOS (desde la raíz del repositorio):
+#   Solo las bases (lo normal al programar):  docker compose up -d --build postgres mongodb redis
+#   Todo, incluida la app (perfil "app"):     docker compose --profile app up -d --build
+#   Ver qué está corriendo:                    docker compose ps
+#   Detener (los datos se conservan):         docker compose down
+#   Detener y BORRAR los datos:                docker compose down -v   (cuidado: no se puede deshacer)
+services:
+  # Base de datos principal: PostgreSQL 18 con PostGIS (mapas) y pgvector (búsqueda por significado para la IA)
+  postgres:
+    build: ./docker/postgres          # imagen propia, definida en docker/postgres/Dockerfile
+    environment:
+      POSTGRES_DB: guayacan           # nombre de la base que se crea al primer arranque
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}
+    ports:
+      - "5432:5432"                   # puerto_en_su_PC:puerto_en_el_contenedor
+    volumes:
+      - pgdata:/var/lib/postgresql    # PostgreSQL 18 guarda sus datos en /var/lib/postgresql/18/docker
+
+  # MongoDB: conversaciones de los canales, mensajes y bitácoras de los agentes de IA
+  mongodb:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USUARIO:?Defina MONGO_USUARIO en .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_CLAVE:?Defina MONGO_CLAVE en .env}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  # Redis: cola de tareas de Celery y flujo de eventos (Redis Streams) entre el ERP y los agentes
+  redis:
+    image: redis:7.4
+    ports:
+      - "6379:6379"
+
+  # MinIO: almacenamiento de archivos compatible con S3 (fotos de campo, documentos, videos). Solo con perfil "app"
+  minio:
+    image: minio/minio:latest         # en producción fije una versión RELEASE con fecha
+    profiles: ["app"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USUARIO:?Defina MINIO_USUARIO en .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_CLAVE:?Defina MINIO_CLAVE en .env}
+    ports:
+      - "9000:9000"                   # API S3
+      - "9001:9001"                   # consola web: http://localhost:9001
+    volumes:
+      - miniodata:/data
+
+  # El ERP (Django). Dentro de Docker los servicios se llaman por su nombre: por eso POSTGRES_HOST es "postgres"
+  erp:
+    build: ./backend
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    depends_on: [postgres, redis]     # arranca después de estos
+
+  # Trabajador de Celery: ejecuta las tareas en segundo plano (publicar eventos, alertas, cierres)
+  celery-worker:
+    build: ./backend
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config worker -l info
+    depends_on: [postgres, redis]
+
+  # Reloj de Celery: dispara las tareas programadas (cada minuto, cada noche...) definidas en config/celery.py
+  celery-beat:
+    build: ./backend
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A config beat -l info
+    depends_on: [postgres, redis]
+
+  # Servicio de agentes y canales (FastAPI): webhooks de WhatsApp, Instagram, Messenger y TikTok
+  agentes:
+    build: ./servicios/agentes
+    profiles: ["app"]
+    env_file: .env
+    environment:
+      ERP_URL: http://erp:8000
+      MONGO_URL: mongodb://${MONGO_USUARIO}:${MONGO_CLAVE}@mongodb:27017/guayacan?authSource=admin
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8100:8100"
+    depends_on: [mongodb, redis, erp]
+
+  # Puente IoT (fase 4): recibe lecturas de la pasarela de la finca. Perfil propio: docker compose --profile iot up -d
+  iot:
+    build: ./servicios/iot
+    profiles: ["iot"]
+    env_file: .env
+    environment:
+      ERP_URL: http://erp:8000
+    ports:
+      - "8200:8200"
+    depends_on: [erp]
+
+# Volúmenes: carpetas administradas por Docker donde quedan los datos aunque se borre el contenedor.
+# No están dentro del repositorio, así que nunca se suben a GitHub.
+volumes:
+  pgdata:
+  mongodata:
+  miniodata:

@@ -1,0 +1,69 @@
+classDiagram
+  direction TB
+  class compras__orden_compra["orden_compra"] {
+    <<por finca · fase 1>>
+    +numero : texto
+    +proveedor_id : ref proveedor
+    +fecha : date
+    +estado : enum
+    +total : dinero
+    +aprobado_por? : ref usuario
+  }
+  class compras__orden_compra_detalle["orden_compra_detalle"] {
+    <<por finca · fase 1>>
+    +orden_compra_id : ref orden_compra
+    +producto_id : ref producto
+    +cantidad : decimal
+    +cantidad_recibida : decimal
+    +precio_unitario : dinero
+  }
+  class compras__cotizacion_proveedor["cotizacion_proveedor"] {
+    <<por finca · fase 1>>
+    +proveedor_id? : ref proveedor
+    +nombre_proveedor? : texto
+    +producto_id : ref producto
+    +precio_unitario : dinero
+    +fecha : date
+    +vigente_hasta? : date
+    +fuente : enum
+    +fuente_url? : texto
+  }
+  class compras__precio_mercado["precio_mercado"] {
+    <<por finca · fase 1>>
+    +producto_id : ref producto
+    +mercado : texto
+    +fecha : date
+    +precio_minimo? : dinero
+    +precio_maximo? : dinero
+    +precio_promedio : dinero
+    +unidad : texto
+    +fuente_url? : texto
+  }
+  class compras__documento_soporte["documento_soporte"] {
+    <<por finca · fase 1>>
+    +proveedor_id : ref proveedor
+    +orden_compra_id? : ref orden_compra
+    +prefijo : texto
+    +numero : integer
+    +fecha : date
+    +descripcion : text
+    +total : dinero
+    +cuds? : texto
+    +estado_dian : enum
+  }
+  namespace inventario {
+    class inventario__producto["inventario.producto"]
+  }
+  namespace terceros {
+    class terceros__proveedor["terceros.proveedor"]
+  }
+  compras__orden_compra "*" --> "1" terceros__proveedor : proveedor_id
+  compras__orden_compra_detalle "*" --> "1" compras__orden_compra : orden_compra_id
+  compras__orden_compra_detalle "*" --> "1" inventario__producto : producto_id
+  compras__cotizacion_proveedor "*" --> "0..1" terceros__proveedor : proveedor_id
+  compras__cotizacion_proveedor "*" --> "1" inventario__producto : producto_id
+  compras__precio_mercado "*" --> "1" inventario__producto : producto_id
+  compras__documento_soporte "*" --> "1" terceros__proveedor : proveedor_id
+  compras__documento_soporte "*" --> "0..1" compras__orden_compra : orden_compra_id
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__proveedor fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

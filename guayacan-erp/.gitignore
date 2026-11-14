@@ -1,0 +1,73 @@
+# .gitignore de GuayacanERP: lista de archivos y carpetas que Git NO debe subir a GitHub.
+# Regla: un patrón por línea; "carpeta/" ignora la carpeta completa; "!" vuelve a incluir algo ya ignorado.
+# Comprobar qué se subiría:  git status      ·  Saber por qué se ignora un archivo:  git check-ignore -v <archivo>
+
+# ---------- Secretos (NUNCA a GitHub) ----------
+.env
+.env.*
+!.env.ejemplo
+*.pem
+*.key
+secrets/
+
+# ---------- Entornos virtuales de Python ----------
+venv/
+.venv/
+env/
+ENV/
+**/venv/
+**/.venv/
+
+# ---------- Archivos generados por Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+requirements.lock
+
+# ---------- Bases de datos y respaldos locales ----------
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.bak
+pgdata/
+mongodata/
+miniodata/
+celerybeat-schedule*
+
+# ---------- Frontend (Node / Angular) ----------
+node_modules/
+dist/
+.angular/
+out-tsc/
+coverage/
+npm-debug.log*
+yarn-error.log*
+
+# ---------- Archivos estáticos y subidos en desarrollo ----------
+static/
+media/
+
+# ---------- Documentos binarios (Word, PDF, Excel): se entregan aparte, no van al repositorio ----------
+entregables/
+
+# ---------- Registros ----------
+*.log
+!specs/casos-prueba/*.log
+
+# ---------- Editores y sistema operativo ----------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

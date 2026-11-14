@@ -1,0 +1,162 @@
+erDiagram
+    concepto_nomina {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        lista tipo
+        lista base
+        varchar parametro_clave
+        boolean constitutivo_salario
+        bigint cuenta_contable_id FK
+        varchar codigo_dian
+        boolean activo
+    }
+    periodo_nomina {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        lista tipo
+        date desde
+        date hasta
+        lista estado
+        bigint preparado_por FK
+        bigint cerrado_por FK
+        bigint aprobado_por FK
+        timestamptz cerrado_en
+        bigint comprobante_id FK
+        bigint ajusta_periodo_id FK
+    }
+    novedad {
+        bigint id PK
+        bigint predio_id FK
+        bigint periodo_id FK
+        bigint empleado_id FK
+        bigint concepto_id FK
+        numeric cantidad
+        numeric valor_unitario
+        numeric valor
+        lista origen
+        bigint tarea_id FK
+        bigint jornada_id FK
+        bigint ausencia_id FK
+        varchar observacion
+    }
+    liquidacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint periodo_id FK
+        bigint empleado_id FK
+        numeric total_devengado
+        numeric total_deducciones
+        numeric neto
+        lista estado
+    }
+    liquidacion_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint liquidacion_id FK
+        bigint concepto_id FK
+        numeric cantidad
+        numeric valor
+    }
+    provision_prestacion {
+        bigint id PK
+        bigint predio_id FK
+        bigint periodo_id FK
+        bigint empleado_id FK
+        lista tipo
+        numeric base
+        numeric valor
+    }
+    documento_nomina_electronica {
+        bigint id PK
+        bigint predio_id FK
+        bigint liquidacion_id FK
+        lista tipo
+        lista proveedor
+        varchar cune
+        lista estado
+        timestamptz enviado_en
+        jsonb respuesta
+        varchar xml_url
+    }
+    planilla_pila {
+        bigint id PK
+        bigint predio_id FK
+        bigint periodo_id FK
+        varchar tipo_planilla
+        varchar archivo_url
+        varchar operador
+        varchar numero_planilla
+        bigint pagada_por FK
+        timestamptz pagada_en
+    }
+    pago_nomina {
+        bigint id PK
+        bigint predio_id FK
+        bigint liquidacion_id FK
+        lista medio
+        numeric valor
+        bigint preparado_por FK
+        bigint aprobado_por FK
+        bigint segunda_aprobacion_por FK
+        timestamptz pagado_en
+        varchar referencia
+    }
+    exportacion_nomina {
+        bigint id PK
+        bigint predio_id FK
+        bigint periodo_id FK
+        lista formato
+        varchar archivo_url
+        bigint generado_por FK
+    }
+    finanzas_comprobante {
+        bigint id PK
+    }
+    finanzas_cuenta_contable {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    personal_ausencia {
+        bigint id PK
+    }
+    personal_jornada {
+        bigint id PK
+    }
+    personal_tarea {
+        bigint id PK
+    }
+    terceros_empleado {
+        bigint id PK
+    }
+    concepto_nomina ||--o{ liquidacion_detalle : "concepto_id"
+    concepto_nomina ||--o{ novedad : "concepto_id"
+    finanzas_comprobante ||--o{ periodo_nomina : "comprobante_id"
+    finanzas_cuenta_contable ||--o{ concepto_nomina : "cuenta_contable_id"
+    liquidacion ||--o{ documento_nomina_electronica : "liquidacion_id"
+    liquidacion ||--o{ liquidacion_detalle : "liquidacion_id"
+    liquidacion ||--o{ pago_nomina : "liquidacion_id"
+    nucleo_usuario ||--o{ exportacion_nomina : "generado_por"
+    nucleo_usuario ||--o{ pago_nomina : "aprobado_por"
+    nucleo_usuario ||--o{ pago_nomina : "preparado_por"
+    nucleo_usuario ||--o{ pago_nomina : "segunda_aprobacion_por"
+    nucleo_usuario ||--o{ periodo_nomina : "aprobado_por"
+    nucleo_usuario ||--o{ periodo_nomina : "cerrado_por"
+    nucleo_usuario ||--o{ periodo_nomina : "preparado_por"
+    nucleo_usuario ||--o{ planilla_pila : "pagada_por"
+    periodo_nomina ||--o{ exportacion_nomina : "periodo_id"
+    periodo_nomina ||--o{ liquidacion : "periodo_id"
+    periodo_nomina ||--o{ novedad : "periodo_id"
+    periodo_nomina ||--o{ periodo_nomina : "ajusta_periodo_id"
+    periodo_nomina ||--o{ planilla_pila : "periodo_id"
+    periodo_nomina ||--o{ provision_prestacion : "periodo_id"
+    personal_ausencia ||--o{ novedad : "ausencia_id"
+    personal_jornada ||--o{ novedad : "jornada_id"
+    personal_tarea ||--o{ novedad : "tarea_id"
+    terceros_empleado ||--o{ liquidacion : "empleado_id"
+    terceros_empleado ||--o{ novedad : "empleado_id"
+    terceros_empleado ||--o{ provision_prestacion : "empleado_id"

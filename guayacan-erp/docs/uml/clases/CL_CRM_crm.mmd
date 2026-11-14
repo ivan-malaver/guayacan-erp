@@ -1,0 +1,120 @@
+classDiagram
+  direction TB
+  class crm__segmento["segmento"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +criterios? : jsonb
+    +propuesta_valor? : text
+  }
+  class crm__campana["campana"] {
+    <<por finca · fase 2>>
+    +nombre : texto
+    +canal : enum
+    +segmento_id? : ref segmento
+    +objetivo? : text
+    +desde : date
+    +hasta? : date
+    +presupuesto : dinero
+    +costo_real : dinero
+    +publicacion_id? : ref publicacion
+  }
+  class crm__formulario_captura["formulario_captura"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +canal : enum
+    +campos : jsonb
+    +texto_autorizacion : text
+    +finalidad : text
+    +campana_id? : ref campana
+    +activo : boolean
+  }
+  class crm__prospecto["prospecto"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +nombre : texto
+    +nit? : texto
+    +sector : enum
+    +municipio? : texto
+    +telefono? : texto
+    +correo? : citext
+    +canal_origen : enum
+    +formulario_id? : ref formulario_captura
+    +campana_id? : ref campana
+    +segmento_id? : ref segmento
+    +intereses? : text lista
+    +… 8 campos más
+  }
+  class crm__contacto_empresa["contacto_empresa"] {
+    <<por finca · fase 2>>
+    +prospecto_id : ref prospecto
+    +nombre : texto
+    +cargo? : texto
+    +telefono? : texto
+    +correo? : citext
+    +consentimiento_id? : ref consentimiento_datos
+  }
+  class crm__interaccion["interaccion"] {
+    <<por finca · fase 2>>
+    +prospecto_id? : ref prospecto
+    +tercero_id? : ref tercero
+    +tipo : enum
+    +fecha : momento
+    +resumen : text
+    +proximo_paso? : texto
+    +usuario_id? : ref usuario
+    +agente_id? : ref agente
+  }
+  class crm__oportunidad["oportunidad"] {
+    <<por finca · fase 2>>
+    +prospecto_id? : ref prospecto
+    +tercero_id? : ref tercero
+    +titulo : texto
+    +productos? : jsonb
+    +valor_estimado : dinero
+    +probabilidad_pct : smallint
+    +cierre_estimado? : date
+    +estado : enum
+    +pedido_id? : ref pedido
+    +linea_negocio_id? : ref linea_negocio
+  }
+  namespace comercial {
+    class comercial__pedido["comercial.pedido"]
+  }
+  namespace estrategia {
+    class estrategia__linea_negocio["estrategia.linea_negocio"]
+  }
+  namespace ia {
+    class ia__agente["ia.agente"]
+  }
+  namespace redes {
+    class redes__publicacion["redes.publicacion"]
+  }
+  namespace terceros {
+    class terceros__consentimiento_datos["terceros.consentimiento_datos"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  crm__campana "*" --> "0..1" crm__segmento : segmento_id
+  crm__campana "*" --> "0..1" redes__publicacion : publicacion_id
+  crm__formulario_captura "*" --> "0..1" crm__campana : campana_id
+  crm__prospecto "*" --> "0..1" crm__formulario_captura : formulario_id
+  crm__prospecto "*" --> "0..1" crm__campana : campana_id
+  crm__prospecto "*" --> "0..1" crm__segmento : segmento_id
+  crm__prospecto "*" --> "0..1" terceros__consentimiento_datos : consentimiento_id
+  crm__prospecto "*" --> "0..1" terceros__tercero : tercero_id
+  crm__contacto_empresa "*" --> "1" crm__prospecto : prospecto_id
+  crm__contacto_empresa "*" --> "0..1" terceros__consentimiento_datos : consentimiento_id
+  crm__interaccion "*" --> "0..1" crm__prospecto : prospecto_id
+  crm__interaccion "*" --> "0..1" terceros__tercero : tercero_id
+  crm__interaccion "*" --> "0..1" ia__agente : agente_id
+  crm__oportunidad "*" --> "0..1" crm__prospecto : prospecto_id
+  crm__oportunidad "*" --> "0..1" terceros__tercero : tercero_id
+  crm__oportunidad "*" --> "0..1" comercial__pedido : pedido_id
+  crm__oportunidad "*" --> "0..1" estrategia__linea_negocio : linea_negocio_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__consentimiento_datos fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style ia__agente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style redes__publicacion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style comercial__pedido fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style estrategia__linea_negocio fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

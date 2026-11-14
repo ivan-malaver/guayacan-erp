@@ -1,0 +1,13 @@
+flowchart TD
+  A([Historia del backlog con su CU]) --> B[Leer especificación, estados y secuencia]
+  B --> C[Escribir prueba de la regla en SQL si es nueva]
+  C --> D[Modelo Django managed=False y serializer]
+  D --> E[Servicio del caso de uso y vista DRF]
+  E --> F[Pruebas pytest de la API contra la base de pruebas]
+  F --> G[Pantalla Angular y estados de botones]
+  G --> H{¿Pasa CI: ruff, pytest, SQL, lint y build?}
+  H -- no --> C
+  H -- sí --> I[Revisión de código por otra persona]
+  I --> J{¿Cumple la definición de terminado?}
+  J -- no --> C
+  J -- sí --> K([Fusión a main y despliegue a pruebas])

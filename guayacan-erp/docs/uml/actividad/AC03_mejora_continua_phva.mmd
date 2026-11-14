@@ -1,0 +1,8 @@
+flowchart LR
+  P[Planear: Analista de negocio propone recomendación con evidencia] --> H[Hacer: persona acepta y crea tareas o iniciativa]
+  H --> V[Verificar: indicadores del periodo contra meta]
+  V --> A{¿Cumplió?}
+  A -- sí --> E[Actuar: estandarizar en plan de labores o documento]
+  A -- no --> R[Actuar: ajustar o descartar con lección aprendida]
+  E --> P
+  R --> P

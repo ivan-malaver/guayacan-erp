@@ -1,0 +1,13 @@
+stateDiagram-v2
+  [*] --> borrador: vendedor, cliente o agente
+  borrador --> confirmado: confirmar_pedido() reserva FEFO
+  borrador --> cancelado
+  confirmado --> en_preparacion: empaque
+  confirmado --> despachado: despachar_pedido()
+  en_preparacion --> despachado: despachar_pedido()
+  confirmado --> cancelado: cancelar_pedido() libera reservas
+  en_preparacion --> cancelado: cancelar_pedido()
+  despachado --> entregado: entrega entregada
+  entregado --> [*]
+  cancelado --> [*]
+  note right of despachado: ya salió de la finca, no se cancela, se devuelve

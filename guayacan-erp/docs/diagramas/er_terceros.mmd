@@ -1,0 +1,75 @@
+erDiagram
+    tercero {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo_persona
+        lista tipo_documento
+        varchar numero_documento
+        char digito_verificacion
+        varchar nombres
+        varchar apellidos
+        varchar razon_social
+        citext correo
+        varchar telefono
+        varchar whatsapp
+        varchar direccion
+        char codigo_dane_municipio
+        boolean es_cliente
+        boolean es_proveedor
+        boolean es_empleado
+    }
+    consentimiento_datos {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        lista finalidad
+        varchar version_politica
+        boolean otorgado
+        lista medio
+        varchar evidencia_url
+        timestamptz otorgado_en
+        timestamptz revocado_en
+    }
+    cliente {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        lista segmento
+        lista canal_origen
+        smallint frecuencia_compra_dias
+        date fecha_primera_compra
+        numeric cupo_credito
+        smallint dias_plazo
+        boolean bloqueado_por_mora
+        bigint lista_precios_id FK
+        varchar perfil_interes_ref
+    }
+    proveedor {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        lista categoria
+        smallint dias_credito
+        numeric calificacion
+    }
+    empleado {
+        bigint id PK
+        bigint predio_id FK
+        bigint tercero_id FK
+        varchar cargo
+        lista tipo_vinculacion
+        numeric salario_base
+        lista forma_pago
+        numeric valor_jornal
+        varchar ruta_aprendizaje
+        date fecha_ingreso
+        date fecha_retiro
+    }
+    comercial_lista_precios {
+        bigint id PK
+    }
+    comercial_lista_precios ||--o{ cliente : "lista_precios_id"
+    tercero ||--o{ consentimiento_datos : "tercero_id"
+    tercero ||--o| cliente : "tercero_id"
+    tercero ||--o| empleado : "tercero_id"
+    tercero ||--o| proveedor : "tercero_id"

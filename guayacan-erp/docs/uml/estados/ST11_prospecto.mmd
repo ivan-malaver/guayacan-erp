@@ -1,0 +1,15 @@
+stateDiagram-v2
+  [*] --> nuevo: captura con autorización
+  nuevo --> contactado: primera interacción
+  contactado --> calificado
+  calificado --> propuesta
+  propuesta --> negociacion
+  negociacion --> ganado: convertir_prospecto() crea el cliente
+  contactado --> perdido: con motivo
+  calificado --> perdido: con motivo
+  propuesta --> perdido: con motivo
+  negociacion --> perdido: con motivo
+  nuevo --> descartado
+  ganado --> [*]
+  perdido --> [*]
+  descartado --> [*]

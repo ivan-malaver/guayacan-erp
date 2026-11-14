@@ -1,0 +1,37 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · Proyectos (PMBOK 8) (PRY)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "DIR"; "PAT";}
+"DIR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Director de\nproyecto", fontsize=11, fontcolor="#1F2933"];
+"PAT" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Patrocinador", fontsize=11, fontcolor="#1F2933"];
+subgraph cluster_sistema { label="GuayacanERP · Proyectos (PMBOK 8)"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "PRY-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-01\nConstituir un proyecto"];
+  "PRY-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-02\nAprobar un proyecto"];
+  "PRY-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-03\nPlanificar el alcance y el\ncronograma"];
+  "PRY-04" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-04\nCalcular la ruta crítica"];
+  "PRY-05" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-05\nGestionar interesados y\nriesgos"];
+  "PRY-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-06\nRegistrar avance y medir\nel valor ganado"];
+  "PRY-07" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-07\nSolicitar y decidir un\ncambio"];
+  "PRY-08" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-08\nAceptar entregables y\ncerrar el proyecto"];
+  "PRY-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="PRY-09\nPlanear y cerrar una\niteración"];
+}
+{rank=sink; "AG_PRY"; "SCH";}
+"AG_PRY" [shape=box, style="rounded,dashed", color="#7A4E9C", fontcolor="#7A4E9C", fontsize=10.5, label="«agente IA»\nAsistente de\nproyectos"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+"DIR" -> "PRY-01";
+"PRY-01" -> "AG_PRY" [style=solid];
+"PAT" -> "PRY-02";
+"DIR" -> "PRY-03";
+"PRY-03" -> "AG_PRY" [style=solid];
+"PRY-03" -> "PRY-04" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=false];
+"DIR" -> "PRY-04";
+"DIR" -> "PRY-05";
+"PRY-05" -> "AG_PRY" [style=solid];
+"DIR" -> "PRY-06";
+"PRY-06" -> "SCH" [style=solid];
+"DIR" -> "PRY-07";
+"PAT" -> "PRY-07";
+"PAT" -> "PRY-08";
+"DIR" -> "PRY-08";
+"DIR" -> "PRY-09";
+}

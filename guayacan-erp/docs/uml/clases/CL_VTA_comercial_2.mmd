@@ -1,0 +1,57 @@
+classDiagram
+  direction LR
+  class comercial__retiro_lote["retiro_lote"] {
+    <<por finca · fase 1>>
+    +lote_inventario_id : ref lote_inventario
+    +motivo : text
+    +estado : enum
+    +abierto_por : ref usuario
+    +cerrado_en? : momento
+  }
+  class comercial__pedido_recurrente_detalle["pedido_recurrente_detalle"] {
+    <<por finca · fase 2>>
+    +pedido_recurrente_id : ref pedido_recurrente
+    +producto_id : ref producto
+    +cantidad : decimal
+  }
+  class comercial__permuta["permuta"] {
+    <<por finca · fase 2>>
+    +factura_id : ref factura
+    +documento_soporte_id : ref documento_soporte
+    +valor_compensado : dinero
+    +acuerdo : text
+    +registrado_por : ref usuario
+  }
+  class comercial__huella_trazabilidad["huella_trazabilidad"] {
+    <<por finca · fase 1>>
+    +lote_inventario_id : ref lote_inventario
+    +hecho : enum
+    +contenido : jsonb
+    +hash_anterior? : huella
+    +hash : huella
+    +anclaje_red? : texto
+    +anclaje_transaccion? : texto
+    +anclado_en? : momento
+  }
+  namespace comercial_otra_parte {
+    class comercial__factura["comercial.factura"]
+    class comercial__pedido_recurrente["comercial.pedido_recurrente"]
+  }
+  namespace compras {
+    class compras__documento_soporte["compras.documento_soporte"]
+  }
+  namespace inventario {
+    class inventario__lote_inventario["inventario.lote_inventario"]
+    class inventario__producto["inventario.producto"]
+  }
+  comercial__retiro_lote "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  comercial__pedido_recurrente_detalle "*" --> "1" comercial__pedido_recurrente : pedido_recurrente_id
+  comercial__pedido_recurrente_detalle "*" --> "1" inventario__producto : producto_id
+  comercial__permuta "*" --> "1" comercial__factura : factura_id
+  comercial__permuta "*" --> "1" compras__documento_soporte : documento_soporte_id
+  comercial__huella_trazabilidad "*" --> "1" inventario__lote_inventario : lote_inventario_id
+  style compras__documento_soporte fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__lote_inventario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style comercial__factura fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style comercial__pedido_recurrente fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

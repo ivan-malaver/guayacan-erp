@@ -1,0 +1,178 @@
+classDiagram
+  direction TB
+  class proyectos__proyecto["proyecto"] {
+    <<por finca · fase 2>>
+    +codigo : texto
+    +nombre : texto
+    +objetivo : text
+    +justificacion? : text
+    +criterios_exito? : text
+    +iniciativa_id? : ref iniciativa
+    +linea_negocio_id? : ref linea_negocio
+    +enfoque : enum
+    +area_enfoque : enum
+    +estado : enum
+    +patrocinador_id? : ref usuario
+    +director_id? : ref usuario
+    +… 9 campos más
+  }
+  class proyectos__interesado["interesado"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +tercero_id? : ref tercero
+    +usuario_id? : ref usuario
+    +nombre : texto
+    +rol? : texto
+    +interes : smallint
+    +influencia : smallint
+    +estrategia? : texto
+    +expectativas? : text
+  }
+  class proyectos__elemento_edt["elemento_edt"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +padre_id? : ref elemento_edt
+    +codigo : texto
+    +nombre : texto
+    +es_entregable : boolean
+    +criterio_aceptacion? : text
+    +estado : enum
+    +aceptado_por? : ref usuario
+    +aceptado_en? : momento
+  }
+  class proyectos__iteracion["iteracion"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +numero : smallint
+    +objetivo? : text
+    +inicio : date
+    +fin : date
+    +estado : enum
+    +retrospectiva? : text
+  }
+  class proyectos__actividad["actividad"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +elemento_edt_id? : ref elemento_edt
+    +iteracion_id? : ref iteracion
+    +codigo : texto
+    +nombre : texto
+    +es_hito : boolean
+    +duracion_dias : smallint
+    +inicio_temprano? : smallint
+    +fin_temprano? : smallint
+    +inicio_tardio? : smallint
+    +fin_tardio? : smallint
+    +holgura? : smallint
+    +… 11 campos más
+  }
+  class proyectos__dependencia["dependencia"] {
+    <<por finca · fase 2>>
+    +predecesora_id : ref actividad
+    +sucesora_id : ref actividad
+    +tipo : enum
+    +desfase_dias : smallint
+  }
+  class proyectos__riesgo["riesgo"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +descripcion : text
+    +tipo : enum
+    +categoria : enum
+    +probabilidad : smallint
+    +impacto : smallint
+    +severidad? : smallint
+    +respuesta? : enum
+    +plan_respuesta? : text
+    +disparador? : texto
+    +responsable_id? : ref usuario
+    +estado : enum
+  }
+  class proyectos__registro["registro"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +tipo : enum
+    +descripcion : text
+    +responsable_id? : ref usuario
+    +estado : enum
+    +fecha : date
+  }
+  class proyectos__solicitud_cambio["solicitud_cambio"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +descripcion : text
+    +solicitada_por : ref usuario
+    +impacto_alcance? : text
+    +impacto_dias : smallint
+    +impacto_costo : dinero
+    +estado : enum
+    +decidida_por? : ref usuario
+    +decidida_en? : momento
+  }
+  class proyectos__linea_base["linea_base"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +version : smallint
+    +presupuesto : dinero
+    +fin_plan : date
+    +alcance : text
+    +solicitud_cambio_id? : ref solicitud_cambio
+    +aprobada_por : ref usuario
+  }
+  class proyectos__medicion_valor_ganado["medicion_valor_ganado"] {
+    <<por finca · fase 2>>
+    +proyecto_id : ref proyecto
+    +fecha_corte : date
+    +pv : dinero
+    +ev : dinero
+    +ac : dinero
+    +cpi? : decimal
+    +spi? : decimal
+    +eac? : dinero
+    +etc? : dinero
+    +vac? : dinero
+  }
+  namespace documental {
+    class documental__documento["documental.documento"]
+  }
+  namespace estrategia {
+    class estrategia__iniciativa["estrategia.iniciativa"]
+    class estrategia__linea_negocio["estrategia.linea_negocio"]
+  }
+  namespace personal {
+    class personal__area_responsabilidad["personal.area_responsabilidad"]
+    class personal__tarea["personal.tarea"]
+  }
+  namespace terceros {
+    class terceros__empleado["terceros.empleado"]
+    class terceros__tercero["terceros.tercero"]
+  }
+  proyectos__proyecto "*" --> "0..1" estrategia__iniciativa : iniciativa_id
+  proyectos__proyecto "*" --> "0..1" estrategia__linea_negocio : linea_negocio_id
+  proyectos__proyecto "*" --> "0..1" documental__documento : acta_documento_id
+  proyectos__interesado "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__interesado "*" --> "0..1" terceros__tercero : tercero_id
+  proyectos__elemento_edt "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__elemento_edt "*" --> "0..1" proyectos__elemento_edt : padre_id
+  proyectos__iteracion "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__actividad "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__actividad "*" --> "0..1" proyectos__elemento_edt : elemento_edt_id
+  proyectos__actividad "*" --> "0..1" proyectos__iteracion : iteracion_id
+  proyectos__actividad "*" --> "0..1" terceros__empleado : responsable_id
+  proyectos__actividad "*" --> "0..1" personal__area_responsabilidad : area_id
+  proyectos__actividad "*" --> "0..1" personal__tarea : tarea_id
+  proyectos__dependencia "*" --> "1" proyectos__actividad : predecesora_id
+  proyectos__dependencia "*" --> "1" proyectos__actividad : sucesora_id
+  proyectos__riesgo "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__registro "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__solicitud_cambio "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__linea_base "*" --> "1" proyectos__proyecto : proyecto_id
+  proyectos__linea_base "*" --> "0..1" proyectos__solicitud_cambio : solicitud_cambio_id
+  proyectos__medicion_valor_ganado "*" --> "1" proyectos__proyecto : proyecto_id
+  style documental__documento fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__area_responsabilidad fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style estrategia__iniciativa fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__empleado fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style estrategia__linea_negocio fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

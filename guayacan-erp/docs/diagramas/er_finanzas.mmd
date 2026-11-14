@@ -1,0 +1,222 @@
+erDiagram
+    cuenta_contable {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        lista naturaleza
+        smallint nivel
+        bigint padre_id FK
+        boolean acepta_movimiento
+    }
+    centro_costo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+    }
+    comprobante {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        varchar numero
+        date fecha
+        text descripcion
+        varchar origen_tabla
+        bigint origen_id
+        lista estado
+        bigint aprobado_por FK
+        timestamptz contabilizado_en
+        text motivo_anulacion
+    }
+    movimiento_contable {
+        bigint id PK
+        bigint predio_id FK
+        bigint comprobante_id FK
+        bigint cuenta_id FK
+        bigint tercero_id FK
+        bigint centro_costo_id FK
+        numeric debito
+        numeric credito
+        varchar detalle
+    }
+    periodo_contable {
+        bigint id PK
+        bigint predio_id FK
+        smallint anio
+        smallint mes
+        lista estado
+        bigint cerrado_por FK
+        timestamptz cerrado_en
+    }
+    clasificacion_costo {
+        bigint id PK
+        bigint predio_id FK
+        bigint cuenta_id FK
+        lista elemento
+        lista comportamiento
+        numeric parte_fija_pct
+        boolean controlable
+        boolean es_costo_producto
+    }
+    actividad_costo {
+        bigint id PK
+        bigint predio_id FK
+        varchar codigo
+        varchar nombre
+        varchar inductor
+        bigint centro_costo_id FK
+    }
+    asignacion_costo {
+        bigint id PK
+        bigint predio_id FK
+        date mes
+        bigint actividad_id FK
+        bigint centro_costo_id FK
+        numeric cantidad_inductor
+        numeric valor_asignado
+    }
+    costo_estandar {
+        bigint id PK
+        bigint predio_id FK
+        bigint producto_id FK
+        date vigente_desde
+        numeric material_directo
+        numeric mano_obra_directa
+        numeric cif
+        numeric costo_variable_unitario
+    }
+    presupuesto {
+        bigint id PK
+        bigint predio_id FK
+        varchar nombre
+        smallint anio
+        smallint version
+        boolean base_cero
+        lista fuente
+        lista estado
+        bigint aprobado_por FK
+    }
+    premisa_presupuesto {
+        bigint id PK
+        bigint predio_id FK
+        bigint presupuesto_id FK
+        lista tipo
+        varchar variable
+        numeric valor
+        varchar fuente
+    }
+    presupuesto_detalle {
+        bigint id PK
+        bigint predio_id FK
+        bigint presupuesto_id FK
+        lista componente
+        smallint mes
+        bigint centro_costo_id FK
+        bigint cuenta_id FK
+        bigint producto_id FK
+        numeric cantidad
+        numeric valor
+        text justificacion
+    }
+    estado_financiero {
+        bigint id PK
+        bigint predio_id FK
+        lista tipo
+        date desde
+        date hasta
+        boolean presupuestado
+        jsonb datos
+        bigint generado_por FK
+    }
+    indicador {
+        bigint id PK
+        varchar codigo
+        varchar nombre
+        lista grupo
+        text formula
+        text interpretacion
+        lista unidad
+        lista sentido
+    }
+    valor_indicador {
+        bigint id PK
+        bigint predio_id FK
+        bigint indicador_id FK
+        date desde
+        date hasta
+        bigint centro_costo_id FK
+        numeric valor
+        numeric meta
+        lista semaforo
+    }
+    anticipo_proveedor {
+        bigint id PK
+        bigint predio_id FK
+        bigint proveedor_id FK
+        date fecha
+        numeric valor
+        numeric saldo
+        bigint comprobante_id FK
+        lista estado
+    }
+    aplicacion_anticipo {
+        bigint id PK
+        bigint predio_id FK
+        bigint anticipo_id FK
+        bigint orden_compra_id FK
+        numeric valor
+    }
+    reporte_indicadores {
+        bigint id PK
+        bigint predio_id FK
+        lista destinatario
+        bigint tercero_id FK
+        date desde
+        date hasta
+        jsonb contenido
+        char hash_sha256
+        bigint autorizado_por FK
+        timestamptz enviado_en
+    }
+    compras_orden_compra {
+        bigint id PK
+    }
+    inventario_producto {
+        bigint id PK
+    }
+    nucleo_usuario {
+        bigint id PK
+    }
+    terceros_proveedor {
+        bigint id PK
+    }
+    terceros_tercero {
+        bigint id PK
+    }
+    actividad_costo ||--o{ asignacion_costo : "actividad_id"
+    anticipo_proveedor ||--o{ aplicacion_anticipo : "anticipo_id"
+    centro_costo ||--o{ actividad_costo : "centro_costo_id"
+    centro_costo ||--o{ asignacion_costo : "centro_costo_id"
+    centro_costo ||--o{ movimiento_contable : "centro_costo_id"
+    centro_costo ||--o{ presupuesto_detalle : "centro_costo_id"
+    centro_costo ||--o{ valor_indicador : "centro_costo_id"
+    compras_orden_compra ||--o{ aplicacion_anticipo : "orden_compra_id"
+    comprobante ||--o{ anticipo_proveedor : "comprobante_id"
+    comprobante ||--o{ movimiento_contable : "comprobante_id"
+    cuenta_contable ||--o{ cuenta_contable : "padre_id"
+    cuenta_contable ||--o{ movimiento_contable : "cuenta_id"
+    cuenta_contable ||--o{ presupuesto_detalle : "cuenta_id"
+    cuenta_contable ||--o| clasificacion_costo : "cuenta_id"
+    indicador ||--o{ valor_indicador : "indicador_id"
+    inventario_producto ||--o{ costo_estandar : "producto_id"
+    inventario_producto ||--o{ presupuesto_detalle : "producto_id"
+    nucleo_usuario ||--o{ comprobante : "aprobado_por"
+    nucleo_usuario ||--o{ estado_financiero : "generado_por"
+    nucleo_usuario ||--o{ periodo_contable : "cerrado_por"
+    nucleo_usuario ||--o{ presupuesto : "aprobado_por"
+    nucleo_usuario ||--o{ reporte_indicadores : "autorizado_por"
+    presupuesto ||--o{ premisa_presupuesto : "presupuesto_id"
+    presupuesto ||--o{ presupuesto_detalle : "presupuesto_id"
+    terceros_proveedor ||--o{ anticipo_proveedor : "proveedor_id"
+    terceros_tercero ||--o{ movimiento_contable : "tercero_id"
+    terceros_tercero ||--o{ reporte_indicadores : "tercero_id"

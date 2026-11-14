@@ -1,0 +1,17 @@
+sequenceDiagram
+  autonumber
+  actor PR as Posible cliente
+  participant F as Formulario web o QR en feria
+  participant API as Django · CRM
+  participant DB as PostgreSQL
+  actor V as Vendedor
+  PR->>F: datos y casilla de autorización con su finalidad
+  F->>API: POST /crm/captura/{formulario}
+  API->>DB: INSERT consentimiento_datos y prospecto
+  DB->>DB: validar_prospecto(): persona con contacto exige autorización
+  V->>DB: interacción whatsapp
+  DB->>DB: validar_interaccion(): no se contacta sin autorización vigente
+  V->>DB: crm.calificar(id)
+  DB-->>V: puntaje 0 a 100
+  V->>DB: crm.convertir_prospecto(id, segmento)
+  DB-->>V: tercero y cliente creados, etapa ganado

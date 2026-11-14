@@ -1,0 +1,126 @@
+classDiagram
+  direction LR
+  class produccion__siembra["siembra"] {
+    <<por finca · fase 1>>
+    +zona_id : ref zona
+    +cultivo_id : ref cultivo
+    +variedad? : texto
+    +fecha_siembra : date
+    +plantas_previstas? : integer
+    +plantas_sembradas? : integer
+    +plantas_vivas? : integer
+    +semilla_kg? : decimal
+    +area_m2? : decimal
+    +fecha_estimada_cosecha? : date
+    +estado : enum
+    +observaciones? : text
+  }
+  class produccion__labor_cultural["labor_cultural"] {
+    <<por finca · fase 1>>
+    +siembra_id : ref siembra
+    +fecha : date
+    +tipo : enum
+    +producto_id? : ref producto
+    +cantidad? : decimal
+    +jornales? : decimal
+    +metodo : enum
+    +tarea_id? : ref tarea
+    +mision_robot_id? : ref mision_robot
+    +observaciones? : text
+  }
+  class produccion__cultivo["cultivo"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre_comun : texto
+    +nombre_cientifico? : texto
+    +tipo_ciclo : enum
+    +dias_a_primera_cosecha? : integer
+  }
+  class produccion__cosecha["cosecha"] {
+    <<por finca · fase 1>>
+    +siembra_id : ref siembra
+    +fecha : date
+    +producto_id : ref producto
+    +cantidad : decimal
+    +destino : enum
+    +lote_inventario_id? : ref lote_inventario
+  }
+  class produccion__calidad_agua_estanque["calidad_agua_estanque"] {
+    <<por finca · fase 1>>
+    +zona_id : ref zona
+    +medido_en : momento
+    +oxigeno_mg_l? : decimal
+    +temperatura_c? : decimal
+    +ph? : decimal
+    +amonio_mg_l? : decimal
+  }
+  class produccion__analisis_suelo["analisis_suelo"] {
+    <<por finca · fase 1>>
+    +zona_id : ref zona
+    +fecha_muestreo : date
+    +laboratorio? : texto
+    +ph? : decimal
+    +materia_organica_pct? : decimal
+    +aluminio_cmol_kg? : decimal
+    +resultados? : jsonb
+    +recomendacion? : text
+    +archivo_url? : texto
+  }
+  class produccion__categoria_huevo["categoria_huevo"] {
+    <<compartida>>
+    +codigo : texto
+    +peso_min_g : decimal
+    +peso_max_g? : decimal
+    +norma : texto
+    +vigente_desde : date
+  }
+  class produccion__registro_bioseguridad["registro_bioseguridad"] {
+    <<por finca · fase 1>>
+    +zona_id : ref zona
+    +fecha : date
+    +tipo : enum
+    +producto_id? : ref producto
+    +responsable : texto
+    +observaciones? : text
+  }
+  class produccion__produccion_abono["produccion_abono"] {
+    <<por finca · fase 1>>
+    +origen : enum
+    +zona_id? : ref zona
+    +fecha : date
+    +kg : decimal
+    +lote_inventario_id? : ref lote_inventario
+  }
+  namespace inventario {
+    class inventario__lote_inventario["inventario.lote_inventario"]
+    class inventario__producto["inventario.producto"]
+  }
+  namespace iot {
+    class iot__mision_robot["iot.mision_robot"]
+  }
+  namespace nucleo {
+    class nucleo__zona["nucleo.zona"]
+  }
+  namespace personal {
+    class personal__tarea["personal.tarea"]
+  }
+  produccion__siembra "*" --> "1" nucleo__zona : zona_id
+  produccion__siembra "*" --> "1" produccion__cultivo : cultivo_id
+  produccion__labor_cultural "*" --> "1" produccion__siembra : siembra_id
+  produccion__labor_cultural "*" --> "0..1" inventario__producto : producto_id
+  produccion__labor_cultural "*" --> "0..1" personal__tarea : tarea_id
+  produccion__labor_cultural "*" --> "0..1" iot__mision_robot : mision_robot_id
+  produccion__cosecha "*" --> "1" produccion__siembra : siembra_id
+  produccion__cosecha "*" --> "1" inventario__producto : producto_id
+  produccion__cosecha "*" --> "0..1" inventario__lote_inventario : lote_inventario_id
+  produccion__calidad_agua_estanque "*" --> "1" nucleo__zona : zona_id
+  produccion__analisis_suelo "*" --> "1" nucleo__zona : zona_id
+  produccion__registro_bioseguridad "*" --> "1" nucleo__zona : zona_id
+  produccion__registro_bioseguridad "*" --> "0..1" inventario__producto : producto_id
+  produccion__produccion_abono "*" --> "0..1" nucleo__zona : zona_id
+  produccion__produccion_abono "*" --> "0..1" inventario__lote_inventario : lote_inventario_id
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__lote_inventario fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style iot__mision_robot fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style nucleo__zona fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style personal__tarea fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

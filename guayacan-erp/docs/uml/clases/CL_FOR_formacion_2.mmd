@@ -1,0 +1,44 @@
+classDiagram
+  direction LR
+  class formacion__pregunta["pregunta"] {
+    <<por finca · fase 2>>
+    +evaluacion_id : ref evaluacion
+    +orden : smallint
+    +enunciado : text
+    +tipo : enum
+    +opciones? : jsonb
+    +respuesta_correcta? : jsonb
+    +puntos : decimal
+  }
+  class formacion__progreso["progreso"] {
+    <<por finca · fase 2>>
+    +inscripcion_id : ref inscripcion
+    +leccion_id : ref leccion
+    +completada_en : momento
+  }
+  class formacion__asistencia["asistencia"] {
+    <<por finca · fase 2>>
+    +sesion_id : ref sesion_presencial
+    +tercero_id : ref tercero
+    +asistio : boolean
+    +nota? : decimal
+  }
+  namespace formacion_otra_parte {
+    class formacion__evaluacion["formacion.evaluacion"]
+    class formacion__inscripcion["formacion.inscripcion"]
+    class formacion__leccion["formacion.leccion"]
+    class formacion__sesion_presencial["formacion.sesion_presencial"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  formacion__pregunta "*" --> "1" formacion__evaluacion : evaluacion_id
+  formacion__progreso "*" --> "1" formacion__inscripcion : inscripcion_id
+  formacion__progreso "*" --> "1" formacion__leccion : leccion_id
+  formacion__asistencia "*" --> "1" formacion__sesion_presencial : sesion_id
+  formacion__asistencia "*" --> "1" terceros__tercero : tercero_id
+  style formacion__sesion_presencial fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style formacion__inscripcion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style formacion__leccion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style formacion__evaluacion fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

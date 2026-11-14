@@ -1,0 +1,47 @@
+digraph G {
+graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.28, ranksep=0.9, pad=0.3, bgcolor=white, label="Casos de uso · IoT, seguridad perimetral y robótica (IOT)", labelloc=t, fontsize=16, fontcolor="#1F2933"];
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", color="#6B7280", arrowhead=none, penwidth=1.1];
+{rank=source; "ADM"; "GW"; "ENC"; "POR"; "SCH";}
+"ADM" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Administrador", fontsize=11, fontcolor="#1F2933"];
+"GW" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nPasarela IoT local"];
+"ENC" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Encargado de\nfinca", fontsize=11, fontcolor="#1F2933"];
+"POR" [shape=none, image="/tmp/claude-0/-home-claude/7320bc6f-3622-59e9-931c-48aeb0592ea4/scratchpad/out/uml/casos-uso/actor.png", imagescale=false, imagepos=tc, labelloc=b, height=1.45, width=1.2, label="Portería", fontsize=11, fontcolor="#1F2933"];
+"SCH" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nTareas programadas"];
+subgraph cluster_sistema { label="GuayacanERP · IoT, seguridad perimetral y robótica"; fontsize=13; fontcolor="#2E6B4F"; color="#2E6B4F"; penwidth=1.4; style=rounded; margin=18;
+  "IOT-01" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-01\nRegistrar dispositivos,\nsensores y actuadores"];
+  "IOT-02" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-02\nRecibir lecturas de\nsensores"];
+  "IOT-03" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-03\nAccionar un actuador a\nmano"];
+  "IOT-04" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-04\nArmar y desarmar la alarma\npor zonas\n[función seguridad_perimetral]"];
+  "IOT-05" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-05\nAtender un evento de\nseguridad perimetral\n[función seguridad_perimetral]"];
+  "IOT-06" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-06\nGestionar credenciales de\nacceso a puertas"];
+  "IOT-07" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-07\nConservar o depurar clips\nde cámaras\n[función camaras]"];
+  "IOT-08" [shape=ellipse, style="filled,dashed", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-08\nPlanear y ejecutar una\nmisión de dron o robot\n[función dron_monitoreo]"];
+  "IOT-09" [shape=ellipse, style="filled", fillcolor="#EAF3EE", color="#2E6B4F", fontcolor="#1F2933", fontsize=10.5, label="IOT-09\nCortar cargas con batería\nbaja"];
+}
+subgraph cluster_otros { label="Casos de otros módulos"; fontsize=11; fontcolor="#6B7280"; color="#C7CCD1"; style="rounded,dashed";
+  "AGD-05" [shape=ellipse, style="dashed", color="#6B7280", fontcolor="#6B7280", fontsize=10, label="AGD-05\nConsultar quién está\nen la finca\n(Agenda y portería)"];
+}
+{rank=sink; "NOT";}
+"NOT" [shape=box, color="#6B7280", fontcolor="#1F2933", fontsize=10.5, label="«sistema»\nCorreo y SMS"];
+"ADM" -> "IOT-01";
+"IOT-01" -> "GW" [style=solid];
+"GW" -> "IOT-02";
+"ENC" -> "IOT-03";
+"IOT-03" -> "GW" [style=solid];
+"ENC" -> "IOT-04";
+"POR" -> "IOT-04";
+"IOT-04" -> "GW" [style=solid];
+"ENC" -> "IOT-05";
+"POR" -> "IOT-05";
+"IOT-05" -> "GW" [style=solid];
+"IOT-05" -> "NOT" [style=solid];
+"ADM" -> "IOT-06";
+"IOT-06" -> "GW" [style=solid];
+"SCH" -> "IOT-07";
+"ADM" -> "IOT-07";
+"ENC" -> "IOT-08";
+"ADM" -> "IOT-08";
+"IOT-08" -> "GW" [style=solid];
+"IOT-08" -> "AGD-05" [style=dashed, arrowhead=vee, xlabel="«include»", fontsize=9.5, fontcolor="#6B7280", constraint=true];
+"GW" -> "IOT-09";
+}

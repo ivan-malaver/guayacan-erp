@@ -1,0 +1,84 @@
+classDiagram
+  direction LR
+  class finanzas__periodo_contable["periodo_contable"] {
+    <<por finca · fase 1>>
+    +anio : smallint
+    +mes : smallint
+    +estado : enum
+    +cerrado_por? : ref usuario
+    +cerrado_en? : momento
+  }
+  class finanzas__clasificacion_costo["clasificacion_costo"] {
+    <<por finca · fase 2>>
+    +cuenta_id : ref cuenta_contable
+    +elemento : enum
+    +comportamiento : enum
+    +parte_fija_pct? : decimal
+    +controlable : boolean
+    +es_costo_producto : boolean
+  }
+  class finanzas__costo_estandar["costo_estandar"] {
+    <<por finca · fase 2>>
+    +producto_id : ref producto
+    +vigente_desde : date
+    +material_directo : dinero
+    +mano_obra_directa : dinero
+    +cif : dinero
+    +costo_variable_unitario : dinero
+  }
+  class finanzas__premisa_presupuesto["premisa_presupuesto"] {
+    <<por finca · fase 2>>
+    +presupuesto_id : ref presupuesto
+    +tipo : enum
+    +variable : texto
+    +valor : decimal
+    +fuente? : texto
+  }
+  class finanzas__estado_financiero["estado_financiero"] {
+    <<por finca · fase 2>>
+    +tipo : enum
+    +desde : date
+    +hasta : date
+    +presupuestado : boolean
+    +datos : jsonb
+    +generado_por? : ref usuario
+  }
+  class finanzas__indicador["indicador"] {
+    <<compartida>>
+    +codigo : texto
+    +nombre : texto
+    +grupo : enum
+    +formula : text
+    +interpretacion? : text
+    +unidad : enum
+    +sentido : enum
+  }
+  class finanzas__reporte_indicadores["reporte_indicadores"] {
+    <<por finca · fase 3>>
+    +destinatario : enum
+    +tercero_id? : ref tercero
+    +desde : date
+    +hasta : date
+    +contenido : jsonb
+    +hash_sha256 : huella
+    +autorizado_por : ref usuario
+    +enviado_en? : momento
+  }
+  namespace finanzas_otra_parte {
+    class finanzas__cuenta_contable["finanzas.cuenta_contable"]
+    class finanzas__presupuesto["finanzas.presupuesto"]
+  }
+  namespace inventario {
+    class inventario__producto["inventario.producto"]
+  }
+  namespace terceros {
+    class terceros__tercero["terceros.tercero"]
+  }
+  finanzas__clasificacion_costo "0..1" --> "1" finanzas__cuenta_contable : cuenta_id
+  finanzas__costo_estandar "*" --> "1" inventario__producto : producto_id
+  finanzas__premisa_presupuesto "*" --> "1" finanzas__presupuesto : presupuesto_id
+  finanzas__reporte_indicadores "*" --> "0..1" terceros__tercero : tercero_id
+  style terceros__tercero fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style inventario__producto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__presupuesto fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3
+  style finanzas__cuenta_contable fill:#F3F4F6,stroke:#9CA3AF,stroke-dasharray:4 3

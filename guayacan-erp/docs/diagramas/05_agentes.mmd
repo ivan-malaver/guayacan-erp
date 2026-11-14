@@ -1,0 +1,22 @@
+flowchart LR
+  ENT[Mensaje de WhatsApp, web o redes] --> ORQ{Orquestador<br/>detecta intención}
+  ORQ -- productos, pedidos --> ASE[Asesor virtual]
+  ORQ -- finca, turismo --> GUI[Guía virtual]
+  ORQ -- cliente con consentimiento --> VEN[Vendedor personalizado]
+  ORQ -- comentarios públicos --> RED[Gestor de redes]
+  ORQ -- tema desconocido o queja --> HUM[Persona del equipo]
+  subgraph Tareas programadas
+    MER[Analista de mercados y proveedores]
+    NEG[Analista de negocio]
+    CON[Asistente contable]
+  end
+  ASE --> HER[Herramientas MCP del ERP]
+  GUI --> HER
+  VEN --> HER
+  RED --> HER
+  MER --> HER
+  NEG --> HER
+  CON --> HER
+  HER -- lectura --> DAT[(Datos)]
+  HER -- propuesta --> APR[Bandeja de aprobación<br/>del administrador]
+  APR -- aprobado --> REG[Regla del ERP ejecuta el cambio]

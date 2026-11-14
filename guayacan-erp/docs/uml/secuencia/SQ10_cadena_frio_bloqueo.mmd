@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  participant S as Sensor de la nevera
+  participant GW as Pasarela IoT local
+  participant DB as PostgreSQL
+  participant OB as evento_salida
+  actor E as Encargado
+  participant AG as Agente de IA
+  S->>GW: temperatura fuera de rango
+  GW->>DB: excursion_temperatura abierta
+  loop cada lectura
+    DB->>DB: evaluar_excursion(): minutos fuera contra tolerancia
+  end
+  DB->>DB: supera 30 min: bloqueo_lote de los perecederos de la nevera
+  DB->>OB: lote.bloqueado y temperatura.fuera_de_rango
+  OB-->>E: aviso push y en el panel
+  AG->>DB: intenta liberar el lote
+  DB-->>AG: Solo una persona decide sobre un lote bloqueado
+  E->>DB: decisión liberado o descartado con observación
+  DB->>DB: aplicar_bloqueo(): queda quién y cuándo, la decisión no cambia
