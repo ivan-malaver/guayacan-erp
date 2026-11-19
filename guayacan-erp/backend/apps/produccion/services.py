@@ -20,6 +20,7 @@ from django.db import connection, transaction  # noqa: F401
 from django.db.models import F
 from rest_framework.exceptions import ValidationError
 
+from apps.inventario.models import LoteInventario
 from guayacan.eventos import publicar  # noqa: F401
 
 from . import models
@@ -123,7 +124,7 @@ def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, modelo,
         registro = modelo.objects.create(**datos)
         if modelo is models.RegistroAlimentacion:
             _consumir('produccion.registro_alimentacion', registro, registro.producto_id,
-                      _kilos_a_unidad(registro.producto_id, registro.cantidad_kg), usuario)
+                      round(registro.cantidad_kg / _kilos_por_unidad(registro.producto_id), 2), usuario)
         if modelo is models.EventoSanitario and registro.tipo in ('mortalidad', 'descarte'):
             n = registro.cantidad_afectada
             # Descuenta en la base para que dos registros simultáneos no dejen el lote en negativo
@@ -139,15 +140,15 @@ def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, modelo,
     return registro
 
 
-def _kilos_a_unidad(producto_id, kilos):
-    """El kardex cuenta en la unidad del producto (p. ej. bulto de 40 kg); el registro viene en kilos."""
+def _kilos_por_unidad(producto_id):
+    """El kardex cuenta en la unidad del producto (p. ej. bulto de 40 kg); la alimentación se registra en kilos."""
     with connection.cursor() as cur:
         cur.execute("select u.factor_base from inventario.producto p join inventario.unidad_medida u on u.id = p.unidad_id "
                     "where p.id = %s and u.unidad_base = 'kg'", [producto_id])
         fila = cur.fetchone()
     if not fila:
         raise ValidationError({'producto': 'El alimento debe medirse en kilos o en una unidad de kilos'})
-    return round(kilos / fila[0], 2)
+    return fila[0]
 
 
 def _consumir(tabla, registro, producto_id, cantidad, usuario):
@@ -274,14 +275,44 @@ def pro_06_registrar_cosecha_destino(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-06, RF-18
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó CosechaSerializer).
+      bodega          destino venta: bodega donde entra el lote de inventario
+      costo_unitario  destino venta: costo por unidad del lote (0 si aún no se conoce)
+      lote_animal     destino alimento animal: lote que se lo come
+    Devuelve la cosecha creada.
     """
-    # Por construir. Pasos sugeridos para PRO-06:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: inventario.entrada_inicial(), comercial.registrar_huella()
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-06: por construir')
+    # shortcut: sin columna de periodo de carencia del insumo (1b); agregarla al modelo de datos y validar aquí
+    bodega = datos.pop('bodega', None)
+    costo_unitario = datos.pop('costo_unitario', 0)
+    lote_animal = datos.pop('lote_animal', None)
+    siembra, destino = datos['siembra'], datos['destino']
+    if siembra.estado in ('planeada', 'perdida', 'finalizada'):
+        raise ValidationError({'siembra': f'La siembra está {siembra.estado}'})
+    if destino == 'venta' and not bodega:
+        raise ValidationError({'bodega': 'Lo que va a venta entra a una bodega'})
+    if destino == 'alimento_animal' and not lote_animal:
+        raise ValidationError({'lote_animal': 'Indique el lote que recibe el alimento'})
+    with transaction.atomic():
+        cosecha = models.Cosecha.objects.create(**datos)
+        if destino == 'venta':
+            # La base registra la entrada en kardex, estima el vencimiento y agrega la huella de trazabilidad
+            cosecha.lote_inventario = LoteInventario.objects.create(
+                producto_id=cosecha.producto_id, bodega=bodega, origen='produccion', origen_tabla='produccion.cosecha',
+                origen_id=cosecha.id, fecha_produccion=cosecha.fecha, cantidad_inicial=cosecha.cantidad,
+                costo_unitario=costo_unitario, codigo_lote=f'{cosecha.producto.sku[:12]}-{cosecha.fecha:%Y%m%d}-{cosecha.id}')
+            cosecha.save(update_fields=['lote_inventario'])
+        elif destino == 'alimento_animal':
+            # 1a: no pasa por bodega; queda como alimento propio del lote
+            models.RegistroAlimentacion.objects.create(
+                lote_animal=lote_animal, fecha=cosecha.fecha, producto_id=cosecha.producto_id, origen='propio',
+                cantidad_kg=cosecha.cantidad * _kilos_por_unidad(cosecha.producto_id))
+        if siembra.estado in ('sembrada', 'recuperacion'):
+            # ST16: la primera cosecha pone la siembra en producción
+            models.Siembra.objects.filter(pk=siembra.pk).update(estado='en_produccion')
+        publicar('produccion.cosecha_registrada', 'produccion.cosecha', cosecha.id,
+                 {'siembra_id': siembra.id, 'producto_id': cosecha.producto_id, 'cantidad': cosecha.cantidad,
+                  'destino': destino, 'lote_inventario_id': cosecha.lote_inventario_id})
+    return cosecha
 
 
 def pro_07_registrar_analisis_suelo_recomendacion(*, usuario, **datos):

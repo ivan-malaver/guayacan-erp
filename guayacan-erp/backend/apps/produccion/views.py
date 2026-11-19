@@ -155,12 +155,17 @@ class LaborCulturalViewSet(VistaModelo):
             usuario=self.request.user, modelo=models.LaborCultural, **serializer.validated_data)
 
 
-# CRUD de produccion.cosecha en /api/v1/produccion/cosechas/
+# CRUD de produccion.cosecha en /api/v1/produccion/cosechas/  (el alta es PRO-06)
 class CosechaViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Cosecha.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.CosechaSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_06_registrar_cosecha_destino(usuario=self.request.user,
+                                                                        **serializer.validated_data)
 
 
 # CRUD de produccion.analisis_suelo en /api/v1/produccion/analisis-suelo/

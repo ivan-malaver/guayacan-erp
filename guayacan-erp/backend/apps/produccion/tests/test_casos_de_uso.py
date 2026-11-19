@@ -395,9 +395,59 @@ def test_pro_05_siembra_finalizada_no_recibe_labores(cultivo):
     assert 'finalizada' in str(r.data['siembra'])
 
 
-@pytest.mark.skip(reason='PRO-06: por construir')
-def test_pro_06_registrar_cosecha_destino_flujo_principal():
-    """PRO-06 · Registrar una cosecha y su destino"""
+@pytest.fixture
+def cosecha(cultivo):
+    """La siembra de fríjol de PRO-05, el producto fríjol y una bodega."""
+    cliente, siembra, _, _ = cultivo
+    with connection.cursor() as cur:
+        cur.execute("select (select id from inventario.producto where sku = 'FRI-KG'), (select min(id) from inventario.bodega)")
+        frijol, bodega = cur.fetchone()
+    base = {'siembra': siembra['id'], 'fecha': '2026-12-30', 'producto': frijol, 'cantidad': 120}
+    return cliente, base, bodega
+
+
+def test_pro_06_registrar_cosecha_destino_flujo_principal(cosecha):
+    """PRO-06 · A venta: entra a bodega como lote con su entrada en kardex y la siembra pasa a producción"""
+    cliente, base, bodega = cosecha
+    r = cliente.post('/api/v1/produccion/cosechas/', {**base, 'destino': 'venta', 'bodega': bodega}, format='json')
+    assert r.status_code == 201, r.data
+    with connection.cursor() as cur:
+        cur.execute("select l.origen_tabla, l.origen_id, l.cantidad_disponible, (select count(*) from inventario.movimiento_inventario m "
+                    "where m.lote_inventario_id = l.id and m.tipo = 'entrada') from inventario.lote_inventario l where l.id = %s",
+                    [r.data['lote_inventario']])
+        assert cur.fetchone() == ('produccion.cosecha', r.data['id'], 120, 1)
+    assert _siembra(base['siembra'])[1] == 'en_produccion'
+    assert _evento(r.data['id'], 'produccion.cosecha_registrada')['destino'] == 'venta'
+
+
+def test_pro_06_venta_sin_bodega_responde_400(cosecha):
+    """Paso 2: lo que va a venta elige bodega"""
+    cliente, base, _ = cosecha
+    r = cliente.post('/api/v1/produccion/cosechas/', {**base, 'destino': 'venta'}, format='json')
+    assert r.status_code == 400
+    assert 'bodega' in r.data
+
+
+def test_pro_06_alimento_animal_queda_como_alimentacion_propia(cosecha, api):
+    """1a: destino alimento animal; no entra a bodega y queda en el registro de alimentación del lote"""
+    cliente, base, _ = cosecha
+    _, lote, _ = api
+    lote_id = cliente.post('/api/v1/produccion/lotes-animal/', lote, format='json').data['id']
+    r = cliente.post('/api/v1/produccion/cosechas/', {**base, 'destino': 'alimento_animal', 'lote_animal': lote_id}, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['lote_inventario'] is None
+    with connection.cursor() as cur:
+        cur.execute('select origen, cantidad_kg from produccion.registro_alimentacion where lote_animal_id = %s', [lote_id])
+        assert cur.fetchall() == [('propio', 120)]
+
+
+def test_pro_06_siembra_perdida_no_cosecha(cosecha):
+    """Precondición: la siembra debe estar en producción (o por empezar a producir)"""
+    cliente, base, _ = cosecha
+    with connection.cursor() as cur:
+        cur.execute("update produccion.siembra set estado = 'perdida' where id = %s", [base['siembra']])
+    r = cliente.post('/api/v1/produccion/cosechas/', {**base, 'destino': 'perdida'}, format='json')
+    assert r.status_code == 400
 
 
 @pytest.mark.skip(reason='PRO-07: por construir')
