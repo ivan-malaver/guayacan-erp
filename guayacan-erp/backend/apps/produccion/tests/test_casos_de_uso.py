@@ -245,9 +245,90 @@ def test_pro_03_lote_cerrado_no_recibe_registros(galpon):
     assert 'cerrado' in str(r.data['lote_animal'])
 
 
-@pytest.mark.skip(reason='PRO-04: por construir')
-def test_pro_04_registrar_eventos_reproductivos_ovinos_caprinos_flujo_principal():
-    """PRO-04 · Registrar eventos reproductivos de ovinos y caprinos"""
+@pytest.fixture
+def rebano(api):
+    """Un rebaño de ovinos (PRO-01) con una hembra y un macho registrados."""
+    cliente, lote, _ = api
+    with connection.cursor() as cur:
+        cur.execute("select id from produccion.especie where codigo = 'ovino'")
+        ovino = cur.fetchone()[0]
+    lote_id = cliente.post('/api/v1/produccion/lotes-animal/', {**lote, 'codigo': 'PRB-OV-01', 'especie': ovino,
+                           'proposito': 'reproduccion', 'cantidad_inicial': 2}, format='json').data['id']
+
+    def animal(identificador, sexo):
+        r = cliente.post('/api/v1/produccion/animales/', {'lote_animal': lote_id, 'identificador': identificador,
+                         'sexo': sexo}, format='json')
+        assert r.status_code == 201, r.data
+        return r.data['id']
+
+    return cliente, lote_id, animal('PRB-OV-H1', 'hembra'), animal('PRB-OV-M1', 'macho')
+
+
+def _crias(madre_id):
+    with connection.cursor() as cur:
+        cur.execute('select padre_id, lote_animal_id, sexo from produccion.animal where madre_id = %s order by id', [madre_id])
+        return cur.fetchall()
+
+
+def test_pro_04_registrar_eventos_reproductivos_ovinos_caprinos_flujo_principal(rebano):
+    """PRO-04 · Monta y parto: cada cría viva nace como animal con su madre y el padre de la monta"""
+    cliente, lote_id, hembra, macho = rebano
+    r = cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'macho': macho, 'tipo': 'monta',
+                     'fecha': '2026-06-01'}, format='json')
+    assert r.status_code == 201, r.data
+    r = cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'tipo': 'parto', 'fecha': '2026-11-01',
+                     'crias_muertas': 1, 'crias': [{'sexo': 'hembra'}, {'sexo': 'macho'}]}, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['crias_vivas'] == 2
+    assert _crias(hembra) == [(macho, lote_id, 'hembra'), (macho, lote_id, 'macho')]
+    assert _vivos(lote_id) == 4
+
+
+def test_pro_04_hembra_vendida_no_registra_eventos(rebano):
+    """1a: la hembra vendida o muerta no puede tener eventos"""
+    cliente, _, hembra, macho = rebano
+    with connection.cursor() as cur:
+        cur.execute("update produccion.animal set estado = 'vendido' where id = %s", [hembra])
+    r = cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'macho': macho, 'tipo': 'monta',
+                     'fecha': '2026-06-01'}, format='json')
+    assert r.status_code == 400
+    assert 'hembra' in r.data
+
+
+def test_pro_04_monta_exige_macho(rebano):
+    """Paso 2: para una monta se registra el macho"""
+    cliente, _, hembra, _ = rebano
+    r = cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'tipo': 'monta', 'fecha': '2026-06-01'},
+                     format='json')
+    assert r.status_code == 400
+    assert 'macho' in r.data
+
+
+def test_pro_04_destete_pasa_las_crias_a_otro_lote(rebano):
+    """3a: al destetar, las crías pasan a su lote y cada lote ajusta su cantidad"""
+    cliente, lote_id, hembra, _ = rebano
+    destino = cliente.post('/api/v1/produccion/lotes-animal/', {'codigo': 'PRB-OV-02', 'especie': _especie_del_lote(lote_id),
+                           'zona': _zona_del_lote(lote_id), 'proposito': 'cria', 'fecha_ingreso': '2026-11-01',
+                           'cantidad_inicial': 0}, format='json').data['id']
+    cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'tipo': 'parto', 'fecha': '2026-11-01',
+                 'crias': [{'sexo': 'hembra'}]}, format='json')
+    r = cliente.post('/api/v1/produccion/eventos-reproductivo/', {'hembra': hembra, 'tipo': 'destete', 'fecha': '2027-01-15',
+                     'lote_destino': destino}, format='json')
+    assert r.status_code == 201, r.data
+    assert [c[1] for c in _crias(hembra)] == [destino]
+    assert (_vivos(lote_id), _vivos(destino)) == (2, 1)
+
+
+def _especie_del_lote(lote_id):
+    with connection.cursor() as cur:
+        cur.execute('select especie_id from produccion.lote_animal where id = %s', [lote_id])
+        return cur.fetchone()[0]
+
+
+def _zona_del_lote(lote_id):
+    with connection.cursor() as cur:
+        cur.execute('select zona_id from produccion.lote_animal where id = %s', [lote_id])
+        return cur.fetchone()[0]
 
 
 @pytest.mark.skip(reason='PRO-05: por construir')

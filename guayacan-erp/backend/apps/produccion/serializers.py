@@ -39,6 +39,8 @@ class AnimalSerializer(serializers.ModelSerializer):
         model = models.Animal  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # Si no se envía, la base pone estado 'activo'
+        extra_kwargs = {'estado': {'required': False}}
 
 
 class ClasificacionManualSerializer(serializers.Serializer):
@@ -87,8 +89,18 @@ class RegistroPesajeSerializer(serializers.ModelSerializer):
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
 
 
+class CriaSerializer(serializers.Serializer):
+    """PRO-04: una cría viva del parto; sin identificador, el servicio le pone uno."""
+    sexo = serializers.ChoiceField(choices=['hembra', 'macho'])
+    identificador = serializers.CharField(max_length=20, required=False)
+
+
 # produccion.evento_reproductivo <-> JSON en /api/v1/produccion/eventos-reproductivo/
 class EventoReproductivoSerializer(serializers.ModelSerializer):
+    # PRO-04: crías del parto y lote del destete; solo se reciben (no se muestran en la respuesta)
+    crias = CriaSerializer(many=True, required=False, write_only=True)
+    lote_destino = serializers.PrimaryKeyRelatedField(queryset=models.LoteAnimal.objects.all(), required=False, write_only=True)
+
     class Meta:
         model = models.EventoReproductivo  # tabla que representa
         fields = '__all__'  # expone todas sus columnas

@@ -179,14 +179,45 @@ def pro_04_registrar_eventos_reproductivos_ovinos_caprinos(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-07
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó EventoReproductivoSerializer).
+      crias         en un parto, lista de {'sexo', 'identificador' opcional}: una por cría viva
+      lote_destino  en un destete, lote al que pasan las crías activas de la hembra
+    Devuelve el evento creado.
     """
-    # Por construir. Pasos sugeridos para PRO-04:
-    # 1. with transaction.atomic():
-    # 3. Guardar con el serializer (el CRUD ya lo hace) o con models.<Clase>.objects.create(...)
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-04: por construir')
+    crias = datos.pop('crias', [])
+    lote_destino = datos.pop('lote_destino', None)
+    hembra, macho, tipo = datos['hembra'], datos.get('macho'), datos['tipo']
+    # 1a: la hembra (y el macho de la monta) deben estar vivos en la finca y tener el sexo correcto
+    if hembra.sexo != 'hembra' or hembra.estado != 'activo':
+        raise ValidationError({'hembra': 'Debe ser una hembra activa'})
+    if macho and (macho.sexo != 'macho' or macho.estado != 'activo'):
+        raise ValidationError({'macho': 'Debe ser un macho activo'})
+    if tipo == 'monta' and not macho:
+        raise ValidationError({'macho': 'La monta registra el macho'})
+    if tipo == 'parto':
+        datos['crias_vivas'] = len(crias)
+    if tipo == 'destete' and not lote_destino:
+        raise ValidationError({'lote_destino': 'El destete indica el lote al que pasan las crías'})
+    with transaction.atomic():
+        evento = models.EventoReproductivo.objects.create(**datos)
+        if crias:
+            if not macho:
+                # El padre es el macho de la última monta de la hembra, si la hubo
+                monta = models.EventoReproductivo.objects.filter(hembra=hembra, tipo='monta', fecha__lte=evento.fecha) \
+                    .order_by('-fecha', '-id').first()
+                macho = monta and monta.macho
+            for i, c in enumerate(crias, 1):
+                models.Animal.objects.create(lote_animal_id=hembra.lote_animal_id, madre=hembra, padre=macho,
+                                             fecha_nacimiento=evento.fecha, sexo=c['sexo'],
+                                             identificador=c.get('identificador') or f'C{evento.id}-{i}')
+            models.LoteAnimal.objects.filter(pk=hembra.lote_animal_id).update(cantidad_actual=F('cantidad_actual') + len(crias))
+        if lote_destino:
+            # 3a: las crías activas que siguen en el lote de la madre pasan al de destino; cada lote ajusta su cantidad
+            n = models.Animal.objects.filter(madre=hembra, estado='activo', lote_animal_id=hembra.lote_animal_id) \
+                .update(lote_animal=lote_destino)
+            models.LoteAnimal.objects.filter(pk=hembra.lote_animal_id).update(cantidad_actual=F('cantidad_actual') - n)
+            models.LoteAnimal.objects.filter(pk=lote_destino.pk).update(cantidad_actual=F('cantidad_actual') + n)
+    return evento
 
 
 def pro_05_registrar_siembra_labores_culturales(*, usuario, **datos):

@@ -100,12 +100,17 @@ class RegistroPesajeViewSet(VistaModelo):
             usuario=self.request.user, modelo=models.RegistroPesaje, **serializer.validated_data)
 
 
-# CRUD de produccion.evento_reproductivo en /api/v1/produccion/eventos-reproductivo/
+# CRUD de produccion.evento_reproductivo en /api/v1/produccion/eventos-reproductivo/  (el alta es PRO-04)
 class EventoReproductivoViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.EventoReproductivo.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.EventoReproductivoSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_04_registrar_eventos_reproductivos_ovinos_caprinos(
+            usuario=self.request.user, **serializer.validated_data)
 
 
 # CRUD de produccion.calidad_agua_estanque en /api/v1/produccion/calidad-agua/
