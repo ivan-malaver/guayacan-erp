@@ -201,6 +201,8 @@ def ado_04_sembrar_trabajador_enviar_video(*, usuario, **datos):
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
     """
+    # TODO(datos personales): si el trabajador sale en el video, la base exige imagen_redes solo para piezas publicadas
+    # en redes, no para el video privado al adoptante; revisarlo con la política de datos antes de construir ADO-04
     # Por construir. Pasos sugeridos para ADO-04:
     # 1. with transaction.atomic():
     # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)

@@ -896,6 +896,9 @@ begin
       if v_comp is not null and not formacion.esta_habilitado(v_emp.tercero_id, v_comp, new.fecha) then
         raise exception 'El trabajador % de la cuadrilla no está habilitado para esta tarea', v_emp.id;
       end if;
+      if not personal.empleado_disponible(v_emp.id, new.fecha) then
+        raise exception 'El trabajador % de la cuadrilla no está disponible el % (retirado o con ausencia)', v_emp.id, new.fecha;
+      end if;
     end loop;
   end if;
   if new.estado = 'en_curso' and (tg_op = 'INSERT' or old.estado <> 'en_curso') then new.iniciada_en := coalesce(new.iniciada_en, now()); end if;
@@ -2215,6 +2218,7 @@ create or replace function personal.empleado_disponible(p_empleado bigint, p_fec
      and not exists (select 1 from personal.turno t where t.empleado_id = p_empleado and t.fecha = p_fecha and t.tipo = 'descanso') $$;
 
 create or replace function personal.validar_area_tarea() returns trigger language plpgsql as $$
+declare v_fuera bigint;
 begin
   if new.area_id is null and new.plantilla_tarea_id is not null then
     select area_id into new.area_id from personal.plantilla_tarea where id = new.plantilla_tarea_id;
@@ -2223,6 +2227,16 @@ begin
      and (tg_op = 'INSERT' or new.empleado_id is distinct from old.empleado_id or new.area_id is distinct from old.area_id)
      and not personal.es_miembro_area(new.empleado_id, new.area_id, new.fecha) then
     raise exception 'El trabajador % no pertenece al área de responsabilidad de la tarea', new.empleado_id;
+  end if;
+  -- Una cuadrilla cumple la regla del área si cada miembro vigente ese día la cumple
+  if new.area_id is not null and new.cuadrilla_id is not null
+     and (tg_op = 'INSERT' or new.cuadrilla_id is distinct from old.cuadrilla_id or new.area_id is distinct from old.area_id or new.fecha <> old.fecha) then
+    select m.empleado_id into v_fuera from personal.cuadrilla_miembro m
+    where m.cuadrilla_id = new.cuadrilla_id and m.desde <= new.fecha and (m.hasta is null or m.hasta >= new.fecha)
+      and not personal.es_miembro_area(m.empleado_id, new.area_id, new.fecha) limit 1;
+    if v_fuera is not null then
+      raise exception 'El trabajador % de la cuadrilla no pertenece al área de responsabilidad de la tarea', v_fuera;
+    end if;
   end if;
   return new;
 end $$;

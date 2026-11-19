@@ -16,7 +16,7 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import transaction  # noqa: F401
+from django.db import connection, transaction  # noqa: F401
 
 from guayacan.eventos import publicar  # noqa: F401
 
@@ -81,7 +81,7 @@ def per_03_generar_tareas_dia(*, usuario, **datos):
     raise NotImplementedError('PER-03: por construir')
 
 
-def per_04_asignar_tarea(*, usuario, **datos):
+def per_04_asignar_tarea(*, usuario, tarea, **datos):
     """PER-04 · Asignar una tarea
 
     Actores: Encargado de finca; secundarios: Coordinador (IA)
@@ -91,14 +91,38 @@ def per_04_asignar_tarea(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RQ-28, RQ-30
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el encargado), tarea (la que se asigna) y **datos (lo que validó TareaSerializer en el PATCH:
+    empleado o cuadrilla y, si cambian, fecha u otros campos).
+    La base valida todo al guardar: un agente no asigna; el trabajador (o cada miembro de la cuadrilla) debe estar
+    disponible (3b), habilitado si la plantilla exige un curso (3a) y ser del área (3c); persona y cuadrilla a la vez no (2a).
+    Devuelve la tarea asignada.
     """
-    # Por construir. Pasos sugeridos para PER-04:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: personal.validar_tarea(), personal.validar_area_tarea(), personal.empleado_disponible()
-    # 4. publicar('personal.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PER-04: por construir')
+    with transaction.atomic():
+        for campo, valor in datos.items():
+            setattr(tarea, campo, valor)
+        tarea.save()
+        # Paso 3: aviso para la app del trabajador
+        publicar('personal.tarea_asignada', 'personal.tarea', tarea.id,
+                 {'titulo': tarea.titulo, 'fecha': tarea.fecha, 'empleado_id': tarea.empleado_id, 'cuadrilla_id': tarea.cuadrilla_id})
+    return tarea
+
+
+def per_04_candidatos(*, tarea_id):
+    """PER-04 paso 1: trabajadores que la base dejaría asignar a la tarea, con los que tienen turno ese día primero.
+
+    Usa las mismas funciones que valida la base al guardar: disponible, del área (si la tarea tiene) y habilitado (si la
+    plantilla exige un curso). Devuelve una lista de {'empleado', 'nombre', 'cargo', 'con_turno'}.
+    """
+    with connection.cursor() as cur:
+        cur.execute("select e.id, concat_ws(' ', te.nombres, te.apellidos), e.cargo, "
+                    "exists (select 1 from personal.turno u where u.empleado_id = e.id and u.fecha = t.fecha and u.tipo <> 'descanso') "
+                    "from personal.tarea t left join personal.plantilla_tarea p on p.id = t.plantilla_tarea_id "
+                    "cross join terceros.empleado e join terceros.tercero te on te.id = e.tercero_id "
+                    "where t.id = %s and personal.empleado_disponible(e.id, t.fecha) "
+                    "and (t.area_id is null or personal.es_miembro_area(e.id, t.area_id, t.fecha)) "
+                    "and (p.competencia_id is null or formacion.esta_habilitado(e.tercero_id, p.competencia_id, t.fecha)) "
+                    "order by 4 desc, 2", [tarea_id])
+        return [dict(zip(('empleado', 'nombre', 'cargo', 'con_turno'), fila, strict=True)) for fila in cur.fetchall()]
 
 
 def per_05_ejecutar_tarea_evidencia(*, usuario, **datos):

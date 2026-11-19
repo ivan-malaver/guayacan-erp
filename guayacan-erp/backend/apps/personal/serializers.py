@@ -60,7 +60,14 @@ class TareaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Tarea  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # PER-04/06: quién aprobó y las horas los pone la base con el usuario de la sesión; si el cliente los enviara,
+        # podría aprobar a nombre de otra persona
+        read_only_fields = SOLO_LECTURA + ('aprobado_por', 'aprobado_en', 'iniciada_en', 'terminada_en')
+
+    def validate_estado(self, estado):
+        if estado in ('aprobada', 'devuelta'):
+            raise serializers.ValidationError('Se aprueba con /aprobar/ y se devuelve con /devolver/ (PER-06)')
+        return estado
 
 
 # personal.paso_tarea <-> JSON en /api/v1/personal/tareas/{id}/pasos/

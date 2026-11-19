@@ -14,9 +14,12 @@ QUÉ OPERACIONES OFRECE (heredadas de guayacan.vistas.VistaModelo)
 La seguridad no se programa aquí: el middleware fija la finca y el usuario, y PostgreSQL solo deja ver y
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from guayacan.vistas import VistaModelo
 
-from . import models, serializers
+from . import models, serializers, services
 
 
 # CRUD de personal.cuadrilla en /api/v1/personal/cuadrillas/
@@ -65,6 +68,19 @@ class TareaViewSet(VistaModelo):
     queryset = models.Tarea.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.TareaSerializer
+
+    def perform_update(self, serializer):
+        # PER-04: cambiar a quién se asigna (persona o cuadrilla) pasa por el servicio; el resto es el CRUD
+        if {'empleado', 'cuadrilla'} & serializer.validated_data.keys():
+            serializer.instance = services.per_04_asignar_tarea(usuario=self.request.user, tarea=serializer.instance,
+                                                                **serializer.validated_data)
+        else:
+            serializer.save()
+
+    @action(detail=True, methods=['get'])
+    def candidatos(self, request, pk=None):
+        """PER-04 · GET /api/v1/personal/tareas/{id}/candidatos/: a quién se le puede asignar la tarea ese día."""
+        return Response(services.per_04_candidatos(tarea_id=self.get_object().pk))
 
 
 # CRUD de personal.paso_tarea en /api/v1/personal/tareas/{id}/pasos/
