@@ -331,9 +331,68 @@ def _zona_del_lote(lote_id):
         return cur.fetchone()[0]
 
 
-@pytest.mark.skip(reason='PRO-05: por construir')
-def test_pro_05_registrar_siembra_labores_culturales_flujo_principal():
-    """PRO-05 · Registrar una siembra y sus labores culturales"""
+@pytest.fixture
+def cultivo(api):
+    """Una siembra de 1.000 plantas de fríjol y 50 kg de cal agrícola en bodega."""
+    cliente, lote, _ = api
+    with connection.cursor() as cur:
+        cur.execute("select id from produccion.cultivo where codigo = 'frijol'")
+        frijol = cur.fetchone()[0]
+        cur.execute("insert into inventario.lote_inventario (producto_id, bodega_id, codigo_lote, origen, fecha_produccion, "
+                    "cantidad_inicial, costo_unitario) select p.id, (select min(id) from inventario.bodega), 'PRB-CAL-1', "
+                    "'compra', '2026-11-01', 50, 900 from inventario.producto p where p.sku = 'CAL-AGR' returning id, producto_id")
+        inventario_id, cal = cur.fetchone()
+    r = cliente.post('/api/v1/produccion/siembras/', {'zona': lote['zona'], 'cultivo': frijol, 'fecha_siembra': '2026-10-01',
+                     'plantas_sembradas': 1000}, format='json')
+    assert r.status_code == 201, r.data
+    return cliente, r.data, inventario_id, cal
+
+
+def _siembra(siembra_id):
+    with connection.cursor() as cur:
+        cur.execute('select plantas_vivas, estado from produccion.siembra where id = %s', [siembra_id])
+        return cur.fetchone()
+
+
+def test_pro_05_registrar_siembra_labores_culturales_flujo_principal(cultivo):
+    """PRO-05 · La siembra nace con sus plantas vivas y la labor descuenta el insumo del inventario"""
+    cliente, siembra, inventario_id, cal = cultivo
+    assert (siembra['plantas_vivas'], siembra['estado']) == (1000, 'sembrada')
+    r = cliente.post('/api/v1/produccion/labores-cultural/', {'siembra': siembra['id'], 'fecha': '2026-10-15',
+                     'tipo': 'encalado', 'producto': cal, 'cantidad': 20, 'jornales': 1}, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['metodo'] == 'manual'
+    assert _disponible(inventario_id) == 30
+
+
+def test_pro_05_conteo_con_muchas_muertas_pasa_a_recuperacion(cultivo):
+    """2a: el conteo deja menos de la mitad viva; la siembra pasa a recuperación y se avisa para resembrar"""
+    cliente, siembra, _, _ = cultivo
+    r = cliente.post('/api/v1/produccion/labores-cultural/', {'siembra': siembra['id'], 'fecha': '2026-10-20',
+                     'tipo': 'conteo', 'cantidad': 400}, format='json')
+    assert r.status_code == 201, r.data
+    assert _siembra(siembra['id']) == (400, 'recuperacion')
+    assert _evento(siembra['id'], 'produccion.siembra_en_recuperacion')['plantas_vivas'] == 400
+
+
+def test_pro_05_labor_por_robot_sin_mision_responde_422(cultivo):
+    """3a: método robot o dron sin misión; lo rechaza el CHECK de la base"""
+    cliente, siembra, _, _ = cultivo
+    r = cliente.post('/api/v1/produccion/labores-cultural/', {'siembra': siembra['id'], 'fecha': '2026-10-20',
+                     'tipo': 'deshierbe', 'metodo': 'robot'}, format='json')
+    assert r.status_code == 422
+    assert r.data['codigo'] == 'valor_invalido'
+
+
+def test_pro_05_siembra_finalizada_no_recibe_labores(cultivo):
+    """Una siembra perdida o finalizada ya no recibe labores"""
+    cliente, siembra, _, _ = cultivo
+    with connection.cursor() as cur:
+        cur.execute("update produccion.siembra set estado = 'finalizada' where id = %s", [siembra['id']])
+    r = cliente.post('/api/v1/produccion/labores-cultural/', {'siembra': siembra['id'], 'fecha': '2026-10-20',
+                     'tipo': 'poda'}, format='json')
+    assert r.status_code == 400
+    assert 'finalizada' in str(r.data['siembra'])
 
 
 @pytest.mark.skip(reason='PRO-06: por construir')

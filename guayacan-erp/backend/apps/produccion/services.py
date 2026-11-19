@@ -121,11 +121,9 @@ def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, modelo,
         raise ValidationError({'lote_animal': 'El lote está cerrado'})
     with transaction.atomic():
         registro = modelo.objects.create(**datos)
-        if modelo is models.RegistroAlimentacion and not _consumir_alimento(registro, usuario):
-            # 5a: el registro queda y bodega corrige; la salida no se hace a medias
-            publicar('inventario.salida_rechazada', 'produccion.registro_alimentacion', registro.id,
-                     {'producto_id': registro.producto_id, 'cantidad_kg': registro.cantidad_kg,
-                      'motivo': 'Inventario insuficiente'})
+        if modelo is models.RegistroAlimentacion:
+            _consumir('produccion.registro_alimentacion', registro, registro.producto_id,
+                      _kilos_a_unidad(registro.producto_id, registro.cantidad_kg), usuario)
         if modelo is models.EventoSanitario and registro.tipo in ('mortalidad', 'descarte'):
             n = registro.cantidad_afectada
             # Descuenta en la base para que dos registros simultáneos no dejen el lote en negativo
@@ -141,32 +139,36 @@ def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, modelo,
     return registro
 
 
-def _consumir_alimento(registro, usuario):
-    """Salida del alimento por consumo interno, primero lo que vence primero. False si no alcanza."""
+def _kilos_a_unidad(producto_id, kilos):
+    """El kardex cuenta en la unidad del producto (p. ej. bulto de 40 kg); el registro viene en kilos."""
     with connection.cursor() as cur:
-        # El kardex cuenta en la unidad del producto (p. ej. bulto de 40 kg); el registro viene en kilos
         cur.execute("select u.factor_base from inventario.producto p join inventario.unidad_medida u on u.id = p.unidad_id "
-                    "where p.id = %s and u.unidad_base = 'kg'", [registro.producto_id])
+                    "where p.id = %s and u.unidad_base = 'kg'", [producto_id])
         fila = cur.fetchone()
     if not fila:
         raise ValidationError({'producto': 'El alimento debe medirse en kilos o en una unidad de kilos'})
-    cantidad = round(registro.cantidad_kg / fila[0], 2)
+    return round(kilos / fila[0], 2)
+
+
+def _consumir(tabla, registro, producto_id, cantidad, usuario):
+    """Salida de un insumo por consumo interno, primero lo que vence primero.
+    Si no alcanza, el registro queda, la salida no se hace a medias y bodega recibe «Inventario insuficiente»."""
     try:
         with transaction.atomic(), connection.cursor() as cur:
             # Reparte la cantidad entre los lotes disponibles; el disparador del kardex descuenta cada uno
             cur.execute("insert into inventario.movimiento_inventario (lote_inventario_id, tipo, cantidad, costo_unitario, "
                         "documento_tipo, documento_id, usuario_id) "
                         "select id, 'consumo_interno', least(cantidad_disponible, %(c)s - previo), costo_unitario, "
-                        "'registro_alimentacion', %(doc)s, %(u)s from (select l.*, coalesce(sum(l.cantidad_disponible) over "
+                        "%(tipo)s, %(doc)s, %(u)s from (select l.*, coalesce(sum(l.cantidad_disponible) over "
                         "(order by l.fecha_vencimiento nulls last, l.fecha_produccion, l.id rows between unbounded preceding "
                         "and 1 preceding), 0) previo from inventario.lote_inventario l where l.producto_id = %(p)s "
                         "and l.estado = 'disponible' and l.cantidad_disponible > 0) x where previo < %(c)s returning cantidad",
-                        {'c': cantidad, 'doc': registro.id, 'u': usuario.id, 'p': registro.producto_id})
+                        {'c': cantidad, 'tipo': tabla.split('.')[1], 'doc': registro.id, 'u': usuario.id, 'p': producto_id})
             if sum(c for (c,) in cur.fetchall()) < cantidad:
                 raise ValidationError('Inventario insuficiente')  # deshace solo las salidas de este bloque
     except ValidationError:
-        return False
-    return True
+        publicar('inventario.salida_rechazada', tabla, registro.id,
+                 {'producto_id': producto_id, 'cantidad': cantidad, 'motivo': 'Inventario insuficiente'})
 
 
 def pro_04_registrar_eventos_reproductivos_ovinos_caprinos(*, usuario, **datos):
@@ -220,7 +222,7 @@ def pro_04_registrar_eventos_reproductivos_ovinos_caprinos(*, usuario, **datos):
     return evento
 
 
-def pro_05_registrar_siembra_labores_culturales(*, usuario, **datos):
+def pro_05_registrar_siembra_labores_culturales(*, usuario, modelo, **datos):
     """PRO-05 · Registrar una siembra y sus labores culturales
 
     Actores: Operario de campo, Encargado de finca
@@ -230,14 +232,36 @@ def pro_05_registrar_siembra_labores_culturales(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-04, RF-05, RF-07
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición), modelo (Siembra o LaborCultural, lo elige la vista según la ruta)
+    y **datos (lo que validó su serializer). En una labor de tipo «conteo», cantidad son las plantas vivas contadas;
+    en las demás, el insumo aplicado en la unidad del producto.
+    Devuelve el registro creado.
     """
-    # Por construir. Pasos sugeridos para PRO-05:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: ck labor por robot exige misión
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-05: por construir')
+    # shortcut: sin columna de periodo de carencia del insumo (3b); agregarla al modelo de datos y validar en PRO-06
+    if modelo is models.Siembra:
+        # Al sembrar, las plantas vivas son las sembradas (o las previstas si aún no se contaron)
+        datos.setdefault('plantas_vivas', datos.get('plantas_sembradas') or datos.get('plantas_previstas'))
+        return models.Siembra.objects.create(**datos)
+    siembra = datos['siembra']
+    if siembra.estado in ('planeada', 'perdida', 'finalizada'):
+        raise ValidationError({'siembra': f'La siembra está {siembra.estado}'})
+    with transaction.atomic():
+        # Método robot o dron sin misión: lo rechaza el CHECK de la base (3a)
+        labor = models.LaborCultural.objects.create(**datos)
+        if labor.tipo == 'conteo':
+            if labor.cantidad is None:
+                raise ValidationError({'cantidad': 'El conteo registra las plantas vivas'})
+            siembra.plantas_vivas = int(labor.cantidad)
+            base = siembra.plantas_sembradas or siembra.plantas_previstas
+            # shortcut: «muchas plantas muertas» es menos de la mitad viva; pasar a un parámetro por cultivo cuando exista
+            if siembra.estado == 'sembrada' and base and siembra.plantas_vivas < base / 2:
+                siembra.estado = 'recuperacion'  # 2a (ST16: sembrada -> recuperacion) y se programa la resiembra
+                publicar('produccion.siembra_en_recuperacion', 'produccion.siembra', siembra.id,
+                         {'zona_id': siembra.zona_id, 'plantas_vivas': siembra.plantas_vivas, 'plantas_base': base})
+            siembra.save(update_fields=['plantas_vivas', 'estado'])
+        elif labor.producto_id and labor.cantidad:
+            _consumir('produccion.labor_cultural', labor, labor.producto_id, labor.cantidad, usuario)
+    return labor
 
 
 def pro_06_registrar_cosecha_destino(*, usuario, **datos):

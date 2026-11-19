@@ -129,20 +129,30 @@ class CultivoViewSet(VistaModelo):
     serializer_class = serializers.CultivoSerializer
 
 
-# CRUD de produccion.siembra en /api/v1/produccion/siembras/
+# CRUD de produccion.siembra en /api/v1/produccion/siembras/  (el alta es PRO-05)
 class SiembraViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Siembra.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.SiembraSerializer
 
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_05_registrar_siembra_labores_culturales(
+            usuario=self.request.user, modelo=models.Siembra, **serializer.validated_data)
 
-# CRUD de produccion.labor_cultural en /api/v1/produccion/labores-cultural/
+
+# CRUD de produccion.labor_cultural en /api/v1/produccion/labores-cultural/  (el alta es PRO-05)
 class LaborCulturalViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.LaborCultural.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.LaborCulturalSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_05_registrar_siembra_labores_culturales(
+            usuario=self.request.user, modelo=models.LaborCultural, **serializer.validated_data)
 
 
 # CRUD de produccion.cosecha en /api/v1/produccion/cosechas/

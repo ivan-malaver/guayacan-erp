@@ -129,6 +129,8 @@ class SiembraSerializer(serializers.ModelSerializer):
         model = models.Siembra  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # Si no se envía, la base pone estado 'sembrada'
+        extra_kwargs = {'estado': {'required': False}}
 
 
 # produccion.labor_cultural <-> JSON en /api/v1/produccion/labores-cultural/
@@ -137,6 +139,8 @@ class LaborCulturalSerializer(serializers.ModelSerializer):
         model = models.LaborCultural  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # Si no se envía, la base pone método 'manual'
+        extra_kwargs = {'metodo': {'required': False}}
 
 
 # produccion.cosecha <-> JSON en /api/v1/produccion/cosechas/
