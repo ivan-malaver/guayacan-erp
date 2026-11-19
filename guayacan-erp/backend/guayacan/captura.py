@@ -27,7 +27,6 @@ TABLAS_CAPTURA = frozenset({
     'iot.comando_actuador',
     'nucleo.nota_voz',
     'personal.evidencia_tarea',
-    'personal.jornada',
     'personal.paso_tarea',
     'personal.tarea',
     'produccion.calidad_agua_estanque',

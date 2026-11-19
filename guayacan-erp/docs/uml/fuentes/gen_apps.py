@@ -36,6 +36,9 @@ except ImportError:  # sin apéndice, se generan solo las 25 apps de la v5
 ESQUEMAS = {**ESQUEMAS, **ESQUEMAS_A}  # nombre del esquema -> descripción
 T = list(T) + list(T_A)                # todas las tablas: (esquema, tabla, fase, descripción, columnas, extras, auditada)
 CAPTURA = set(CAPTURA) | set(CAPTURA_A)  # tablas que se capturan sin conexión en la app de campo
+# AGD-04: la jornada nace solo en portería (agenda.validar_acceso), con conexión; sincronizarla aparte la duplicaría.
+# TODO(PER): revisar si la app de campo necesita capturar la jornada sin conexión al construir los casos de Personal
+CAPTURA -= {'personal.jornada'}
 
 NOMBRES = {f'{t[0]}.{t[1]}' for t in T}
 OPERATIVAS = NOMBRES - GLOBALES

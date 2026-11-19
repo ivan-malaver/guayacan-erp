@@ -145,6 +145,8 @@ update personal.tarea set estado = 'aprobada' where titulo = 'Cosecha a destajo'
 select set_config('app.usuario_id', '1', false);
 insert into nomina.periodo_nomina (codigo, tipo, desde, hasta) values ('2026-10', 'mensual', date_trunc('month', current_date), (date_trunc('month', current_date) + interval '1 month - 1 day')::date);
 select id as per from nomina.periodo_nomina where codigo = '2026-10' \gset
+-- TODO(Nómina): falla desde noviembre de 2026 también con el esquema anterior (el log guardado la da por buena);
+-- probablemente depende de la fecha (periodo del mes actual). Revisar; mientras tanto el archivo se detiene aquí.
 select prueba.ok(nomina.preparar_prenomina(:per) = 6, 'Nómina: la prenómina reúne 2 salarios, 2 auxilios, 1 destajo y 1 jornal');
 select prueba.ok((select valor = 1750905 and cantidad = 30 from nomina.novedad where empleado_id = :e_op and origen = 'contrato' and concepto_id = nomina.concepto('SALARIO')),
   'Nómina: salario de 30 días del contrato');

@@ -115,7 +115,7 @@ class JornadaViewSet(VistaModelo):
     serializer_class = serializers.JornadaSerializer
     # AGD-04: la jornada nace solo en portería (agenda.validar_acceso la abre y la cierra); sin POST aquí no hay dos
     # caminos que la dupliquen. Quien no tiene carné entra por portería con empleado y método manual.
-    # TODO(PER): revisar al construir los casos de Personal (la sincronización sin conexión aún acepta personal.jornada)
+    # TODO(PER): revisar al construir los casos de Personal (la sincronización sin conexión tampoco la acepta: guayacan/captura.py)
     http_method_names = ['get', 'put', 'patch', 'head', 'options']
 
 
