@@ -7,6 +7,7 @@ import os
 
 os.environ.setdefault('DJANGO_SECRET_KEY', 'solo-para-pruebas')
 os.environ.setdefault('POSTGRES_API_CLAVE', 'cambiar_esta_clave')
+os.environ.setdefault('PASARELA_SECRETO', 'secreto-de-pruebas')
 
 from .base import *  # noqa: E402,F403
 

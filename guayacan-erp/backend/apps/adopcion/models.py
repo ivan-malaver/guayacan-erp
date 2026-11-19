@@ -159,7 +159,7 @@ class Contrato(models.Model):
     cuota_mensual = models.DecimalField(max_digits=14, decimal_places=2, db_comment='Cuota mensual pactada (no cambia si cambia el plan)')
     modalidad_siembra = models.CharField(max_length=10, choices=[('propia', 'propia'), ('trabajador', 'trabajador'), ('no_aplica', 'no_aplica')], db_default='no_aplica', db_comment='Quién siembra el árbol')
     consentimiento = models.ForeignKey('terceros.ConsentimientoDatos', models.DO_NOTHING, db_column='consentimiento_id', related_name='+', db_constraint=False, null=True, blank=True, db_comment='Autorización de datos con finalidad seguimiento_adopcion')
-    estado = models.CharField(max_length=21, choices=[('activo', 'activo'), ('terminado_abandono', 'terminado_abandono'), ('terminado_liquidacion', 'terminado_liquidacion'), ('cedido', 'cedido'), ('terminado_muerte', 'terminado_muerte')], db_default='activo', db_comment='Estado del contrato')
+    estado = models.CharField(max_length=21, choices=[('pendiente_pago', 'pendiente_pago'), ('activo', 'activo'), ('cancelado', 'cancelado'), ('terminado_abandono', 'terminado_abandono'), ('terminado_liquidacion', 'terminado_liquidacion'), ('cedido', 'cedido'), ('terminado_muerte', 'terminado_muerte')], db_default='activo', db_comment='Estado del contrato')
     decision_madurez = models.CharField(max_length=8, choices=[('mantener', 'mantener'), ('liquidar', 'liquidar')], null=True, blank=True, db_comment='Decisión del dueño en la madurez')
     decidido_en = models.DateTimeField(null=True, blank=True, db_comment='Cuándo se registró la decisión')
     terminado_en = models.DateTimeField(null=True, blank=True, db_comment='Cuándo terminó el contrato')

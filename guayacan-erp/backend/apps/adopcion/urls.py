@@ -28,6 +28,8 @@ router.register('movimientos-saldo', views.MovimientoSaldoViewSet, basename='ado
 
 urlpatterns = [
     # --- Acciones de los casos de uso (responden 501 «por construir» hasta que se programen)
+    # ADO-02 · Comprar un árbol o un animal: POST /api/v1/adopcion/contratos/compra/ (el pago confirma en /api/v1/pagos/webhook/)
+    path('contratos/compra/', views.Compra.as_view(), name='ado-02-contratos-compra'),
     # ADO-03 · Sembrar en persona: POST /api/v1/adopcion/bienes/{id}/siembra/
     path('bienes/<int:id>/siembra/', PorConstruir.as_view(caso_de_uso='ADO-03', metodo='POST'), name='ado-03-bienes-id-siembra'),
     # ADO-05 · Cobrar y pagar la cuota mensual: POST /api/v1/adopcion/cuotas/{id}/pagar/

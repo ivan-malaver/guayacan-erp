@@ -14,6 +14,10 @@ alter table terceros.consentimiento_datos add constraint ck_consentimiento_datos
   ('atencion_pedidos', 'publicidad', 'personalizacion_ofertas', 'analitica', 'imagen_redes', 'biometria_acceso', 'seguimiento_adopcion'));
 alter table terceros.tercero add column if not exists es_adoptante boolean not null default false;
 comment on column terceros.tercero.es_adoptante is 'Compró o readoptó un árbol o animal (apéndice A)';
+-- ADO-02: pagos de prueba con la pasarela simulada (guayacan/pasarela.py) mientras se conecta Wompi
+alter table comercial.pago drop constraint ck_pago_proveedor_pasarela;
+alter table comercial.pago add constraint ck_pago_proveedor_pasarela check (proveedor_pasarela in
+  ('wompi', 'mercado_pago', 'epayco', 'payu', 'simulada'));
 
 insert into produccion.cultivo (codigo, nombre_comun, nombre_cientifico, tipo_ciclo, dias_a_primera_cosecha) values
  ('mango', 'Mango', 'Mangifera indica', 'perenne', 1460),
@@ -100,7 +104,7 @@ create table adopcion.contrato (
     cuota_mensual numeric(14,2) not null check (cuota_mensual > 0),
     modalidad_siembra text not null default 'no_aplica' constraint ck_contrato_modalidad check (modalidad_siembra in ('propia', 'trabajador', 'no_aplica')),
     consentimiento_id bigint,
-    estado text not null default 'activo' constraint ck_contrato_estado check (estado in ('activo', 'terminado_abandono', 'terminado_liquidacion', 'cedido', 'terminado_muerte')),
+    estado text not null default 'activo' constraint ck_contrato_estado check (estado in ('pendiente_pago', 'activo', 'cancelado', 'terminado_abandono', 'terminado_liquidacion', 'cedido', 'terminado_muerte')),
     decision_madurez text constraint ck_contrato_decision check (decision_madurez in ('mantener', 'liquidar')),
     decidido_en timestamptz,
     terminado_en timestamptz,
@@ -227,12 +231,22 @@ end $$;
 create trigger tg_movimiento_saldo_validar before insert on adopcion.movimiento_saldo for each row execute function adopcion.validar_movimiento();
 
 create or replace function adopcion.validar_contrato() returns trigger language plpgsql as $$
-declare b adopcion.bien; p adopcion.plan; v_ok boolean;
+declare b adopcion.bien; p adopcion.plan; v_ok boolean; v_activa boolean;
 begin
   perform nucleo.exigir_funcion('adopcion');
   select * into b from adopcion.bien where id = new.bien_id;
   select * into p from adopcion.plan where id = b.plan_id;
-  if tg_op = 'INSERT' then
+  -- ADO-02: un contrato nace pendiente de pago y se activa cuando la pasarela confirma; solo entonces toma el bien
+  v_activa := new.estado = 'activo' and (tg_op = 'INSERT' or old.estado = 'pendiente_pago');
+  if tg_op = 'UPDATE' and old.estado = 'pendiente_pago' and new.estado is distinct from old.estado then
+    if new.estado not in ('activo', 'cancelado') then
+      raise exception 'El contrato % está pendiente de pago: solo se activa o se cancela', old.numero; end if;
+    if new.estado = 'cancelado' then new.terminado_en := now(); end if;
+  end if;
+  if tg_op = 'INSERT' and new.estado not in ('activo', 'pendiente_pago') then
+    raise exception 'Un contrato nace activo o pendiente de pago'; end if;
+  if tg_op = 'INSERT' or v_activa then
+    -- Al activar se revisa otra vez: otro adoptante pudo pagar primero el mismo bien
     if new.tipo = 'compra' and b.estado <> 'disponible' then
       raise exception 'El bien % no está disponible para compra (estado %)', b.codigo, b.estado; end if;
     if new.tipo = 'readopcion' and b.estado <> 'en_readopcion' then
@@ -248,12 +262,14 @@ begin
                      and c.finalidad = 'seguimiento_adopcion' and c.otorgado and c.revocado_en is null) into v_ok;
       if not v_ok then raise exception 'Para enviar el video de siembra se necesita la autorización de datos del adoptante (seguimiento_adopcion)'; end if;
     end if;
-    update terceros.tercero set es_adoptante = true where id = new.adoptante_id and not es_adoptante;
-    update adopcion.bien set estado = case when new.tipo = 'cesion' then estado
-                                           when p.tipo in ('frutal', 'maderable') and new.tipo = 'compra' then 'reservado' else 'activo' end,
-                             fecha_inicio = coalesce(fecha_inicio, case when p.tipo in ('ovino', 'caprino', 'ave') then new.fecha end)
-    where id = new.bien_id;
-  elsif tg_op = 'UPDATE' then
+    if v_activa then
+      update terceros.tercero set es_adoptante = true where id = new.adoptante_id and not es_adoptante;
+      update adopcion.bien set estado = case when new.tipo = 'cesion' then estado
+                                             when p.tipo in ('frutal', 'maderable') and new.tipo = 'compra' then 'reservado' else 'activo' end,
+                               fecha_inicio = coalesce(fecha_inicio, case when p.tipo in ('ovino', 'caprino', 'ave') then new.fecha end)
+      where id = new.bien_id;
+    end if;
+  elsif tg_op = 'UPDATE' and old.estado <> 'pendiente_pago' then
     if old.estado <> 'activo' and new.estado is distinct from old.estado then
       raise exception 'El contrato % ya terminó (%)', old.numero, old.estado; end if;
     if new.decision_madurez is distinct from old.decision_madurez then
@@ -266,6 +282,12 @@ begin
   return new;
 end $$;
 create trigger tg_contrato_validar before insert or update on adopcion.contrato for each row execute function adopcion.validar_contrato();
+
+create or replace function adopcion.cancelar_pendientes_pago(p_horas integer default 48) returns integer language sql as $$
+  with c as (update adopcion.contrato set estado = 'cancelado'
+             where estado = 'pendiente_pago' and creado_en < now() - make_interval(hours => p_horas) returning 1)
+  select count(*)::integer from c $$;
+comment on function adopcion.cancelar_pendientes_pago(integer) is 'Cancela los contratos que no se pagaron en p_horas (quedan para trazabilidad; el bien nunca se reservó). Prevista para una tarea programada';
 
 create or replace function adopcion.ceder_previo() returns trigger language plpgsql as $$
 begin  -- al ceder, el contrato anterior queda cedido antes de que entre el nuevo (índice de un activo por bien)

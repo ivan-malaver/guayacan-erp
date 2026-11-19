@@ -6,6 +6,8 @@ config/urls.py); por eso /api/v1/nucleo/mis-fincas/ se resuelve aquí y no en ap
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from apps.adopcion.views import AvisoPago
+
 from .autenticacion import Ingreso, MisFincas
 from .sincronizacion import SincronizarLote
 from .vistas import PorConstruir, PorConstruirPublico
@@ -26,6 +28,6 @@ urlpatterns = [
     # Públicas (sin sesión): resuelven el código con una función de la base y nunca exponen otras fincas
     path('publico/trazabilidad/<str:codigo>/', PorConstruirPublico.as_view(caso_de_uso='VTA-11', metodo='GET'), name='vta-11-trazabilidad'),
     path('publico/certificados/<str:codigo>/', PorConstruirPublico.as_view(caso_de_uso='FOR-05', metodo='GET'), name='for-05-certificado'),
-    # Webhook de la pasarela de pagos: al construirse debe validar la firma antes de tocar la base
-    path('pagos/webhook/', PorConstruirPublico.as_view(caso_de_uso='VTA-07', metodo='POST'), name='vta-07-webhook'),
+    # Webhook de la pasarela de pagos: valida la firma antes de tocar la base (hoy confirma las compras de ADO-02)
+    path('pagos/webhook/', AvisoPago.as_view(), name='vta-07-webhook'),
 ]

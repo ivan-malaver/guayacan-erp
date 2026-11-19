@@ -16,9 +16,15 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import connection, transaction  # noqa: F401
+from django.db import Error, connection, transaction  # noqa: F401
+from django.utils import timezone
+from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.comercial.models import Factura, Pago
+from apps.terceros.models import Cliente, ConsentimientoDatos, Tercero
+from guayacan.errores import datos_del_error
 from guayacan.eventos import publicar  # noqa: F401
+from guayacan.pasarela import pasarela
 
 from . import models
 
@@ -62,15 +68,90 @@ def ado_02_comprar_arbol_animal(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RQ-45
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (vendedor, administrador o agente con sesión en la finca; el adoptante no necesita cuenta)
+    y **datos (lo que validó CompraSerializer).
+    Devuelve (contrato, cobro): el contrato nace pendiente_pago y el bien sigue disponible hasta que la pasarela
+    confirme (ado_02_confirmar_pago). cobro trae el enlace de pago para enviarle al adoptante.
     """
-    # Por construir. Pasos sugeridos para ADO-02:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.validar_contrato(), comercial.preparar_factura()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-02: por construir')
+    if not datos['autoriza_datos']:
+        raise ValidationError({'autoriza_datos': 'Sin la autorización de datos (Ley 1581) no se puede registrar al adoptante'})
+    bien, plan = datos['bien'], datos['bien'].plan
+    with transaction.atomic():
+        persona = datos['adoptante']
+        # Un adoptante que ya compró o es cliente se reconoce por su documento; sus datos no se sobrescriben
+        tercero = Tercero.objects.filter(tipo_documento=persona['tipo_documento'],
+                                         numero_documento=persona['numero_documento']).first() \
+            or Tercero.objects.create(es_cliente=True, **persona)
+        Tercero.objects.filter(pk=tercero.pk, es_cliente=False).update(es_cliente=True)
+        Cliente.objects.get_or_create(tercero=tercero, defaults={'segmento': 'turista'})
+        consentimiento = None
+        for finalidad, otorgado in (('atencion_pedidos', True), ('seguimiento_adopcion', datos['autoriza_seguimiento'])):
+            if otorgado:
+                consentimiento = ConsentimientoDatos.objects.create(
+                    tercero=tercero, finalidad=finalidad, version_politica=datos['version_politica'], otorgado=True,
+                    medio=datos['medio_autorizacion'], evidencia_url=datos.get('evidencia_url'), otorgado_en=timezone.now())
+        with connection.cursor() as cur:
+            # shortcut: consecutivo por max+1; dos compras simultáneas chocan en el único (409) y se reintenta
+            cur.execute("select coalesce(max(substring(numero from '^ADO-([0-9]+)$')::integer), 0) + 1 from adopcion.contrato")
+            numero = f'ADO-{cur.fetchone()[0]}'
+        # La base exige la función «adopcion», el bien disponible, la modalidad de siembra y, si siembra un trabajador,
+        # la autorización seguimiento_adopcion (adopcion.validar_contrato)
+        contrato = models.Contrato.objects.create(
+            numero=numero, bien=bien, adoptante=tercero, tipo='compra', precio=plan.precio_compra,
+            cuota_mensual=plan.cuota_mensual, modalidad_siembra=datos['modalidad_siembra'],
+            consentimiento=consentimiento, estado='pendiente_pago')
+        cobro = pasarela().crear_cobro(referencia=f'{contrato.predio_id}:{numero}', valor=contrato.precio,
+                                       descripcion=f'Adopción {bien.codigo} ({plan.nombre})')
+    return contrato, cobro
+
+
+def ado_02_confirmar_pago(*, referencia, estado, id_transaccion, valor):
+    """ADO-02 · Aviso de la pasarela (webhook), con la firma ya verificada y la finca de la referencia fijada.
+
+    aprobado:  el contrato pasa a activo (la base toma el bien) y se crean la factura y el pago confirmado.
+    rechazado: el contrato sigue pendiente_pago, sin factura; se puede reintentar o vence (adopcion.cancelar_pendientes_pago).
+    Un aviso repetido no hace nada. Devuelve el contrato.
+    """
+    numero = referencia.split(':', 1)[1]
+    contrato = models.Contrato.objects.select_for_update().filter(numero=numero).first()
+    if not contrato:
+        raise NotFound(f'No hay contrato {numero}')
+    if contrato.estado != 'pendiente_pago':
+        return contrato  # la pasarela reenvía avisos: el segundo no cambia nada
+    if estado == 'rechazado':
+        publicar('adopcion.pago_rechazado', 'adopcion.contrato', contrato.id, {'numero': numero, 'id_transaccion': id_transaccion})
+        return contrato
+    if valor != contrato.precio:
+        raise ValidationError({'valor': f'La pasarela cobró {valor} y el contrato vale {contrato.precio}'})
+    try:
+        with transaction.atomic():
+            contrato.estado = 'activo'
+            contrato.save(update_fields=['estado'])  # la base revisa otra vez que el bien siga disponible
+    except Error as e:
+        if 'no está disponible' not in datos_del_error(e)[1]:
+            raise
+        # Otro adoptante pagó primero el mismo bien: el contrato se cancela y el dinero se devuelve
+        contrato.estado = 'cancelado'
+        contrato.save(update_fields=['estado'])
+        publicar('adopcion.pago_sin_bien', 'adopcion.contrato', contrato.id,
+                 {'numero': numero, 'id_transaccion': id_transaccion, 'valor': valor, 'accion': 'devolver el pago'})
+        return contrato
+    cliente = Cliente.objects.get(tercero_id=contrato.adoptante_id)
+    with connection.cursor() as cur:
+        cur.execute("select coalesce(max(numero), 0) + 1 from comercial.factura where prefijo = 'ADO'")
+        consecutivo = cur.fetchone()[0]
+    # TODO(DIAN): numerar con la resolución de facturación de la finca y enviar la factura electrónica;
+    # el IVA de la adopción lo define el contador (hoy 0)
+    factura = Factura.objects.create(prefijo='ADO', numero=consecutivo, cliente=cliente, fecha_emision=timezone.now(),
+                                     subtotal=contrato.precio, iva=0, total=contrato.precio, forma_pago='contado')
+    # comercial.aplicar_pago() descuenta el pago del saldo de la factura
+    Pago.objects.create(factura=factura, fecha=timezone.now(), valor=valor, medio='pasarela',
+                        proveedor_pasarela=pasarela().proveedor, id_transaccion_pasarela=id_transaccion,
+                        referencia=referencia, estado='confirmado')
+    publicar('adopcion.compra_confirmada', 'adopcion.contrato', contrato.id,
+             {'numero': numero, 'bien_id': contrato.bien_id, 'factura': f'ADO-{consecutivo}',
+              'modalidad_siembra': contrato.modalidad_siembra})
+    return contrato
 
 
 def ado_03_sembrar_persona(*, usuario, **datos):

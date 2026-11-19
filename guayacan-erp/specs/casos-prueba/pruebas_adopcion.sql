@@ -149,5 +149,27 @@ select set_config('app.predio_id', '2', false);
 select prueba.ok((select count(*) from adopcion.bien) = 0 and (select count(*) from adopcion.contrato) = 0, 'RLS: otra finca no ve bienes ni contratos');
 select set_config('app.predio_id', '1', false);
 select prueba.ok((select bienes_con_dueno from adopcion.v_tablero where tipo = 'frutal') = 1, 'Tablero por tipo');
+
+-- ADO-02: el contrato nace pendiente de pago y solo toma el bien cuando la pasarela confirma
+insert into adopcion.sitio (zona_id, codigo, tipo) select id, 'HS-003', 'hoyo_siembra' from nucleo.zona where codigo = 'LOT-AG';
+insert into adopcion.bien (codigo, plan_id, sitio_id) select 'AGU-0002', p.id, s.id from adopcion.plan p, adopcion.sitio s where p.codigo = 'ARB-AGU' and s.codigo = 'HS-003';
+select id as b_agu2 from adopcion.bien where codigo = 'AGU-0002' \gset
+insert into adopcion.contrato (numero, bien_id, adoptante_id, tipo, precio, cuota_mensual, modalidad_siembra, estado)
+values ('ADO-6', :b_agu2, :t_anna, 'compra', 150000, 25000, 'propia', 'pendiente_pago'),
+       ('ADO-7', :b_agu2, :t_john, 'compra', 150000, 25000, 'propia', 'pendiente_pago');
+select prueba.ok((select estado from adopcion.bien where id = :b_agu2) = 'disponible', 'Pendiente de pago: el bien sigue disponible');
+update adopcion.contrato set estado = 'activo' where numero = 'ADO-6';
+select prueba.ok((select estado from adopcion.bien where id = :b_agu2) = 'reservado', 'Pago confirmado: el árbol queda reservado');
+select prueba.esperar_error($q$update adopcion.contrato set estado = 'activo' where numero = 'ADO-7'$q$, 'no está disponible',
+  'Si otro pagó primero, el segundo pago no activa el contrato');
+select prueba.esperar_error($q$update adopcion.contrato set estado = 'cedido' where numero = 'ADO-7'$q$, 'solo se activa o se cancela',
+  'Un contrato pendiente solo se activa o se cancela');
+select prueba.ok(adopcion.cancelar_pendientes_pago(0) = 1, 'El pendiente que no se paga vence');
+select prueba.ok((select estado = 'cancelado' and terminado_en is not null from adopcion.contrato where numero = 'ADO-7'),
+  'El contrato vencido queda cancelado y registrado');
+select prueba.esperar_error($q$update adopcion.contrato set estado = 'activo' where numero = 'ADO-7'$q$, 'ya terminó',
+  'Un contrato cancelado no revive');
+select prueba.esperar_error(format($q$insert into adopcion.contrato (numero, bien_id, adoptante_id, tipo, precio, cuota_mensual, estado)
+  values ('ADO-8', %s, %s, 'compra', 150000, 25000, 'cancelado')$q$, :b_agu2, :t_john), 'nace activo o pendiente', 'Un contrato no nace cancelado');
 reset role;
 select 'TODAS LAS PRUEBAS PASARON' as resultado;

@@ -11,6 +11,7 @@ from django.db import connection
 from rest_framework.test import APIClient
 
 from guayacan.autenticacion import emitir_tokens
+from guayacan.pasarela import PasarelaSimulada
 
 
 @pytest.fixture
@@ -91,9 +92,112 @@ def test_ado_01_precio_cero_responde_422(ado_01):
     assert r.data['codigo'] == 'valor_invalido'
 
 
-@pytest.mark.skip(reason='ADO-02: por construir')
-def test_ado_02_comprar_arbol_animal_flujo_principal():
-    """ADO-02 · Comprar un árbol o un animal"""
+@pytest.fixture
+def ado_02(ado_01):
+    """Un aguacate disponible (ADO-01) y la compra que envía el vendedor; el adoptante no tiene cuenta."""
+    api, funcion, plan, sitio, predio_id = ado_01
+    funcion(True)
+    plan_id = api.post('/api/v1/adopcion/planes/', plan, format='json').data['id']
+    sitio_id = api.post('/api/v1/adopcion/sitios/', sitio, format='json').data['id']
+    bien_id = api.post('/api/v1/adopcion/bienes/', {'codigo': 'PRB-0001', 'plan': plan_id, 'sitio': sitio_id,
+                       'estado': 'disponible'}, format='json').data['id']
+    compra = {'bien': bien_id, 'modalidad_siembra': 'propia', 'autoriza_datos': True, 'version_politica': '2026-10',
+              'medio_autorizacion': 'whatsapp', 'adoptante': {'tipo_documento': 'PAS', 'numero_documento': 'PRB123456',
+                                                              'nombres': 'Anna', 'apellidos': 'Schmidt', 'correo': 'anna@example.com'}}
+    return api, compra, bien_id
+
+
+def _avisar(numero, predio_id, estado='aprobado', valor='150000.00', firma=None):
+    """La pasarela simulada avisa el resultado del pago (sin sesión, con su firma)."""
+    aviso = {'referencia': f'{predio_id}:{numero}', 'estado': estado, 'id_transaccion': f'SIM-{numero}', 'valor': valor}
+    return APIClient().post('/api/v1/pagos/webhook/', aviso, format='json',
+                            HTTP_X_PASARELA_FIRMA=firma or PasarelaSimulada().firmar(aviso))
+
+
+def _fila(sql, *params):
+    with connection.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchone()
+
+
+def test_ado_02_comprar_arbol_animal_flujo_principal(ado_02):
+    """ADO-02 · El contrato nace pendiente de pago con el bien libre; al aprobarse el pago se activa, el árbol queda
+    reservado y se crean la factura ADO y el pago confirmado"""
+    api, compra, bien_id = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['estado'] == 'pendiente_pago'
+    assert r.data['cobro']['url_pago'].endswith(f"{r.data['predio']}:{r.data['numero']}")
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('disponible',)
+    assert _fila("select count(*) from terceros.consentimiento_datos where tercero_id = %s and finalidad = 'atencion_pedidos'",
+                 r.data['adoptante']) == (1,)
+    a = _avisar(r.data['numero'], r.data['predio'])
+    assert a.status_code == 200, a.data
+    assert a.data['estado'] == 'activo'
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('reservado',)
+    assert _fila("select f.total, f.saldo, f.estado_dian, p.estado, p.proveedor_pasarela from comercial.factura f "
+                 "join comercial.pago p on p.factura_id = f.id where p.referencia = %s",
+                 f"{r.data['predio']}:{r.data['numero']}") == (150000, 0, 'pendiente', 'confirmado', 'simulada')
+
+
+def test_ado_02_sin_autorizacion_de_datos_no_registra_nada(ado_02):
+    """Ley 1581: sin autorización expresa no se crea el tercero ni el contrato"""
+    api, compra, _ = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'autoriza_datos': False}, format='json')
+    assert r.status_code == 400
+    assert _fila("select count(*) from terceros.tercero where numero_documento = 'PRB123456'") == (0,)
+
+
+def test_ado_02_siembra_por_trabajador_exige_autorizar_seguimiento(ado_02):
+    """El video de siembra necesita la autorización seguimiento_adopcion (regla de la base)"""
+    api, compra, _ = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'modalidad_siembra': 'trabajador'}, format='json')
+    assert r.status_code == 422
+    assert 'seguimiento_adopcion' in r.data['detalle']
+    r = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'modalidad_siembra': 'trabajador',
+                 'autoriza_seguimiento': True}, format='json')
+    assert r.status_code == 201, r.data
+
+
+def test_ado_02_aviso_con_firma_falsa_responde_403(ado_02):
+    """Nadie confirma un pago sin la firma de la pasarela"""
+    api, compra, _ = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json')
+    a = _avisar(r.data['numero'], r.data['predio'], firma='falsa')
+    assert a.status_code == 403
+    assert _fila('select estado from adopcion.contrato where id = %s', r.data['id']) == ('pendiente_pago',)
+
+
+def test_ado_02_pago_rechazado_queda_pendiente_sin_factura(ado_02):
+    """El intento fallido queda como contrato pendiente_pago, sin factura y con el bien libre"""
+    api, compra, bien_id = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json')
+    a = _avisar(r.data['numero'], r.data['predio'], estado='rechazado')
+    assert (a.status_code, a.data['estado']) == (200, 'pendiente_pago')
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('disponible',)
+    assert _fila('select count(*) from comercial.pago where referencia = %s', f"{r.data['predio']}:{r.data['numero']}") == (0,)
+
+
+def test_ado_02_si_otro_pago_primero_se_cancela_y_se_devuelve(ado_02):
+    """Dos compras del mismo árbol: gana el primer pago; el segundo cancela su contrato y pide devolver el dinero"""
+    api, compra, _ = ado_02
+    primero = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json').data
+    segundo = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'adoptante': {
+        'tipo_documento': 'PAS', 'numero_documento': 'PRB654321', 'nombres': 'John'}}, format='json').data
+    assert _avisar(primero['numero'], primero['predio']).data['estado'] == 'activo'
+    a = _avisar(segundo['numero'], segundo['predio'])
+    assert (a.status_code, a.data['estado']) == (200, 'cancelado')
+    assert _fila("select count(*) from nucleo.evento_salida where tipo_evento = 'adopcion.pago_sin_bien' and entidad_id = %s",
+                 segundo['id']) == (1,)
+
+
+def test_ado_02_aviso_repetido_no_duplica_la_factura(ado_02):
+    """La pasarela puede reenviar el aviso: la segunda vez no crea otra factura"""
+    api, compra, _ = ado_02
+    r = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json')
+    assert _avisar(r.data['numero'], r.data['predio']).status_code == 200
+    assert _avisar(r.data['numero'], r.data['predio']).status_code == 200
+    assert _fila('select count(*) from comercial.pago where referencia = %s', f"{r.data['predio']}:{r.data['numero']}") == (1,)
 
 
 @pytest.mark.skip(reason='ADO-03: por construir')

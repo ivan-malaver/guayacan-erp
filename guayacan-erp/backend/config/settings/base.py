@@ -163,6 +163,9 @@ CELERY_TIMEZONE = TIME_ZONE
 # Rutas que pasan por el contexto de finca (todas las de la API)
 GUAYACAN_PREFIJOS_API = ('/api/',)
 
+# Secreto con que la pasarela firma sus avisos (guayacan/pasarela.py). Vacío = se rechaza todo aviso de pago
+PASARELA_SECRETO = entorno('PASARELA_SECRETO', '')
+
 # Registro de eventos (logs): se imprimen en la consola; el nivel se cambia con NIVEL_LOG en .env
 LOGGING = {
     'version': 1,

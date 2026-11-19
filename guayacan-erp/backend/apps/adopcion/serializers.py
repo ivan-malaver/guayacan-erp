@@ -77,3 +77,36 @@ class MovimientoSaldoSerializer(serializers.ModelSerializer):
         model = models.MovimientoSaldo  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+
+
+class AdoptanteSerializer(serializers.Serializer):
+    """ADO-02: datos del adoptante; si ya existe un tercero con ese documento se usa el existente."""
+    tipo_persona = serializers.ChoiceField(choices=['natural', 'juridica'], default='natural')
+    tipo_documento = serializers.ChoiceField(choices=['CC', 'CE', 'NIT', 'PAS', 'TI', 'PPT'])
+    numero_documento = serializers.CharField(max_length=20)
+    nombres = serializers.CharField(max_length=120)
+    apellidos = serializers.CharField(max_length=120, required=False)
+    correo = serializers.EmailField(required=False)
+    telefono = serializers.CharField(max_length=20, required=False)
+    whatsapp = serializers.CharField(max_length=20, required=False)
+
+
+class CompraSerializer(serializers.Serializer):
+    """ADO-02: lo que envía el vendedor (o el agente) en POST /api/v1/adopcion/contratos/compra/."""
+    bien = serializers.PrimaryKeyRelatedField(queryset=models.Bien.objects.all())
+    adoptante = AdoptanteSerializer()
+    modalidad_siembra = serializers.ChoiceField(choices=['propia', 'trabajador', 'no_aplica'], default='no_aplica')
+    # Ley 1581: autorización expresa para tratar los datos y evidencia de cómo se dio
+    autoriza_datos = serializers.BooleanField()
+    autoriza_seguimiento = serializers.BooleanField(default=False)  # fotos y video del bien (obligatoria si siembra un trabajador)
+    version_politica = serializers.CharField(max_length=20)
+    medio_autorizacion = serializers.ChoiceField(choices=['whatsapp', 'web', 'formulario_fisico', 'verbal_grabado', 'correo'])
+    evidencia_url = serializers.URLField(max_length=300, required=False)
+
+
+class AvisoPagoSerializer(serializers.Serializer):
+    """ADO-02: aviso (webhook) de la pasarela, ya con la firma verificada."""
+    referencia = serializers.RegexField(r'^\d+:.+$', max_length=60)  # '<predio_id>:<número del contrato>'
+    estado = serializers.ChoiceField(choices=['aprobado', 'rechazado'])
+    id_transaccion = serializers.CharField(max_length=80)
+    valor = serializers.DecimalField(max_digits=14, decimal_places=2)

@@ -267,7 +267,7 @@ class Pago(models.Model):
     fecha = models.DateTimeField(db_comment='Momento del pago')
     valor = models.DecimalField(max_digits=14, decimal_places=2, db_comment='Valor')
     medio = models.CharField(max_length=20, choices=[('efectivo', 'efectivo'), ('nequi', 'nequi'), ('daviplata', 'daviplata'), ('transferencia', 'transferencia'), ('tarjeta', 'tarjeta'), ('bre_b', 'bre_b'), ('pasarela', 'pasarela'), ('compensacion_permuta', 'compensacion_permuta')], db_comment='Medio de pago; compensacion_permuta = saldado con una permuta')
-    proveedor_pasarela = models.CharField(max_length=12, choices=[('wompi', 'wompi'), ('mercado_pago', 'mercado_pago'), ('epayco', 'epayco'), ('payu', 'payu')], null=True, blank=True, db_comment='Pasarela de pago local, si medio = pasarela (Stripe no opera en Colombia)')
+    proveedor_pasarela = models.CharField(max_length=12, choices=[('wompi', 'wompi'), ('mercado_pago', 'mercado_pago'), ('epayco', 'epayco'), ('payu', 'payu'), ('simulada', 'simulada')], null=True, blank=True, db_comment='Pasarela de pago local, si medio = pasarela (Stripe no opera en Colombia)')
     id_transaccion_pasarela = models.CharField(max_length=80, null=True, blank=True, db_comment='Id de la transacción en la pasarela (llave de idempotencia del webhook)')
     referencia = models.CharField(max_length=60, null=True, blank=True, db_comment='Número de transacción')
     estado = models.CharField(max_length=10, choices=[('pendiente', 'pendiente'), ('confirmado', 'confirmado'), ('reversado', 'reversado')], db_default='pendiente', db_comment='Situación')

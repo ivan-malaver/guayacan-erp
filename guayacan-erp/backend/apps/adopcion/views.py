@@ -14,6 +14,12 @@ QUÉ OPERACIONES OFRECE (heredadas de guayacan.vistas.VistaModelo)
 La seguridad no se programa aquí: el middleware fija la finca y el usuario, y PostgreSQL solo deja ver y
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from guayacan.contexto import Contexto, fijar
+from guayacan.pasarela import pasarela
 from guayacan.vistas import VistaModelo
 
 from . import models, serializers, services
@@ -100,3 +106,36 @@ class MovimientoSaldoViewSet(VistaModelo):
     queryset = models.MovimientoSaldo.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.MovimientoSaldoSerializer
+
+
+class Compra(APIView):
+    """ADO-02 · POST /api/v1/adopcion/contratos/compra/: un vendedor (o el agente) inicia la compra para el adoptante.
+
+    Responde 201 con el contrato pendiente_pago y el enlace de pago; el adoptante no necesita cuenta.
+    """
+
+    def post(self, request):
+        datos = serializers.CompraSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        contrato, cobro = services.ado_02_comprar_arbol_animal(usuario=request.user, **datos.validated_data)
+        return Response({**serializers.ContratoSerializer(contrato).data, 'cobro': cobro}, status=status.HTTP_201_CREATED)
+
+
+class AvisoPago(APIView):
+    """ADO-02 · POST /api/v1/pagos/webhook/: la pasarela avisa si el pago se aprobó o se rechazó.
+
+    Llega sin sesión. Primero se verifica la firma (cabecera X-Pasarela-Firma) y solo entonces se fija la finca
+    de la referencia para que la seguridad por filas deje ver el contrato.
+    """
+
+    permission_classes = []      # la pasarela no tiene usuario: la firma es la autenticación
+    authentication_classes = []
+
+    def post(self, request):
+        aviso = pasarela().leer_aviso(request.data, request.headers.get('X-Pasarela-Firma'))
+        datos = serializers.AvisoPagoSerializer(data=aviso)
+        datos.is_valid(raise_exception=True)
+        # TODO(VTA-07): las referencias de pedidos de venta llegarán aquí también; hoy solo hay contratos de adopción
+        fijar(Contexto(predio_id=int(datos.validated_data['referencia'].split(':', 1)[0])))
+        contrato = services.ado_02_confirmar_pago(**datos.validated_data)
+        return Response({'recibido': True, 'contrato': contrato.numero, 'estado': contrato.estado})
