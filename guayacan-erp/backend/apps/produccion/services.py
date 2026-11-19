@@ -295,11 +295,8 @@ def pro_06_registrar_cosecha_destino(*, usuario, **datos):
     with transaction.atomic():
         cosecha = models.Cosecha.objects.create(**datos)
         if destino == 'venta':
-            # La base registra la entrada en kardex, estima el vencimiento y agrega la huella de trazabilidad
-            cosecha.lote_inventario = LoteInventario.objects.create(
-                producto_id=cosecha.producto_id, bodega=bodega, origen='produccion', origen_tabla='produccion.cosecha',
-                origen_id=cosecha.id, fecha_produccion=cosecha.fecha, cantidad_inicial=cosecha.cantidad,
-                costo_unitario=costo_unitario, codigo_lote=f'{cosecha.producto.sku[:12]}-{cosecha.fecha:%Y%m%d}-{cosecha.id}')
+            cosecha.lote_inventario = _crear_lote('produccion.cosecha', cosecha, cosecha.producto, bodega, cosecha.cantidad,
+                                                  costo_unitario)
             cosecha.save(update_fields=['lote_inventario'])
         elif destino == 'alimento_animal':
             # 1a: no pasa por bodega; queda como alimento propio del lote
@@ -379,14 +376,31 @@ def pro_09_producir_abono_lombricultivo_compostera(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-08, RNF-14
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó ProduccionAbonoSerializer).
+      producto, bodega, costo_unitario  si el abono entra a bodega para venderse; sin bodega es de uso interno (2a)
+    Devuelve la producción creada.
     """
-    # Por construir. Pasos sugeridos para PRO-09:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: inventario.entrada_inicial()
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-09: por construir')
+    # shortcut: el uso interno (2a) no enlaza la labor de fertilización; se registra aparte con PRO-05
+    producto = datos.pop('producto', None)
+    bodega = datos.pop('bodega', None)
+    costo_unitario = datos.pop('costo_unitario', 0)
+    if bodega and not producto:
+        raise ValidationError({'producto': 'Indique el producto del abono que entra a bodega'})
+    with transaction.atomic():
+        abono = models.ProduccionAbono.objects.create(**datos)
+        if bodega:
+            cantidad = round(abono.kg / _kilos_por_unidad(producto.id), 2)
+            abono.lote_inventario = _crear_lote('produccion.produccion_abono', abono, producto, bodega, cantidad, costo_unitario)
+            abono.save(update_fields=['lote_inventario'])
+    return abono
+
+
+def _crear_lote(tabla, registro, producto, bodega, cantidad, costo_unitario):
+    """Lote de inventario de lo producido. La base registra la entrada en kardex, estima el vencimiento y agrega la huella."""
+    return LoteInventario.objects.create(
+        producto=producto, bodega=bodega, origen='produccion', origen_tabla=tabla, origen_id=registro.id,
+        fecha_produccion=registro.fecha, cantidad_inicial=cantidad, costo_unitario=costo_unitario,
+        codigo_lote=f'{producto.sku[:12]}-{registro.fecha:%Y%m%d}-{registro.id}')
 
 
 def pro_10_medir_calidad_agua_estanques(*, usuario, **datos):

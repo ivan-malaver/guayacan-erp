@@ -511,9 +511,28 @@ def test_pro_08_sin_responsable_responde_400(api):
     assert 'responsable' in r.data
 
 
-@pytest.mark.skip(reason='PRO-09: por construir')
-def test_pro_09_producir_abono_lombricultivo_compostera_flujo_principal():
-    """PRO-09 · Producir abono en lombricultivo o compostera"""
+def test_pro_09_producir_abono_lombricultivo_compostera_flujo_principal(api):
+    """PRO-09 · El humus que va a bodega queda como lote vendible con su entrada en kardex"""
+    cliente, _, _ = api
+    with connection.cursor() as cur:
+        cur.execute("select (select id from inventario.producto where sku = 'ABO-HUMUS-KG'), (select min(id) from inventario.bodega)")
+        humus, bodega = cur.fetchone()
+    r = cliente.post('/api/v1/produccion/producciones-abono/', {'origen': 'lombricultivo', 'fecha': '2026-11-18', 'kg': 35,
+                     'producto': humus, 'bodega': bodega}, format='json')
+    assert r.status_code == 201, r.data
+    with connection.cursor() as cur:
+        cur.execute('select origen_tabla, origen_id, cantidad_disponible from inventario.lote_inventario where id = %s',
+                    [r.data['lote_inventario']])
+        assert cur.fetchone() == ('produccion.produccion_abono', r.data['id'], 35)
+
+
+def test_pro_09_abono_de_uso_interno_no_entra_a_bodega(api):
+    """2a: sin bodega es abono para la finca; se registra sin lote de inventario"""
+    cliente, _, _ = api
+    r = cliente.post('/api/v1/produccion/producciones-abono/', {'origen': 'compostera', 'fecha': '2026-11-18', 'kg': 80},
+                     format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['lote_inventario'] is None
 
 
 @pytest.mark.skip(reason='PRO-10: por construir')

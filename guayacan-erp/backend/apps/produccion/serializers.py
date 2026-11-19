@@ -9,7 +9,7 @@ Generado por docs/uml/fuentes/gen_apps.py. Un caso de uso que necesite otros cam
 aquí mismo, debajo de los generados."""
 from rest_framework import serializers
 
-from apps.inventario.models import Bodega
+from apps.inventario.models import Bodega, Producto
 
 from . import models
 
@@ -193,7 +193,13 @@ class RegistroBioseguridadSerializer(serializers.ModelSerializer):
 
 # produccion.produccion_abono <-> JSON en /api/v1/produccion/producciones-abono/
 class ProduccionAbonoSerializer(serializers.ModelSerializer):
+    # PRO-09: solo si el abono entra a bodega; solo se reciben (no se muestran en la respuesta)
+    producto = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.all(), required=False, write_only=True)
+    bodega = serializers.PrimaryKeyRelatedField(queryset=Bodega.objects.all(), required=False, write_only=True)
+    costo_unitario = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, write_only=True)
+
     class Meta:
         model = models.ProduccionAbono  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # PRO-09: el lote de inventario lo crea el servicio
+        read_only_fields = SOLO_LECTURA + ('lote_inventario',)

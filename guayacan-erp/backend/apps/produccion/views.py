@@ -210,9 +210,14 @@ class RegistroBioseguridadViewSet(VistaModelo):
                                                                                  **serializer.validated_data)
 
 
-# CRUD de produccion.produccion_abono en /api/v1/produccion/producciones-abono/
+# CRUD de produccion.produccion_abono en /api/v1/produccion/producciones-abono/  (el alta es PRO-09)
 class ProduccionAbonoViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.ProduccionAbono.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.ProduccionAbonoSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_09_producir_abono_lombricultivo_compostera(usuario=self.request.user,
+                                                                                      **serializer.validated_data)
