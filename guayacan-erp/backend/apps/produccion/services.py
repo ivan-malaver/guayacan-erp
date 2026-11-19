@@ -414,10 +414,26 @@ def pro_10_medir_calidad_agua_estanques(*, usuario, **datos):
     Requerimientos: RF-18
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Rangos: parámetros agua_<especie>_<medida>_min y _max (p. ej. agua_tilapia_oxigeno_mg_l_min); la especie es la
+    del lote activo del estanque (tilapia si no hay). Sin parámetro no se compara esa medida.
+    Devuelve la medición creada.
     """
-    # Por construir. Pasos sugeridos para PRO-10:
-    # 1. with transaction.atomic():
-    # 3. Guardar con el serializer (el CRUD ya lo hace) o con models.<Clase>.objects.create(...)
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-10: por construir')
+    with transaction.atomic():
+        medicion = models.CalidadAguaEstanque.objects.create(**datos)
+        with connection.cursor() as cur:
+            cur.execute("select campo, valor, minimo, maximo from (select m.campo, m.valor, "
+                        "nucleo.parametro_valor('agua_' || e.codigo || '_' || m.campo || '_min', %(f)s) minimo, "
+                        "nucleo.parametro_valor('agua_' || e.codigo || '_' || m.campo || '_max', %(f)s) maximo "
+                        "from (values ('oxigeno_mg_l', %(o)s::numeric), ('temperatura_c', %(t)s::numeric), "
+                        "('ph', %(ph)s::numeric), ('amonio_mg_l', %(a)s::numeric)) m(campo, valor), "
+                        "(select coalesce((select s.codigo from produccion.lote_animal l join produccion.especie s "
+                        "on s.id = l.especie_id where l.zona_id = %(z)s and l.estado = 'activo' order by l.id limit 1), "
+                        "'tilapia') codigo) e) x where valor < minimo or valor > maximo",
+                        {'f': medicion.medido_en.date(), 'o': medicion.oxigeno_mg_l, 't': medicion.temperatura_c,
+                         'ph': medicion.ph, 'a': medicion.amonio_mg_l, 'z': medicion.zona_id})
+            fuera = [dict(zip(('medida', 'valor', 'minimo', 'maximo'), fila, strict=True)) for fila in cur.fetchall()]
+        if fuera:
+            # Paso 2: avisa al encargado
+            publicar('produccion.agua_fuera_de_rango', 'produccion.calidad_agua_estanque', medicion.id,
+                     {'zona_id': medicion.zona_id, 'fuera_de_rango': fuera})
+    return medicion

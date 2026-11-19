@@ -113,12 +113,17 @@ class EventoReproductivoViewSet(VistaModelo):
             usuario=self.request.user, **serializer.validated_data)
 
 
-# CRUD de produccion.calidad_agua_estanque en /api/v1/produccion/calidad-agua/
+# CRUD de produccion.calidad_agua_estanque en /api/v1/produccion/calidad-agua/  (el alta es PRO-10)
 class CalidadAguaEstanqueViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.CalidadAguaEstanque.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.CalidadAguaEstanqueSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_10_medir_calidad_agua_estanques(usuario=self.request.user,
+                                                                           **serializer.validated_data)
 
 
 # CRUD de produccion.cultivo en /api/v1/produccion/cultivos/

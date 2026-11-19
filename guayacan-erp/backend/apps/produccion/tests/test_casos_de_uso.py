@@ -535,6 +535,36 @@ def test_pro_09_abono_de_uso_interno_no_entra_a_bodega(api):
     assert r.data['lote_inventario'] is None
 
 
-@pytest.mark.skip(reason='PRO-10: por construir')
-def test_pro_10_medir_calidad_agua_estanques_flujo_principal():
-    """PRO-10 · Medir la calidad del agua de los estanques"""
+@pytest.fixture
+def estanque(api):
+    """Rango de oxígeno para tilapia de 4 a 9 mg/L en la finca (se deshace al final)."""
+    cliente, lote, _ = api
+    with connection.cursor() as cur:
+        cur.execute("insert into nucleo.parametro (predio_id, clave, valor, tipo_dato, vigente_desde) values "
+                    "(nucleo.predio_actual(), 'agua_tilapia_oxigeno_mg_l_min', '4', 'decimal', '2026-01-01'), "
+                    "(nucleo.predio_actual(), 'agua_tilapia_oxigeno_mg_l_max', '9', 'decimal', '2026-01-01')")
+    return cliente, {'zona': lote['zona'], 'medido_en': '2026-11-18T06:00:00-05:00', 'temperatura_c': 27, 'ph': 7.2}
+
+
+def _avisos_agua(medicion_id):
+    with connection.cursor() as cur:
+        cur.execute("select count(*) from nucleo.evento_salida where tipo_evento = 'produccion.agua_fuera_de_rango' "
+                    "and entidad_id = %s", [medicion_id])
+        return cur.fetchone()[0]
+
+
+def test_pro_10_medir_calidad_agua_estanques_flujo_principal(estanque):
+    """PRO-10 · Oxígeno bajo el mínimo: la medición queda y avisa al encargado con la medida fuera de rango"""
+    cliente, base = estanque
+    r = cliente.post('/api/v1/produccion/calidad-agua/', {**base, 'oxigeno_mg_l': 2.5}, format='json')
+    assert r.status_code == 201, r.data
+    fuera = _evento(r.data['id'], 'produccion.agua_fuera_de_rango')['fuera_de_rango']
+    assert [f['medida'] for f in fuera] == ['oxigeno_mg_l']
+
+
+def test_pro_10_dentro_de_rango_no_avisa(estanque):
+    """Medición normal: se guarda sin aviso (la temperatura y el pH no tienen rango configurado)"""
+    cliente, base = estanque
+    r = cliente.post('/api/v1/produccion/calidad-agua/', {**base, 'oxigeno_mg_l': 6}, format='json')
+    assert r.status_code == 201, r.data
+    assert _avisos_agua(r.data['id']) == 0
