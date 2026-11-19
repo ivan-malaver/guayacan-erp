@@ -16,7 +16,7 @@ cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, l
 Generado por docs/uml/fuentes/gen_apps.py."""
 from guayacan.vistas import VistaModelo
 
-from . import models, serializers
+from . import models, serializers, services
 
 
 # CRUD de produccion.especie en /api/v1/produccion/especies/
@@ -27,12 +27,17 @@ class EspecieViewSet(VistaModelo):
     serializer_class = serializers.EspecieSerializer
 
 
-# CRUD de produccion.lote_animal en /api/v1/produccion/lotes-animal/
+# CRUD de produccion.lote_animal en /api/v1/produccion/lotes-animal/  (el alta es PRO-01)
 class LoteAnimalViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.LoteAnimal.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.LoteAnimalSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_01_registrar_ingreso_lote_animales(usuario=self.request.user,
+                                                                             **serializer.validated_data)
 
 
 # CRUD de produccion.animal en /api/v1/produccion/animales/

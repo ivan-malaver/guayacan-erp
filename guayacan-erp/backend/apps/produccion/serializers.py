@@ -29,6 +29,8 @@ class LoteAnimalSerializer(serializers.ModelSerializer):
         model = models.LoteAnimal  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # PRO-01: si no se envían, el servicio iguala cantidad_actual a cantidad_inicial y la base pone estado 'activo'
+        extra_kwargs = {'cantidad_actual': {'required': False}, 'estado': {'required': False}}
 
 
 # produccion.animal <-> JSON en /api/v1/produccion/animales/

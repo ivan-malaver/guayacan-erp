@@ -16,9 +16,11 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import transaction  # noqa: F401
+from django.db import connection, transaction  # noqa: F401
 
 from guayacan.eventos import publicar  # noqa: F401
+
+from . import models
 
 
 def pro_01_registrar_ingreso_lote_animales(*, usuario, **datos):
@@ -31,14 +33,22 @@ def pro_01_registrar_ingreso_lote_animales(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-07
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó LoteAnimalSerializer).
+    Devuelve el lote creado. Los animales individuales (ovinos, caprinos) se registran después en /animales/.
     """
-    # Por construir. Pasos sugeridos para PRO-01:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: cumplimiento.v_granja_biosegura
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-01: por construir')
+    # Al ingresar, los animales vivos son los que llegaron
+    datos.setdefault('cantidad_actual', datos['cantidad_inicial'])
+    with transaction.atomic():
+        # La finca (predio_id) la pone la base según la sesión; especie, zona y propósito los validan sus llaves y CHECK
+        lote = models.LoteAnimal.objects.create(**datos)
+        # La vista no bloquea: avisa si la finca llegó a 200 aves de postura o levante sin certificado ICA
+        with connection.cursor() as cur:
+            cur.execute('select situacion from cumplimiento.v_granja_biosegura')
+            situacion = cur.fetchone()[0]
+        publicar('produccion.lote_ingresado', 'produccion.lote_animal', lote.id,
+                 {'codigo': lote.codigo, 'especie_id': lote.especie_id, 'proposito': lote.proposito,
+                  'cantidad': lote.cantidad_inicial, 'granja_biosegura': situacion})
+    return lote
 
 
 def pro_02_registrar_postura_diaria_clasificar_huevo(*, usuario, **datos):
