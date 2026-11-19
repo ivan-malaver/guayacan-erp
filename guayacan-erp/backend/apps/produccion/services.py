@@ -360,13 +360,13 @@ def pro_08_registrar_bioseguridad_e_inocuidad(*, usuario, **datos):
     Requerimientos: RQ-33
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Devuelve el registro creado.
     """
-    # Por construir. Pasos sugeridos para PRO-08:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: cumplimiento.evaluar_expediente()
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-08: por construir')
+    with transaction.atomic():
+        registro = models.RegistroBioseguridad.objects.create(**datos)
+        # Paso 3: el requisito GAB-03 pasa a cumple ya, sin esperar la tarea nocturna (que maneja el vencimiento, 3a)
+        _reevaluar_expedientes('produccion.registro_bioseguridad')
+    return registro
 
 
 def pro_09_producir_abono_lombricultivo_compostera(*, usuario, **datos):

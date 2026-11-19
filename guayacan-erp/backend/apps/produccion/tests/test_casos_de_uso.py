@@ -450,8 +450,15 @@ def test_pro_06_siembra_perdida_no_cosecha(cosecha):
     assert r.status_code == 400
 
 
+def _abrir_expediente(norma):
+    """La finca de prueba aún no lleva el expediente: se abre aquí (se deshace al final)."""
+    with connection.cursor() as cur:
+        cur.execute('insert into cumplimiento.expediente (norma_id) select id from cumplimiento.norma where codigo = %s '
+                    'on conflict do nothing', [norma])
+
+
 def _requisito(codigo):
-    """Estado del requisito en el expediente de la finca, o None si la finca no tiene ese expediente."""
+    """Estado del requisito en el expediente de la finca (None si aún no se ha evaluado)."""
     with connection.cursor() as cur:
         cur.execute('select ev.estado from cumplimiento.evaluacion_requisito ev join cumplimiento.requisito q '
                     'on q.id = ev.requisito_id where q.codigo = %s', [codigo])
@@ -461,11 +468,12 @@ def _requisito(codigo):
 def test_pro_07_registrar_analisis_suelo_recomendacion_flujo_principal(api):
     """PRO-07 · Sin recomendación, el análisis avisa al Agrónomo (IA) y cuenta como evidencia BPA-02"""
     cliente, lote, _ = api
+    _abrir_expediente('ICA_BPA')
     r = cliente.post('/api/v1/produccion/analisis-suelo/', {'zona': lote['zona'], 'fecha_muestreo': '2026-11-10',
                      'laboratorio': 'Agrosavia', 'ph': 5.2, 'materia_organica_pct': 3.1}, format='json')
     assert r.status_code == 201, r.data
     assert _evento(r.data['id'], 'produccion.analisis_suelo_registrado')['ph'] == '5.20'  # el outbox guarda los decimales como texto
-    assert _requisito('BPA-02') in (None, 'cumple')  # None: la finca de prueba no lleva el expediente BPA
+    assert _requisito('BPA-02') == 'cumple'
 
 
 def test_pro_07_con_recomendacion_del_encargado_no_espera_al_agente(api):
@@ -480,9 +488,23 @@ def test_pro_07_con_recomendacion_del_encargado_no_espera_al_agente(api):
         assert cur.fetchone()[0] == 0
 
 
-@pytest.mark.skip(reason='PRO-08: por construir')
-def test_pro_08_registrar_bioseguridad_e_inocuidad_flujo_principal():
-    """PRO-08 · Registrar bioseguridad e inocuidad"""
+def test_pro_08_registrar_bioseguridad_e_inocuidad_flujo_principal(api):
+    """PRO-08 · La desinfección queda registrada y el requisito GAB-03 del expediente ICA pasa a cumple"""
+    cliente, lote, _ = api
+    _abrir_expediente('ICA_GAB')
+    r = cliente.post('/api/v1/produccion/registros-bioseguridad/', {'zona': lote['zona'], 'fecha': '2026-11-18',
+                     'tipo': 'desinfeccion', 'responsable': 'Operario de turno'}, format='json')
+    assert r.status_code == 201, r.data
+    assert _requisito('GAB-03') == 'cumple'
+
+
+def test_pro_08_sin_responsable_responde_400(api):
+    """El registro exige responsable (evidencia para el ICA)"""
+    cliente, lote, _ = api
+    r = cliente.post('/api/v1/produccion/registros-bioseguridad/', {'zona': lote['zona'], 'fecha': '2026-11-18',
+                     'tipo': 'limpieza'}, format='json')
+    assert r.status_code == 400
+    assert 'responsable' in r.data
 
 
 @pytest.mark.skip(reason='PRO-09: por construir')

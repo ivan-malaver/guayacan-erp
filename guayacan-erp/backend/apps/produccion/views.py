@@ -197,12 +197,17 @@ class ClasificacionPosturaViewSet(VistaModelo):
     serializer_class = serializers.ClasificacionPosturaSerializer
 
 
-# CRUD de produccion.registro_bioseguridad en /api/v1/produccion/registros-bioseguridad/
+# CRUD de produccion.registro_bioseguridad en /api/v1/produccion/registros-bioseguridad/  (el alta es PRO-08)
 class RegistroBioseguridadViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.RegistroBioseguridad.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroBioseguridadSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_08_registrar_bioseguridad_e_inocuidad(usuario=self.request.user,
+                                                                                 **serializer.validated_data)
 
 
 # CRUD de produccion.produccion_abono en /api/v1/produccion/producciones-abono/
