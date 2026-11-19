@@ -41,12 +41,26 @@ class AnimalSerializer(serializers.ModelSerializer):
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
 
 
+class ClasificacionManualSerializer(serializers.Serializer):
+    """PRO-02: una categoría contada a mano (o por visión) dentro del alta de la postura."""
+    categoria_huevo = serializers.PrimaryKeyRelatedField(queryset=models.CategoriaHuevo.objects.all())
+    cantidad = serializers.IntegerField(min_value=0)
+    metodo = serializers.ChoiceField(choices=['manual', 'vision'], default='manual')
+
+
 # produccion.registro_postura <-> JSON en /api/v1/produccion/registros-postura/
 class RegistroPosturaSerializer(serializers.ModelSerializer):
+    # PRO-02: clasificación opcional en el mismo envío; solo se reciben (no se muestran en la respuesta)
+    clasificacion = ClasificacionManualSerializer(many=True, required=False, write_only=True)
+    pesos_g = serializers.ListField(child=serializers.DecimalField(max_digits=5, decimal_places=1, min_value=0),
+                                    required=False, write_only=True)
+
     class Meta:
         model = models.RegistroPostura  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
         read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # PRO-02: en la API lo pone el servicio con el usuario del token; la sincronización sin conexión aún lo recibe del cliente
+        extra_kwargs = {'registrado_por': {'required': False}, 'huevos_rotos': {'required': False}}
 
 
 # produccion.registro_alimentacion <-> JSON en /api/v1/produccion/registros-alimentacion/

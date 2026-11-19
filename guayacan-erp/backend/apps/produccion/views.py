@@ -48,12 +48,17 @@ class AnimalViewSet(VistaModelo):
     serializer_class = serializers.AnimalSerializer
 
 
-# CRUD de produccion.registro_postura en /api/v1/produccion/registros-postura/
+# CRUD de produccion.registro_postura en /api/v1/produccion/registros-postura/  (el alta es PRO-02)
 class RegistroPosturaViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.RegistroPostura.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroPosturaSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_02_registrar_postura_diaria_clasificar_huevo(usuario=self.request.user,
+                                                                                       **serializer.validated_data)
 
 
 # CRUD de produccion.registro_alimentacion en /api/v1/produccion/registros-alimentacion/

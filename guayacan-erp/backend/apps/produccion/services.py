@@ -17,6 +17,7 @@ Cada función está vacía (NotImplementedError) y su documentación resume la e
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
 from django.db import connection, transaction  # noqa: F401
+from rest_framework.exceptions import ValidationError
 
 from guayacan.eventos import publicar  # noqa: F401
 
@@ -61,14 +62,42 @@ def pro_02_registrar_postura_diaria_clasificar_huevo(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-06, RF-18
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó RegistroPosturaSerializer).
+      clasificacion  lista de {'categoria_huevo', 'cantidad', 'metodo'} contados a mano (o por visión)
+      pesos_g        lista de pesos de la báscula; cada uno se convierte en categoría con produccion.clasificar_por_peso()
+    Devuelve el registro de postura creado.
     """
-    # Por construir. Pasos sugeridos para PRO-02:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: produccion.validar_clasificacion()
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-02: por construir')
+    clasificacion = datos.pop('clasificacion', [])
+    pesos_g = datos.pop('pesos_g', [])
+    # Quien registra es el usuario del token, nunca lo que diga el cliente
+    datos.pop('registrado_por', None)
+    with transaction.atomic():
+        # Lote y día repetidos: la llave única de la base responde 409 (flujo 4a)
+        registro = models.RegistroPostura.objects.create(registrado_por=usuario, **datos)
+        for c in clasificacion:
+            # Al insertar, el disparador produccion.validar_clasificacion() rechaza si la suma supera los buenos (3b)
+            # o si el método es visión y la función vision_artificial está apagada (3c)
+            models.ClasificacionPostura.objects.create(registro_postura=registro, **c)
+        if pesos_g:
+            with connection.cursor() as cur:
+                # Cuenta los pesos por categoría con los rangos vigentes el día del registro (3a)
+                cur.execute('select c.id, count(*) from unnest(%s::numeric[]) p join produccion.categoria_huevo c '
+                            'on c.codigo = produccion.clasificar_por_peso(p, %s) and c.vigente_desde = '
+                            '(select max(vigente_desde) from produccion.categoria_huevo where vigente_desde <= %s) group by c.id',
+                            [pesos_g, registro.fecha, registro.fecha])
+                conteo = cur.fetchall()
+            if sum(n for _, n in conteo) != len(pesos_g):
+                raise ValidationError({'pesos_g': 'Hay pesos sin categoría vigente para esa fecha'})
+            for categoria_id, n in conteo:
+                models.ClasificacionPostura.objects.create(registro_postura=registro, categoria_huevo_id=categoria_id,
+                                                           cantidad=n, metodo='peso_bascula')
+        aves = models.LoteAnimal.objects.get(pk=registro.lote_animal_id).cantidad_actual
+        # TODO(Volumen 4): revisar la carga del evento cuando el resumen de postura y el chatbot la consuman
+        publicar('produccion.postura_registrada', 'produccion.registro_postura', registro.id,
+                 {'lote_animal_id': registro.lote_animal_id, 'fecha': registro.fecha,
+                  'huevos_recogidos': registro.huevos_recogidos, 'huevos_rotos': registro.huevos_rotos,
+                  'postura_por_ave': round(registro.huevos_recogidos / aves, 3) if aves else None})
+    return registro
 
 
 def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, **datos):

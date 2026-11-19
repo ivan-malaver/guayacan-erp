@@ -36,9 +36,9 @@ def api(en_finca):
     return cliente, lote, predio_id
 
 
-def _evento(lote_id):
+def _evento(entidad_id, tipo='produccion.lote_ingresado'):
     with connection.cursor() as cur:
-        cur.execute("select carga from nucleo.evento_salida where tipo_evento = 'produccion.lote_ingresado' and entidad_id = %s", [lote_id])
+        cur.execute('select carga from nucleo.evento_salida where tipo_evento = %s and entidad_id = %s', [tipo, entidad_id])
         # Django deja el jsonb como texto en los cursores crudos
         return json.loads(cur.fetchone()[0])
 
@@ -73,9 +73,90 @@ def test_pro_01_especie_inexistente_no_crea_lote(api):
     assert r.status_code in (400, 409, 422)
 
 
-@pytest.mark.skip(reason='PRO-02: por construir')
-def test_pro_02_registrar_postura_diaria_clasificar_huevo_flujo_principal():
-    """PRO-02 · Registrar la postura diaria y clasificar el huevo"""
+@pytest.fixture
+def postura(api):
+    """Un lote de 100 gallinas ya registrado (PRO-01), el usuario de la sesión, las categorías por código y una postura base."""
+    cliente, lote, _ = api
+    with connection.cursor() as cur:
+        cur.execute('select nucleo.usuario_actual()')
+        usuario_id = cur.fetchone()[0]
+        cur.execute('select codigo, id from produccion.categoria_huevo')
+        categorias = dict(cur.fetchall())
+    lote_id = cliente.post('/api/v1/produccion/lotes-animal/', {**lote, 'cantidad_inicial': 100}, format='json').data['id']
+    base = {'lote_animal': lote_id, 'fecha': '2026-11-18', 'huevos_recogidos': 100, 'huevos_rotos': 4}
+    return cliente, base, usuario_id, categorias
+
+
+def _clasificacion(registro_id):
+    with connection.cursor() as cur:
+        cur.execute('select c.codigo, p.cantidad, p.metodo from produccion.clasificacion_postura p '
+                    'join produccion.categoria_huevo c on c.id = p.categoria_huevo_id where p.registro_postura_id = %s', [registro_id])
+        return {codigo: (cantidad, metodo) for codigo, cantidad, metodo in cur.fetchall()}
+
+
+def test_pro_02_registrar_postura_diaria_clasificar_huevo_flujo_principal(postura):
+    """PRO-02 · Registrar la postura diaria y clasificar el huevo: registro, clasificación manual, quién registró y evento"""
+    cliente, base, usuario_id, cat = postura
+    r = cliente.post('/api/v1/produccion/registros-postura/', {**base, 'clasificacion': [
+        {'categoria_huevo': cat['aaa'], 'cantidad': 50}, {'categoria_huevo': cat['aa'], 'cantidad': 46}]}, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['registrado_por'] == usuario_id  # lo puso el servicio con el usuario del token
+    assert _clasificacion(r.data['id']) == {'aaa': (50, 'manual'), 'aa': (46, 'manual')}
+    assert _evento(r.data['id'], 'produccion.postura_registrada')['postura_por_ave'] == 1.0  # 100 huevos / 100 gallinas
+
+
+def test_pro_02_ignora_registrado_por_del_cliente(postura):
+    """Nadie registra a nombre de otro: el registrado_por que envía el cliente se ignora"""
+    cliente, base, usuario_id, _ = postura
+    with connection.cursor() as cur:
+        cur.execute('select id from nucleo.usuario where id <> %s limit 1', [usuario_id])
+        otro = cur.fetchone()
+    if not otro:
+        pytest.skip('la base de prueba solo tiene un usuario')
+    r = cliente.post('/api/v1/produccion/registros-postura/', {**base, 'registrado_por': otro[0]}, format='json')
+    assert r.status_code == 201, r.data
+    assert r.data['registrado_por'] == usuario_id
+
+
+def test_pro_02_clasificacion_por_peso_de_bascula(postura):
+    """3a: cada peso se convierte en categoría con los rangos vigentes (68 g = AAA)"""
+    cliente, base, _, _ = postura
+    r = cliente.post('/api/v1/produccion/registros-postura/', {**base, 'pesos_g': [68, 59.9, 80, 68]}, format='json')
+    assert r.status_code == 201, r.data
+    assert _clasificacion(r.data['id']) == {'aaa': (2, 'peso_bascula'), 'a': (1, 'peso_bascula'), 'jumbo': (1, 'peso_bascula')}
+
+
+def test_pro_02_clasificacion_mayor_que_los_buenos_no_guarda_nada(postura):
+    """3b: «La clasificación suma N huevos y solo hay M buenos»; tampoco queda el registro a medias"""
+    cliente, base, _, cat = postura
+    r = cliente.post('/api/v1/produccion/registros-postura/', {**base, 'clasificacion': [{'categoria_huevo': cat['aaa'], 'cantidad': 97}]}, format='json')
+    assert r.status_code == 422
+    assert 'solo hay 96 buenos' in r.data['detalle']
+    with connection.cursor() as cur:
+        cur.execute('select count(*) from produccion.registro_postura where lote_animal_id = %s', [base['lote_animal']])
+        assert cur.fetchone()[0] == 0
+
+
+def test_pro_02_vision_con_funcion_apagada_responde_422(postura):
+    """3c: el método visión espera su equipo («La función vision_artificial no está activa»)"""
+    cliente, base, _, cat = postura
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.funcion_activa('vision_artificial')")
+        if cur.fetchone()[0]:
+            pytest.skip('la finca de prueba tiene la visión artificial encendida')
+    r = cliente.post('/api/v1/produccion/registros-postura/', {**base, 'clasificacion': [
+        {'categoria_huevo': cat['aaa'], 'cantidad': 10, 'metodo': 'vision'}]}, format='json')
+    assert r.status_code == 422
+    assert 'vision_artificial' in r.data['detalle']
+
+
+def test_pro_02_mismo_lote_y_dia_responde_409(postura):
+    """4a: ya hay registro de ese lote y día; se corrige el existente"""
+    cliente, base, _, _ = postura
+    assert cliente.post('/api/v1/produccion/registros-postura/', base, format='json').status_code == 201
+    r = cliente.post('/api/v1/produccion/registros-postura/', base, format='json')
+    assert r.status_code == 409
+    assert r.data['codigo'] == 'duplicado'
 
 
 @pytest.mark.skip(reason='PRO-03: por construir')
