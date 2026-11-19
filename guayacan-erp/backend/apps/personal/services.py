@@ -20,6 +20,8 @@ from django.db import connection, transaction  # noqa: F401
 
 from guayacan.eventos import publicar  # noqa: F401
 
+from . import models
+
 
 def per_01_configurar_areas_responsabilidad_matriz_raci(*, usuario, **datos):
     """PER-01 · Configurar áreas de responsabilidad y matriz RACI
@@ -152,24 +154,33 @@ def per_05_ejecutar_tarea_evidencia(*, usuario, tarea, **datos):
     return tarea
 
 
-def per_06_aprobar_devolver_tarea(*, usuario, **datos):
+def per_06_aprobar_devolver_tarea(*, usuario, tarea_id, decision, motivo=None):
     """PER-06 · Aprobar o devolver una tarea
 
     Actores: Encargado de finca
     Fase 1
     Tablas: personal.tarea
     Reglas en la base: personal.validar_tarea(), personal.es_responsable_area()
-    Endpoints: POST /api/v1/personal/tareas/{id}/aprobar/
+    Endpoints: POST /api/v1/personal/tareas/{id}/aprobar/; POST /api/v1/personal/tareas/{id}/devolver/
     Requerimientos: RQ-28, RQ-29
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el aprobador), tarea_id, decision ('aprobar' o 'devolver') y motivo (obligatorio al devolver;
+    al aprobar es un comentario opcional).
+    La base (personal.validar_tarea) exige: tarea terminada (422); una persona; permiso personal.aprobar_tarea o ser
+    responsable del área (403); nunca la propia tarea, ni de su cuadrilla (403); devolver con motivo; y pone quién y cuándo.
+    Devuelve la tarea aprobada (inmutable, entra a la prenómina) o devuelta (el trabajador la retoma en curso).
     """
-    # Por construir. Pasos sugeridos para PER-06:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: personal.validar_tarea(), personal.es_responsable_area()
-    # 4. publicar('personal.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PER-06: por construir')
+    tarea = models.Tarea.objects.select_for_update().get(pk=tarea_id)
+    with transaction.atomic():
+        tarea.estado = 'aprobada' if decision == 'aprobar' else 'devuelta'
+        tarea.comentario_revision = motivo
+        tarea.save(update_fields=['estado', 'comentario_revision'])
+        tarea.refresh_from_db()  # aprobado_por y aprobado_en los pone la base
+        # Aviso para la app del trabajador
+        publicar(f'personal.tarea_{tarea.estado}', 'personal.tarea', tarea.id,
+                 {'titulo': tarea.titulo, 'empleado_id': tarea.empleado_id, 'cuadrilla_id': tarea.cuadrilla_id,
+                  'motivo': motivo, 'aprobado_por': tarea.aprobado_por_id})
+    return tarea
 
 
 def per_07_armar_publicar_cronograma_turnos(*, usuario, **datos):

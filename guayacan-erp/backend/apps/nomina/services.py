@@ -53,6 +53,9 @@ def nom_02_preparar_prenomina(*, usuario, **datos):
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
     """
+    # TODO(Nómina): nomina.preparar_prenomina() solo paga jornal y destajo de tareas con empleado_id; una tarea de
+    # cuadrilla aprobada no le paga a nadie. Debe pagarle a cada miembro vigente ese día (personal.cuadrilla_miembro).
+    # TODO(Nómina): aprobar jornadas (POST /api/v1/personal/jornadas/{id}/aprobar/, rotulada PER-06)
     # Por construir. Pasos sugeridos para NOM-02:
     # 1. with transaction.atomic():
     # 3. Llamar a la base: nomina.preparar_prenomina(), nomina.validar_novedad()

@@ -15,8 +15,12 @@ La seguridad no se programa aquí: el middleware fija la finca y el usuario, y P
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from guayacan.permisos import SoloPersonas
 from guayacan.vistas import VistaModelo
 
 from . import models, serializers, services
@@ -205,3 +209,22 @@ class DisponibilidadViewSet(VistaModelo):
     queryset = models.Disponibilidad.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.DisponibilidadSerializer
+
+
+class RevisarTarea(APIView):
+    """PER-06 · POST /api/v1/personal/tareas/{id}/aprobar/ y /devolver/ ({motivo}, obligatorio al devolver).
+
+    Permisos y «nadie aprueba su propia tarea» los decide la base (403); aquí solo se bloquea a los agentes de IA.
+    """
+
+    permission_classes = [IsAuthenticated, SoloPersonas]
+    decision = None  # 'aprobar' o 'devolver', lo fija urls.py
+
+    def post(self, request, id):
+        datos = serializers.RevisionTareaSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        if self.decision == 'devolver' and not datos.validated_data.get('motivo'):
+            raise ValidationError({'motivo': 'Para devolver una tarea hay que decir por qué'})
+        tarea = services.per_06_aprobar_devolver_tarea(usuario=request.user, tarea_id=id, decision=self.decision,
+                                                       **datos.validated_data)
+        return Response(serializers.TareaSerializer(tarea).data)

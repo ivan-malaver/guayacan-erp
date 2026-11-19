@@ -40,16 +40,17 @@ urlpatterns = [
     # PER-03 · Generar las tareas del día: POST /api/v1/personal/tareas/generar-dia/
     path('tareas/generar-dia/', PorConstruir.as_view(caso_de_uso='PER-03', metodo='POST'), name='per-03-tareas-generar-dia'),
     # PER-06 · Aprobar o devolver una tarea: POST /api/v1/personal/tareas/{id}/aprobar/
-    path('tareas/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='PER-06', metodo='POST'), name='per-06-tareas-id-aprobar'),
+    path('tareas/<int:id>/aprobar/', views.RevisarTarea.as_view(decision='aprobar'), name='per-06-tareas-id-aprobar'),
     # PER-07 · Armar y publicar el cronograma de turnos: POST /api/v1/personal/cronogramas/{id}/generar/
     path('cronogramas/<int:id>/generar/', PorConstruir.as_view(caso_de_uso='PER-07', metodo='POST'), name='per-07-cronogramas-id-generar'),
     # PER-07 · Armar y publicar el cronograma de turnos: GET /api/v1/personal/cronogramas/{id}/huecos/
     path('cronogramas/<int:id>/huecos/', PorConstruir.as_view(caso_de_uso='PER-07', metodo='GET'), name='per-07-cronogramas-id-huecos'),
     # PER-07 · Armar y publicar el cronograma de turnos: POST /api/v1/personal/cronogramas/{id}/publicar/
     path('cronogramas/<int:id>/publicar/', PorConstruir.as_view(caso_de_uso='PER-07', metodo='POST'), name='per-07-cronogramas-id-publicar'),
-    # PER-03 · Generar las tareas del día: POST /api/v1/personal/tareas/{id}/devolver/
-    path('tareas/<int:id>/devolver/', PorConstruir.as_view(caso_de_uso='PER-03', metodo='POST'), name='per-03-tareas-id-devolver'),
-    # PER-06 · Aprobar o devolver una tarea: POST /api/v1/personal/jornadas/{id}/aprobar/
+    # PER-06 · Aprobar o devolver una tarea: POST /api/v1/personal/tareas/{id}/devolver/
+    path('tareas/<int:id>/devolver/', views.RevisarTarea.as_view(decision='devolver'), name='per-06-tareas-id-devolver'),
+    # PER-06 · Aprobar una jornada: POST /api/v1/personal/jornadas/{id}/aprobar/
+    # TODO(Nómina): construir con NOM-02; la prenómina usa las jornadas aprobadas
     path('jornadas/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='PER-06', metodo='POST'), name='per-06-jornadas-id-aprobar'),
     # --- Rutas anidadas: los hijos de un registro; el padre llega en la ruta y se fija al crear
     path('tareas/<int:padre>/pasos/', views.PasoTareaViewSet.as_view({'get': 'list', 'post': 'create'}, campo_padre='tarea'), name='personal-pasos-lista'),

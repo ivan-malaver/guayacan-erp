@@ -7493,12 +7493,19 @@ begin
     perform nucleo.exigir_persona('aprobar o devolver tareas');
     if tg_op = 'INSERT' or old.estado <> 'terminada' then raise exception 'Solo se aprueba o devuelve una tarea terminada'; end if;
     new.aprobado_por := coalesce(new.aprobado_por, nucleo.usuario_actual());
+    -- PER-06: sin permiso o sobre su propia tarea es un problema de permisos: SQLSTATE 42501 (la API responde 403)
     if not nucleo.tiene_permiso(new.aprobado_por, 'personal.aprobar_tarea')
        and not (new.area_id is not null and personal.es_responsable_area(new.aprobado_por, new.area_id, new.fecha)) then
-      raise exception 'El usuario % no tiene el permiso personal.aprobar_tarea ni es responsable del área', new.aprobado_por;
+      raise exception 'El usuario % no tiene el permiso personal.aprobar_tarea ni es responsable del área', new.aprobado_por
+        using errcode = '42501';
     end if;
-    if new.empleado_id is not null and nucleo.tercero_de_usuario(new.aprobado_por) = (select tercero_id from terceros.empleado where id = new.empleado_id) then
-      raise exception 'Nadie aprueba su propia tarea';
+    -- Su propia tarea: la asignada a él o a una cuadrilla de la que era miembro ese día
+    if exists (select 1 from terceros.empleado e
+               where e.tercero_id = nucleo.tercero_de_usuario(new.aprobado_por)
+                 and (e.id = new.empleado_id
+                      or exists (select 1 from personal.cuadrilla_miembro m where m.cuadrilla_id = new.cuadrilla_id and m.empleado_id = e.id
+                                 and m.desde <= new.fecha and (m.hasta is null or m.hasta >= new.fecha)))) then
+      raise exception 'Nadie aprueba su propia tarea' using errcode = '42501';
     end if;
     if new.estado = 'devuelta' and new.comentario_revision is null then raise exception 'Para devolver una tarea hay que decir por qué'; end if;
     new.aprobado_en := now();

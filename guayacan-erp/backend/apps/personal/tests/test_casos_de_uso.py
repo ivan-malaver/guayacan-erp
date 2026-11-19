@@ -151,12 +151,12 @@ def test_per_04_candidatos_del_area_disponibles(per):
     assert ana not in [c['empleado'] for c in cliente.get(f'/api/v1/personal/tareas/{tarea}/candidatos/').data]
 
 
-def _cliente_de(empleado_id):
-    """El trabajador inicia sesión con su propio usuario (rol operario, sin permiso para asignar tareas)."""
+def _cliente_de(empleado_id, rol='operario_granja'):
+    """El trabajador inicia sesión con su propio usuario (por defecto operario: sin permiso para asignar ni aprobar)."""
     tercero, predio = _sql('select tercero_id, predio_id from terceros.empleado where id = %s', empleado_id)
     usuario = _sql("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
-                   "values ('Trabajador de prueba', %s, 'x', %s) returning id", f'prb{empleado_id}@guayacan.local', tercero)[0]
-    _sql("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'operario_granja'", usuario)
+                   "values ('Trabajador de prueba', %s, 'x', %s) returning id", f'prb{empleado_id}{rol}@guayacan.local', tercero)[0]
+    _sql("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = %s", usuario, rol)
     cliente = APIClient()
     tokens = emitir_tokens(get_user_model().objects.get(pk=usuario), predio)
     cliente.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['acceso']}")
@@ -224,9 +224,82 @@ def test_per_05_miembro_de_la_cuadrilla_la_ejecuta(per):
     assert _asignar(_cliente_de(ana), tarea, estado='en_curso').status_code == 200
 
 
-@pytest.mark.skip(reason='PER-06: por construir')
-def test_per_06_aprobar_devolver_tarea_flujo_principal():
-    """PER-06 · Aprobar o devolver una tarea"""
+@pytest.fixture
+def revision(per):
+    """La tarea asignada a Ana y terminada por ella misma, lista para que el encargado la revise."""
+    encargado, tarea, ana, beto = per
+    assert _asignar(encargado, tarea, empleado=ana).status_code == 200
+    cliente_ana = _cliente_de(ana)
+    assert _asignar(cliente_ana, tarea, estado='en_curso').status_code == 200
+    assert _asignar(cliente_ana, tarea, estado='terminada', cantidad=380).status_code == 200
+    return encargado, tarea, ana, beto, cliente_ana
+
+
+def _revisar(cliente, tarea, accion, **datos):
+    return cliente.post(f'/api/v1/personal/tareas/{tarea}/{accion}/', datos, format='json')
+
+
+def _aviso(tipo, tarea):
+    fila = _sql('select carga from nucleo.evento_salida where tipo_evento = %s and entidad_id = %s', tipo, tarea)
+    return json.loads(fila[0]) if fila else None
+
+
+def test_per_06_aprobar_devolver_tarea_flujo_principal(revision):
+    """PER-06 · El encargado aprueba: queda quién y cuándo, sale el aviso al trabajador y la tarea ya no se edita"""
+    encargado, tarea, ana, _, _ = revision
+    r = _revisar(encargado, tarea, 'aprobar')
+    assert (r.status_code, r.data['estado'], r.data['aprobado_por'] is not None, r.data['aprobado_en'] is not None) == (
+        200, 'aprobada', True, True), r.data
+    assert _aviso('personal.tarea_aprobada', tarea)['empleado_id'] == ana
+    r = _asignar(encargado, tarea, cantidad=400)
+    assert r.status_code == 422
+    assert 'no se edita' in r.data['detalle']
+
+
+def test_per_06_devolver_exige_motivo_y_el_trabajador_la_retoma(revision):
+    """2a: devolver sin motivo no se permite; con motivo queda devuelta, avisa y el trabajador la retoma en curso"""
+    encargado, tarea, _, _, cliente_ana = revision
+    assert _revisar(encargado, tarea, 'devolver').status_code == 400
+    r = _revisar(encargado, tarea, 'devolver', motivo='Faltan los huevos del nido 4')
+    assert (r.status_code, r.data['estado'], r.data['comentario_revision']) == (200, 'devuelta', 'Faltan los huevos del nido 4')
+    assert _aviso('personal.tarea_devuelta', tarea)['motivo'] == 'Faltan los huevos del nido 4'
+    assert _asignar(cliente_ana, tarea, estado='en_curso').status_code == 200
+
+
+def test_per_06_sin_permiso_responde_403(revision):
+    """2c: un operario sin permiso ni responsabilidad del área no aprueba"""
+    _, tarea, _, beto, _ = revision
+    r = _revisar(_cliente_de(beto), tarea, 'aprobar')
+    assert (r.status_code, r.data['codigo']) == (403, 'sin_permiso')
+    assert _sql('select estado from personal.tarea where id = %s', tarea) == ('terminada',)
+
+
+def test_per_06_nadie_aprueba_su_propia_tarea(revision):
+    """2b: aunque Ana tenga el rol de encargada, no aprueba la tarea que ella ejecutó (403)"""
+    _, tarea, ana, _, _ = revision
+    r = _revisar(_cliente_de(ana, rol='encargado_finca'), tarea, 'aprobar')
+    assert (r.status_code, r.data['detalle']) == (403, 'Nadie aprueba su propia tarea')
+
+
+def test_per_06_la_cuadrilla_tampoco_se_aprueba(per):
+    """Migración 006: un miembro de la cuadrilla asignada no aprueba la tarea de su cuadrilla"""
+    encargado, tarea, ana, beto = per
+    _sql('insert into personal.miembro_area (area_id, empleado_id, desde) select area_id, %s, %s from personal.tarea where id = %s',
+         beto, '2026-01-01', tarea)
+    assert _asignar(encargado, tarea, cuadrilla=_cuadrilla(ana, beto)).status_code == 200
+    cliente_ana = _cliente_de(ana)
+    assert _asignar(cliente_ana, tarea, estado='en_curso').status_code == 200
+    assert _asignar(cliente_ana, tarea, estado='terminada').status_code == 200
+    r = _revisar(_cliente_de(beto, rol='encargado_finca'), tarea, 'aprobar')
+    assert (r.status_code, r.data['detalle']) == (403, 'Nadie aprueba su propia tarea')
+
+
+def test_per_06_solo_se_revisa_una_tarea_terminada(per):
+    """Una tarea pendiente todavía no se aprueba"""
+    encargado, tarea, _, _ = per
+    r = _revisar(encargado, tarea, 'aprobar')
+    assert r.status_code == 422
+    assert 'terminada' in r.data['detalle']
 
 
 @pytest.mark.skip(reason='PER-07: por construir')

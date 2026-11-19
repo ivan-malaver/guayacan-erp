@@ -71,6 +71,11 @@ class TareaSerializer(serializers.ModelSerializer):
 
 
 # personal.paso_tarea <-> JSON en /api/v1/personal/tareas/{id}/pasos/
+class RevisionTareaSerializer(serializers.Serializer):
+    """PER-06: lo que envía el aprobador en /aprobar/ (comentario opcional) o /devolver/ (motivo obligatorio)."""
+    motivo = serializers.CharField(required=False)
+
+
 class PasoTareaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.PasoTarea  # tabla que representa
