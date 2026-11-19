@@ -114,6 +114,9 @@ class Compra(APIView):
     Responde 201 con el contrato pendiente_pago y el enlace de pago; el adoptante no necesita cuenta.
     """
 
+    # TODO(roles): exigir un permiso de adopción (p. ej. requiere('adopcion.vender')) cuando se definan los roles;
+    # hoy basta la sesión en la finca (IsAuthenticated por defecto)
+
     def post(self, request):
         datos = serializers.CompraSerializer(data=request.data)
         datos.is_valid(raise_exception=True)
