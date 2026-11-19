@@ -33,7 +33,7 @@ urlpatterns = [
     # ADO-03 · Sembrar en persona: POST /api/v1/adopcion/bienes/{id}/siembra/
     path('bienes/<int:id>/siembra/', views.Siembra.as_view(), name='ado-03-bienes-id-siembra'),
     # ADO-05 · Cobrar y pagar la cuota mensual: POST /api/v1/adopcion/cuotas/{id}/pagar/
-    path('cuotas/<int:id>/pagar/', PorConstruir.as_view(caso_de_uso='ADO-05', metodo='POST'), name='ado-05-cuotas-id-pagar'),
+    path('cuotas/<int:id>/pagar/', views.PagarCuota.as_view(), name='ado-05-cuotas-id-pagar'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/
     path('mis-bienes/', PorConstruir.as_view(caso_de_uso='ADO-06', metodo='GET'), name='ado-06-mis-bienes'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/

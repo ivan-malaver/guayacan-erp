@@ -379,9 +379,88 @@ def test_ado_04_tarea_de_otra_zona_no_sirve(ado_04):
     assert 'zona' in str(r.data['tarea'])
 
 
-@pytest.mark.skip(reason='ADO-05: por construir')
-def test_ado_05_cobrar_pagar_cuota_mensual_flujo_principal():
-    """ADO-05 · Cobrar y pagar la cuota mensual"""
+@pytest.fixture
+def ado_05(ado_02):
+    """Un contrato activo (ADO-02) con el árbol ya sembrado y su cuota del mes siguiente, creada por
+    adopcion.generar_cuotas() (la tarea del día 1)."""
+    api, compra, bien_id = ado_02
+    c = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json').data
+    assert _avisar(c['numero'], c['predio']).data['estado'] == 'activo'
+    # Solo un árbol sembrado (vivo) paga cuota: se siembra con la función de la base (ADO-03 ya la prueba por la API)
+    _fila('select adopcion.registrar_siembra(%s, current_date) is null', bien_id)
+    mes = (timezone.localdate().replace(day=1) + timedelta(days=32)).replace(day=1)
+    assert _fila('select adopcion.generar_cuotas(%s)', mes) == (1,)
+    cuota = _fila('select id from adopcion.cuota where contrato_id = %s', c['id'])[0]
+    return api, cuota, c['predio']
+
+
+def _cuota(cuota_id):
+    return _fila('select estado, pago_id is not null from adopcion.cuota where id = %s', cuota_id)
+
+
+def _avisos(tipo, entidad_id):
+    return _fila('select count(*) from nucleo.evento_salida where tipo_evento = %s and entidad_id = %s', tipo, entidad_id)[0]
+
+
+def test_ado_05_cobrar_pagar_cuota_mensual_flujo_principal(ado_05):
+    """ADO-05 · El vendedor pide el cobro, la pasarela confirma y la cuota queda pagada con su factura"""
+    api, cuota, predio = ado_05
+    r = api.post(f'/api/v1/adopcion/cuotas/{cuota}/pagar/')
+    assert r.status_code == 200, r.data
+    assert r.data['cobro']['url_pago'].endswith(f'{predio}:CUO-{cuota}')
+    assert _cuota(cuota) == ('pendiente', False)  # hasta que la pasarela confirme
+    a = _avisar(f'CUO-{cuota}', predio, valor='25000.00')
+    assert (a.status_code, a.data['estado']) == (200, 'pagada'), a.data
+    assert _cuota(cuota) == ('pagada', True)
+    assert _fila('select f.total, f.saldo, p.estado from adopcion.cuota q join comercial.pago p on p.id = q.pago_id '
+                 'join comercial.factura f on f.id = p.factura_id where q.id = %s', cuota) == (25000, 0, 'confirmado')
+    assert _avisos('adopcion.cuota_pagada', cuota) == 1
+
+
+def test_ado_05_pago_rechazado_queda_pendiente(ado_05):
+    """Si el pago falla, la cuota sigue pendiente y sin factura"""
+    api, cuota, predio = ado_05
+    a = _avisar(f'CUO-{cuota}', predio, estado='rechazado', valor='25000.00')
+    assert a.status_code == 200
+    assert _cuota(cuota) == ('pendiente', False)
+    assert _avisos('adopcion.pago_rechazado', cuota) == 1
+
+
+def test_ado_05_monto_distinto_responde_400(ado_05):
+    """C: la pasarela debe cobrar exactamente el valor de la cuota"""
+    _, cuota, predio = ado_05
+    a = _avisar(f'CUO-{cuota}', predio, valor='20000.00')
+    assert a.status_code == 400
+    assert _cuota(cuota) == ('pendiente', False)
+
+
+def test_ado_05_cuota_anulada_no_cobra_dos_veces(ado_05):
+    """B: el contrato terminó por abandono y la cuota se anuló mientras se pagaba: se pide devolver el dinero, una vez"""
+    _, cuota, predio = ado_05
+    _fila("update adopcion.cuota set estado = 'anulada' where id = %s returning id", cuota)
+    for _ in range(2):
+        a = _avisar(f'CUO-{cuota}', predio, valor='25000.00')
+        assert (a.status_code, a.data['estado']) == (200, 'anulada')
+    assert _cuota(cuota) == ('anulada', False)
+    assert _avisos('adopcion.pago_sin_cuota', cuota) == 1
+
+
+def test_ado_05_aviso_repetido_no_duplica(ado_05):
+    """La pasarela reenvía el aviso: no hay segundo pago ni segunda factura"""
+    _, cuota, predio = ado_05
+    assert _avisar(f'CUO-{cuota}', predio, valor='25000.00').data['estado'] == 'pagada'
+    assert _avisar(f'CUO-{cuota}', predio, valor='25000.00').data['estado'] == 'pagada'
+    assert _fila("select count(*) from comercial.pago where referencia = %s", f'{predio}:CUO-{cuota}') == (1,)
+    assert _avisos('adopcion.pago_sin_cuota', cuota) == 0
+
+
+def test_ado_05_cuota_pagada_no_se_cobra_otra_vez(ado_05):
+    """No se pide el cobro de una cuota que ya no está pendiente"""
+    api, cuota, predio = ado_05
+    _avisar(f'CUO-{cuota}', predio, valor='25000.00')
+    r = api.post(f'/api/v1/adopcion/cuotas/{cuota}/pagar/')
+    assert r.status_code == 400
+    assert 'pagada' in str(r.data['estado'])
 
 
 @pytest.mark.skip(reason='ADO-06: por construir')

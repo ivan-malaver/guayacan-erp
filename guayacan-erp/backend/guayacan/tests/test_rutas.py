@@ -15,7 +15,7 @@ def test_resuelve_crud_y_acciones():
     assert resolve('/api/v1/sincronizacion/lote/').url_name == 'nuc-05-sincronizar'
     # Apéndice A: la app de adopción también tiene CRUD y acciones
     assert resolve('/api/v1/adopcion/contratos/').url_name.startswith('adopcion-contratos')
-    assert issubclass(resolve('/api/v1/adopcion/cuotas/3/pagar/').func.view_class, PorConstruir)
+    assert issubclass(resolve('/api/v1/adopcion/contratos/3/decision/').func.view_class, PorConstruir)
     # Una acción ya construida (ADO-03) deja de ser PorConstruir
     assert not issubclass(resolve('/api/v1/adopcion/bienes/3/siembra/').func.view_class, PorConstruir)
 

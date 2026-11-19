@@ -126,8 +126,15 @@ class Compra(APIView):
         return Response({**serializers.ContratoSerializer(contrato).data, 'cobro': cobro}, status=status.HTTP_201_CREATED)
 
 
+class PagarCuota(APIView):
+    """ADO-05 · POST /api/v1/adopcion/cuotas/{id}/pagar/: devuelve el enlace de cobro de la cuota pendiente."""
+
+    def post(self, request, id):
+        return Response({'cuota': id, 'cobro': services.ado_05_cobrar_pagar_cuota_mensual(usuario=request.user, cuota_id=id)})
+
+
 class AvisoPago(APIView):
-    """ADO-02 · POST /api/v1/pagos/webhook/: la pasarela avisa si el pago se aprobó o se rechazó.
+    """ADO-02 y ADO-05 · POST /api/v1/pagos/webhook/: la pasarela avisa si el pago se aprobó o se rechazó.
 
     Llega sin sesión. Primero se verifica la firma (cabecera X-Pasarela-Firma) y solo entonces se fija la finca
     de la referencia para que la seguridad por filas deje ver el contrato.
@@ -142,8 +149,8 @@ class AvisoPago(APIView):
         datos.is_valid(raise_exception=True)
         # TODO(VTA-07): las referencias de pedidos de venta llegarán aquí también; hoy solo hay contratos de adopción
         fijar(Contexto(predio_id=int(datos.validated_data['referencia'].split(':', 1)[0])))
-        contrato = services.ado_02_confirmar_pago(**datos.validated_data)
-        return Response({'recibido': True, 'contrato': contrato.numero, 'estado': contrato.estado})
+        documento, estado = services.confirmar_pago(**datos.validated_data)  # contrato (ADO-02) o cuota (ADO-05)
+        return Response({'recibido': True, 'documento': documento, 'estado': estado})
 
 
 class Siembra(APIView):

@@ -137,22 +137,36 @@ def ado_02_confirmar_pago(*, referencia, estado, id_transaccion, valor):
         publicar('adopcion.pago_sin_bien', 'adopcion.contrato', contrato.id,
                  {'numero': numero, 'id_transaccion': id_transaccion, 'valor': valor, 'accion': 'devolver el pago'})
         return contrato
-    cliente = Cliente.objects.get(tercero_id=contrato.adoptante_id)
+    pago = _facturar_y_cobrar(contrato.adoptante_id, valor, referencia, id_transaccion)
+    publicar('adopcion.compra_confirmada', 'adopcion.contrato', contrato.id,
+             {'numero': numero, 'bien_id': contrato.bien_id, 'factura': f'ADO-{pago.factura.numero}',
+              'modalidad_siembra': contrato.modalidad_siembra})
+    return contrato
+
+
+def confirmar_pago(**aviso):
+    """Aviso de la pasarela (webhook) ya verificado: la referencia dice si es una compra (ADO-) o una cuota (CUO-).
+    Devuelve (documento, estado) para la respuesta."""
+    documento = aviso['referencia'].split(':', 1)[1]
+    if documento.startswith('CUO-'):
+        return documento, ado_05_confirmar_pago_cuota(**aviso).estado
+    return documento, ado_02_confirmar_pago(**aviso).estado
+
+
+def _facturar_y_cobrar(adoptante_id, valor, referencia, id_transaccion):
+    """Factura de contado ADO-<consecutivo> y pago confirmado de la pasarela, para una compra o una cuota. Devuelve el pago."""
+    cliente = Cliente.objects.get(tercero_id=adoptante_id)
     with connection.cursor() as cur:
         cur.execute("select coalesce(max(numero), 0) + 1 from comercial.factura where prefijo = 'ADO'")
         consecutivo = cur.fetchone()[0]
     # TODO(DIAN): numerar con la resolución de facturación de la finca y enviar la factura electrónica;
     # el IVA de la adopción lo define el contador (hoy 0)
     factura = Factura.objects.create(prefijo='ADO', numero=consecutivo, cliente=cliente, fecha_emision=timezone.now(),
-                                     subtotal=contrato.precio, iva=0, total=contrato.precio, forma_pago='contado')
+                                     subtotal=valor, iva=0, total=valor, forma_pago='contado')
     # comercial.aplicar_pago() descuenta el pago del saldo de la factura
-    Pago.objects.create(factura=factura, fecha=timezone.now(), valor=valor, medio='pasarela',
-                        proveedor_pasarela=pasarela().proveedor, id_transaccion_pasarela=id_transaccion,
-                        referencia=referencia, estado='confirmado')
-    publicar('adopcion.compra_confirmada', 'adopcion.contrato', contrato.id,
-             {'numero': numero, 'bien_id': contrato.bien_id, 'factura': f'ADO-{consecutivo}',
-              'modalidad_siembra': contrato.modalidad_siembra})
-    return contrato
+    return Pago.objects.create(factura=factura, fecha=timezone.now(), valor=valor, medio='pasarela',
+                               proveedor_pasarela=pasarela().proveedor, id_transaccion_pasarela=id_transaccion,
+                               referencia=referencia, estado='confirmado')
 
 
 def ado_03_sembrar_persona(*, usuario, bien_id, **datos):
@@ -238,7 +252,7 @@ def ado_04_sembrar_trabajador_enviar_video(*, usuario, bien_id, **datos):
     return models.Bien.objects.get(pk=bien_id)
 
 
-def ado_05_cobrar_pagar_cuota_mensual(*, usuario, **datos):
+def ado_05_cobrar_pagar_cuota_mensual(*, usuario, cuota_id):
     """ADO-05 · Cobrar y pagar la cuota mensual
 
     Actores: Tareas programadas; secundarios: Adoptante, Pasarela de pagos
@@ -248,15 +262,58 @@ def ado_05_cobrar_pagar_cuota_mensual(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/cuotas/{id}/pagar/
     Requerimientos: RQ-46
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (vendedor, administrador o agente; el adoptante no necesita cuenta) y cuota_id.
+    Devuelve el cobro de la pasarela (enlace de pago) para enviárselo al adoptante. La cuota sigue pendiente hasta que
+    la pasarela confirme (ado_05_confirmar_pago_cuota).
+
+    El cobro mensual ya lo hace la base: adopcion.generar_cuotas() crea las cuotas el día 1 (Celery, config/celery.py)
+    y adopcion.compensar_cuotas() las paga con el saldo a favor del adoptante.
     """
-    # Por construir. Pasos sugeridos para ADO-05:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.generar_cuotas(), adopcion.compensar_cuotas()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-05: por construir')
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.exigir_funcion('adopcion')")
+    cuota = models.Cuota.objects.select_related('contrato').filter(pk=cuota_id).first()
+    if not cuota:
+        raise NotFound(f'No hay cuota {cuota_id}')
+    if cuota.estado != 'pendiente':
+        raise ValidationError({'estado': f'La cuota ya está {cuota.estado}'})
+    return pasarela().crear_cobro(referencia=f'{cuota.predio_id}:CUO-{cuota.id}', valor=cuota.valor,
+                                  descripcion=f'Cuota {cuota.periodo:%Y-%m} de la adopción {cuota.contrato.numero}')
+
+
+def ado_05_confirmar_pago_cuota(*, referencia, estado, id_transaccion, valor):
+    """ADO-05 · Aviso de la pasarela para una cuota, con la firma ya verificada y la finca fijada.
+
+    aprobado:  factura y pago confirmado; la cuota queda pagada.
+    rechazado: la cuota sigue pendiente, sin factura.
+    Si la cuota ya no está pendiente (la compensó el saldo, se anuló por abandono) o el contrato terminó, no se cobra
+    dos veces: se publica adopcion.pago_sin_cuota para devolver el dinero. Un aviso repetido no hace nada.
+    Devuelve la cuota.
+    """
+    cuota_id = int(referencia.split(':', 1)[1].removeprefix('CUO-'))
+    cuota = models.Cuota.objects.select_for_update().select_related('contrato').filter(pk=cuota_id).first()
+    if cuota and cuota.pago_id and Pago.objects.filter(pk=cuota.pago_id, id_transaccion_pasarela=id_transaccion).exists():
+        return cuota  # la pasarela reenvió el aviso del pago que ya se aplicó
+    if estado == 'rechazado':
+        publicar('adopcion.pago_rechazado', 'adopcion.cuota', cuota_id, {'referencia': referencia, 'id_transaccion': id_transaccion})
+        return cuota
+    if not cuota or cuota.estado != 'pendiente' or cuota.contrato.estado != 'activo':
+        with connection.cursor() as cur:
+            cur.execute("select exists (select 1 from nucleo.evento_salida where tipo_evento = 'adopcion.pago_sin_cuota' "
+                        "and carga->>'id_transaccion' = %s)", [id_transaccion])
+            ya_avisado = cur.fetchone()[0]
+        if not ya_avisado:
+            publicar('adopcion.pago_sin_cuota', 'adopcion.cuota', cuota_id,
+                     {'referencia': referencia, 'id_transaccion': id_transaccion, 'valor': valor,
+                      'cuota': cuota and cuota.estado, 'accion': 'devolver el pago'})
+        return cuota
+    if valor != cuota.valor:
+        raise ValidationError({'valor': f'La pasarela cobró {valor} y la cuota vale {cuota.valor}'})
+    cuota.pago = _facturar_y_cobrar(cuota.contrato.adoptante_id, valor, referencia, id_transaccion)
+    cuota.estado, cuota.pagada_en = 'pagada', timezone.now()
+    cuota.save(update_fields=['pago', 'estado', 'pagada_en'])
+    publicar('adopcion.cuota_pagada', 'adopcion.cuota', cuota.id,
+             {'contrato': cuota.contrato.numero, 'periodo': cuota.periodo, 'factura': f'ADO-{cuota.pago.factura.numero}'})
+    return cuota
 
 
 def ado_06_seguir_mi_arbol_mi_animal(*, usuario, **datos):
