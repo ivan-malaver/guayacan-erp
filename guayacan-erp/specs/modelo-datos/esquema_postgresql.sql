@@ -7484,6 +7484,23 @@ begin
   return new;
 end $$;
 create trigger tg_tarea_validar before insert or update on personal.tarea for each row execute function personal.validar_tarea();
+
+create or replace function personal.validar_paso_tarea() returns trigger language plpgsql as $$
+declare v_estado text;
+begin
+  select estado into v_estado from personal.tarea where id = new.tarea_id;
+  if tg_op = 'UPDATE' and v_estado in ('aprobada', 'cancelada') then
+    raise exception 'La tarea % está %: sus pasos no se editan', new.tarea_id, v_estado;
+  end if;
+  if new.hecho and (tg_op = 'INSERT' or not old.hecho) then
+    if v_estado <> 'en_curso' then
+      raise exception 'Solo se marcan pasos de una tarea en curso (la tarea % está %)', new.tarea_id, v_estado;
+    end if;
+    new.hecho_en := coalesce(new.hecho_en, now());
+  end if;
+  return new;
+end $$;
+create trigger tg_paso_tarea_validar before insert or update on personal.paso_tarea for each row execute function personal.validar_paso_tarea();
 create trigger tg_tarea_no_borrar before delete on personal.tarea for each row execute function nucleo.impedir_cambio();
 
 create or replace function personal.generar_tareas_del_dia(p_fecha date default current_date) returns integer language plpgsql as $$
