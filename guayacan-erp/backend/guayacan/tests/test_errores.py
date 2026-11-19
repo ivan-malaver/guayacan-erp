@@ -47,7 +47,7 @@ def test_conserva_el_mensaje_de_la_regla():
 # En un error 500 no se muestran detalles internos
 def test_no_filtra_detalles_en_error_interno():
     r = respuesta_de_base(error_django('XX000', 'detalle interno con datos'))
-    assert 'datos' not in r.data['detalle']
+    assert r.data['detalle'] == 'Error interno de la base de datos'
 
 
 # Se informa qué restricción falló (útil para mostrar el cruce de reservas)

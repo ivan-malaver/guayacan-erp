@@ -16,12 +16,14 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import transaction  # noqa: F401
+from django.db import connection, transaction  # noqa: F401
 
 from guayacan.eventos import publicar  # noqa: F401
 
+from . import models
 
-def ado_01_configurar_catalogo_sitios(*, usuario, **datos):
+
+def ado_01_configurar_catalogo_sitios(*, usuario, planes=(), sitios=(), bienes=(), **datos):
     """ADO-01 · Configurar catálogo y sitios
 
     Actores: Administrador; secundarios: Encargado de finca
@@ -32,14 +34,22 @@ def ado_01_configurar_catalogo_sitios(*, usuario, **datos):
     Requerimientos: RQ-45
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+      planes, sitios, bienes  listas con los datos validados por PlanSerializer, SitioSerializer y BienSerializer
+    Devuelve {'planes': [...], 'sitios': [...], 'bienes': [...]} con los objetos creados.
     """
-    # Por construir. Pasos sugeridos para ADO-01:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: nucleo.exigir_funcion()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-01: por construir')
+    # Todo o nada: si un registro falla (código repetido, precio en cero...), no queda ninguno a medias
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            # Los disparadores de plan, sitio y bien no exigen la función (pruebas_adopcion.sql los crea apagada): se exige aquí.
+            # Si está apagada, la base lanza P0001 y guayacan/errores.py responde 422 con su mensaje
+            cur.execute("select nucleo.exigir_funcion('adopcion')")
+        # La finca (predio_id) la pone la base según la sesión; el resto de reglas lo validan los CHECK y llaves de la base.
+        # shortcut: un bien solo puede apuntar a planes y sitios ya guardados (los del mismo lote aún no tienen id ante el serializer); enviar bienes en una segunda llamada
+        return {
+            'planes': [models.Plan.objects.create(**p) for p in planes],
+            'sitios': [models.Sitio.objects.create(**s) for s in sitios],
+            'bienes': [models.Bien.objects.create(**b) for b in bienes],
+        }
 
 
 def ado_02_comprar_arbol_animal(*, usuario, **datos):

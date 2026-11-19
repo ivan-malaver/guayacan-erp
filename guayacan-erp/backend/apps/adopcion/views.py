@@ -16,31 +16,50 @@ cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, l
 Generado por docs/uml/fuentes/gen_apps.py."""
 from guayacan.vistas import VistaModelo
 
-from . import models, serializers
+from . import models, serializers, services
 
 
-# CRUD de adopcion.plan en /api/v1/adopcion/planes/
-class PlanViewSet(VistaModelo):
+class AltaPorAdo01:
+    """ADO-01: crear un plan, un sitio o un bien pasa por el servicio, que exige la función «adopcion» en la finca.
+
+    Solo cambia el POST; listar, ver y modificar siguen siendo el CRUD de VistaModelo.
+    lista_ado_01 es el nombre de la lista que recibe el servicio: 'planes', 'sitios' o 'bienes'.
+    """
+
+    lista_ado_01 = None
+
+    def perform_create(self, serializer):
+        creados = services.ado_01_configurar_catalogo_sitios(usuario=self.request.user,
+                                                             **{self.lista_ado_01: [serializer.validated_data]})
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = creados[self.lista_ado_01][0]
+
+
+# CRUD de adopcion.plan en /api/v1/adopcion/planes/  (el alta es ADO-01)
+class PlanViewSet(AltaPorAdo01, VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Plan.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.PlanSerializer
+    lista_ado_01 = 'planes'
 
 
-# CRUD de adopcion.sitio en /api/v1/adopcion/sitios/
-class SitioViewSet(VistaModelo):
+# CRUD de adopcion.sitio en /api/v1/adopcion/sitios/  (el alta es ADO-01)
+class SitioViewSet(AltaPorAdo01, VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Sitio.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.SitioSerializer
+    lista_ado_01 = 'sitios'
 
 
-# CRUD de adopcion.bien en /api/v1/adopcion/bienes/
-class BienViewSet(VistaModelo):
+# CRUD de adopcion.bien en /api/v1/adopcion/bienes/  (el alta es ADO-01)
+class BienViewSet(AltaPorAdo01, VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Bien.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.BienSerializer
+    lista_ado_01 = 'bienes'
 
 
 # CRUD de adopcion.contrato en /api/v1/adopcion/contratos/
