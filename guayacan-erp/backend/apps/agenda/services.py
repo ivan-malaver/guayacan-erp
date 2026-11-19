@@ -16,9 +16,12 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import transaction  # noqa: F401
+from django.db import connection, transaction  # noqa: F401
+from rest_framework.exceptions import ValidationError
 
 from guayacan.eventos import publicar  # noqa: F401
+
+from . import models
 
 
 def agd_01_configurar_recursos_agendables(*, usuario, **datos):
@@ -71,14 +74,48 @@ def agd_03_programar_aprobar_visita(*, usuario, **datos):
     Endpoints: POST /api/v1/agenda/visitas/{id}/aprobar/; POST /api/v1/agenda/visitas/{id}/pase/
     Requerimientos: RQ-39, RF-16
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó VisitaSerializer).
+    Paso 1 (registrar): la visita nace solicitada; el anfitrión, si no se indica, es quien la registra.
+    La aprobación y el pase son agd_03_decidir_visita y agd_03_emitir_pase.
+    Devuelve la visita creada.
     """
-    # Por construir. Pasos sugeridos para AGD-03:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: agenda.validar_visita(), agenda.emitir_pase()
-    # 4. publicar('agenda.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('AGD-03: por construir')
+    datos.setdefault('anfitrion', usuario)
+    # La declaración de bioseguridad (paso 2) viaja en contacto_aves_reciente; la base la exige al aprobar
+    return models.Visita.objects.create(**datos)
+
+
+def agd_03_decidir_visita(*, usuario, visita_id, decision, motivo=None):
+    """AGD-03 paso 3: aprobar o rechazar (con motivo) una visita solicitada.
+
+    La base exige que decida una persona, la declaración de 72 horas sin contacto con aves si va al galpón (3a)
+    y el motivo del rechazo (3b). Devuelve la visita.
+    """
+    visita = models.Visita.objects.select_for_update().get(pk=visita_id)
+    if visita.estado != 'solicitada':
+        raise ValidationError({'estado': f'La visita ya está {visita.estado}'})
+    with transaction.atomic():
+        if decision == 'aprobar':
+            visita.estado = 'aprobada'
+        else:
+            visita.estado, visita.motivo_rechazo = 'rechazada', motivo
+        visita.save(update_fields=['estado', 'motivo_rechazo'])
+        visita.refresh_from_db(fields=['aprobada_por'])  # lo pone la base al aprobar
+        publicar(f'agenda.visita_{visita.estado}', 'agenda.visita', visita.id,
+                 {'tipo': visita.tipo, 'nombre': visita.nombre, 'ingreso_programado': visita.ingreso_programado,
+                  'motivo_rechazo': visita.motivo_rechazo})
+    return visita
+
+
+def agd_03_emitir_pase(*, usuario, visita_id):
+    """AGD-03 paso 4: código del pase de una visita aprobada. La base guarda solo su huella.
+
+    El código no va al outbox: quedaría en claro en nucleo.evento_salida. Se devuelve solo a quien lo pide.
+    """
+    # TODO(Volumen 4): enviarlo al visitante como QR por WhatsApp o correo (SQ14) cuando existan esos canales
+    with connection.cursor() as cur:
+        # Solo una visita aprobada recibe pase: si no, la base responde 422
+        cur.execute('select agenda.emitir_pase(%s)', [visita_id])
+        return cur.fetchone()[0]
 
 
 def agd_04_registrar_entradas_salidas_porteria(*, usuario, **datos):

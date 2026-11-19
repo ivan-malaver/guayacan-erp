@@ -35,8 +35,19 @@ class CitaSerializer(serializers.ModelSerializer):
 class VisitaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Visita  # tabla que representa
-        fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # AGD-03: la huella del pase no se muestra (con ella se podría adivinar el código por fuerza bruta)
+        exclude = ('pase_hash',)
+        # AGD-03: el estado y la decisión cambian solo con /aprobar/ (permiso agenda.aprobar_visita) y en portería
+        read_only_fields = SOLO_LECTURA + ('estado', 'aprobada_por', 'motivo_rechazo')
+        # Si no se envían, el servicio pone al usuario como anfitrión y la base personas = 1
+        extra_kwargs = {'anfitrion': {'required': False}, 'personas': {'required': False},
+                        'requiere_bioseguridad': {'required': False}}
+
+
+class DecisionVisitaSerializer(serializers.Serializer):
+    """AGD-03: lo que envía el encargado en POST /api/v1/agenda/visitas/{id}/aprobar/."""
+    decision = serializers.ChoiceField(choices=['aprobar', 'rechazar'])
+    motivo = serializers.CharField(max_length=200, required=False)
 
 
 # agenda.registro_acceso <-> JSON en /api/v1/agenda/registros-acceso/

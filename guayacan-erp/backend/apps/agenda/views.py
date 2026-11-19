@@ -14,9 +14,14 @@ QUÉ OPERACIONES OFRECE (heredadas de guayacan.vistas.VistaModelo)
 La seguridad no se programa aquí: el middleware fija la finca y el usuario, y PostgreSQL solo deja ver y
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from guayacan.permisos import SoloPersonas, requiere
 from guayacan.vistas import VistaModelo
 
-from . import models, serializers
+from . import models, serializers, services
 
 
 # CRUD de agenda.recurso en /api/v1/agenda/recursos/
@@ -42,6 +47,10 @@ class VisitaViewSet(VistaModelo):
     # Cómo se convierten y validan los datos
     serializer_class = serializers.VisitaSerializer
 
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.agd_03_programar_aprobar_visita(usuario=self.request.user, **serializer.validated_data)
+
 
 # CRUD de agenda.registro_acceso en /api/v1/agenda/registros-acceso/
 class RegistroAccesoViewSet(VistaModelo):
@@ -49,3 +58,24 @@ class RegistroAccesoViewSet(VistaModelo):
     queryset = models.RegistroAcceso.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroAccesoSerializer
+
+
+class AprobarVisita(APIView):
+    """AGD-03 · POST /api/v1/agenda/visitas/{id}/aprobar/ con {decision: aprobar | rechazar, motivo}."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas, requiere('agenda.aprobar_visita')]
+
+    def post(self, request, id):
+        datos = serializers.DecisionVisitaSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        visita = services.agd_03_decidir_visita(usuario=request.user, visita_id=id, **datos.validated_data)
+        return Response(serializers.VisitaSerializer(visita).data)
+
+
+class PaseVisita(APIView):
+    """AGD-03 · POST /api/v1/agenda/visitas/{id}/pase/: devuelve el código del pase (para el QR) una sola vez."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas, requiere('agenda.aprobar_visita')]
+
+    def post(self, request, id):
+        return Response({'visita': id, 'codigo_pase': services.agd_03_emitir_pase(usuario=request.user, visita_id=id)})

@@ -27,9 +27,9 @@ urlpatterns = [
     # TUR-02 · Reservar una cabaña o un plan: GET /api/v1/agenda/recursos/{id}/disponible/
     path('recursos/<int:id>/disponible/', PorConstruir.as_view(caso_de_uso='TUR-02', metodo='GET'), name='tur-02-recursos-id-disponible'),
     # AGD-03 · Programar y aprobar una visita: POST /api/v1/agenda/visitas/{id}/aprobar/
-    path('visitas/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='AGD-03', metodo='POST'), name='agd-03-visitas-id-aprobar'),
+    path('visitas/<int:id>/aprobar/', views.AprobarVisita.as_view(), name='agd-03-visitas-id-aprobar'),
     # AGD-03 · Programar y aprobar una visita: POST /api/v1/agenda/visitas/{id}/pase/
-    path('visitas/<int:id>/pase/', PorConstruir.as_view(caso_de_uso='AGD-03', metodo='POST'), name='agd-03-visitas-id-pase'),
+    path('visitas/<int:id>/pase/', views.PaseVisita.as_view(), name='agd-03-visitas-id-pase'),
     # AGD-05 · Consultar quién está en la finca: GET /api/v1/agenda/en-sitio/
     path('en-sitio/', PorConstruir.as_view(caso_de_uso='AGD-05', metodo='GET'), name='agd-05-sitio'),
     # AGD-06 · Consultar la agenda del día: GET /api/v1/agenda/dia/
