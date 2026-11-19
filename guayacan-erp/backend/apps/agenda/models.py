@@ -171,6 +171,8 @@ class RegistroAcceso(models.Model):
     desinfeccion = models.BooleanField(db_default=False, db_comment='Pasó por desinfección (personas y vehículos que van al galpón)')
     ocurrido_en = models.DateTimeField(db_default=Now(), db_comment='Momento')
     registrado_por = models.ForeignKey('nucleo.Usuario', models.DO_NOTHING, db_column='registrado_por', related_name='+', db_constraint=False, null=True, blank=True, db_comment='Portero o encargado')
+    observacion = models.CharField(max_length=200, null=True, blank=True, db_comment='Novedad o motivo de la corrección (los registros no se editan: se corrige con uno nuevo)')
+    corrige = models.ForeignKey('agenda.RegistroAcceso', models.DO_NOTHING, db_column='corrige_id', related_name='+', db_constraint=False, null=True, blank=True, db_comment='Registro que este corrige (error de digitación)')
     # Captura sin conexión: el celular genera id_cliente (UUIDv7); si el mismo registro llega dos veces,
     # la base lo detecta por este campo único y no lo duplica (ver guayacan/sincronizacion.py)
     id_cliente = models.UUIDField(null=True, blank=True, unique=True, db_comment='UUIDv7 del celular (sincronización idempotente)')

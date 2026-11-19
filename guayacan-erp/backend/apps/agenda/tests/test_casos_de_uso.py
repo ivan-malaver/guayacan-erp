@@ -6,10 +6,12 @@ Cada función es la prueba del flujo principal de un caso de uso. Están marcada
 2. Escriba la prueba del flujo principal y agregue una por cada flujo alterno de la especificación.
 3. Corra pytest desde la carpeta backend (necesita la base cargada; ver INSTALAR.md)."""
 import hashlib
+from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import connection
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from guayacan.autenticacion import emitir_tokens
@@ -102,9 +104,117 @@ def test_agd_03_solo_aprobada_recibe_pase(agd):
     assert 'aprobada' in r.data['detalle']
 
 
-@pytest.mark.skip(reason='AGD-04: por construir')
-def test_agd_04_registrar_entradas_salidas_porteria_flujo_principal():
-    """AGD-04 · Registrar entradas y salidas en portería"""
+@pytest.fixture
+def porteria(agd):
+    """Una visita aprobada para dentro de 10 minutos (con su pase) y un trabajador con carné QR vigente."""
+    cliente, visita, _ = agd
+    ahora = timezone.now()
+    visita = {**visita, 'ingreso_programado': (ahora + timedelta(minutes=10)).isoformat(),
+              'salida_programada': (ahora + timedelta(hours=3)).isoformat()}
+
+    def aprobada(**cambios):
+        v = _visita(cliente, {**visita, **cambios})
+        assert cliente.post(f"/api/v1/agenda/visitas/{v['id']}/aprobar/", {'decision': 'aprobar'}, format='json').status_code == 200
+        return v['id'], cliente.post(f"/api/v1/agenda/visitas/{v['id']}/pase/").data['codigo_pase']
+
+    with connection.cursor() as cur:
+        cur.execute("insert into terceros.tercero (tipo_persona, tipo_documento, numero_documento, nombres) "
+                    "values ('natural', 'CC', 'PRB-0001', 'Operario de prueba') returning id")
+        cur.execute("insert into terceros.empleado (tercero_id, cargo, tipo_vinculacion, fecha_ingreso) "
+                    "values (%s, 'Operario', 'jornal', '2026-01-01') returning id", [cur.fetchone()[0]])
+        empleado_id = cur.fetchone()[0]
+        cur.execute("insert into personal.credencial_trabajo (empleado_id, tipo, codigo_hash, emitida_en) values (%s, 'qr', %s, '2026-01-01')",
+                    [empleado_id, hashlib.sha256(b'CARNE-PRB-1').hexdigest()])
+    return cliente, aprobada, empleado_id
+
+
+def _acceso(cliente, **datos):
+    return cliente.post('/api/v1/agenda/registros-acceso/', {'tipo': 'persona', **datos}, format='json')
+
+
+def _jornadas(empleado_id):
+    with connection.cursor() as cur:
+        cur.execute('select metodo_registro, salida is not null from personal.jornada where empleado_id = %s', [empleado_id])
+        return cur.fetchall()
+
+
+def test_agd_04_registrar_entradas_salidas_porteria_flujo_principal(porteria):
+    """AGD-04 · El portero escanea el pase: la visita entra (en_sitio) y sale (salio)"""
+    cliente, aprobada, _ = porteria
+    visita_id, codigo = aprobada()
+    r = _acceso(cliente, sentido='entrada', codigo_pase=codigo)
+    assert r.status_code == 201, r.data
+    assert (r.data['visita'], r.data['metodo']) == (visita_id, 'pase_qr')
+    assert cliente.get(f'/api/v1/agenda/visitas/{visita_id}/').data['estado'] == 'en_sitio'
+    assert _acceso(cliente, sentido='salida', codigo_pase=codigo).status_code == 201
+    assert cliente.get(f'/api/v1/agenda/visitas/{visita_id}/').data['estado'] == 'salio'
+
+
+def test_agd_04_carne_abre_y_cierra_una_sola_jornada(porteria):
+    """El carné abre la jornada al entrar y la cierra al salir; escanear dos veces no crea otra jornada"""
+    cliente, _, empleado_id = porteria
+    # En la prueba todo corre en una transacción (misma hora): la entrada se registra 8 horas antes
+    temprano = (timezone.now() - timedelta(hours=8)).isoformat()
+    r = _acceso(cliente, sentido='entrada', codigo_carne='CARNE-PRB-1', ocurrido_en=temprano)
+    assert (r.status_code, r.data['empleado'], r.data['metodo']) == (201, empleado_id, 'carne_qr')
+    assert _acceso(cliente, sentido='entrada', codigo_carne='CARNE-PRB-1', ocurrido_en=temprano).status_code == 201
+    assert _jornadas(empleado_id) == [('qr', False)]
+    r = _acceso(cliente, sentido='salida', codigo_carne='CARNE-PRB-1')
+    assert r.status_code == 201, r.data
+    assert _jornadas(empleado_id) == [('qr', True)]
+
+
+def test_agd_04_carne_revocado_no_entra(porteria):
+    """Un carné revocado no identifica a nadie"""
+    cliente, _, _ = porteria
+    with connection.cursor() as cur:
+        cur.execute('update personal.credencial_trabajo set revocada_en = now() where codigo_hash = %s',
+                    [hashlib.sha256(b'CARNE-PRB-1').hexdigest()])
+    r = _acceso(cliente, sentido='entrada', codigo_carne='CARNE-PRB-1')
+    assert r.status_code == 400
+    assert 'codigo_carne' in r.data
+
+
+def test_agd_04_placa_distinta_responde_422(porteria):
+    """3a: la placa no corresponde a la visita programada"""
+    cliente, aprobada, _ = porteria
+    _, codigo = aprobada(vehiculo_placa='ABC123', vehiculo_tipo='carro')
+    r = _acceso(cliente, sentido='entrada', tipo='vehiculo', placa='XYZ999', codigo_pase=codigo)
+    assert r.status_code == 422
+    assert 'no corresponde' in r.data['detalle']
+
+
+def test_agd_04_galpon_sin_desinfeccion_responde_422(porteria):
+    """3c: al galpón sin desinfección no se entra"""
+    cliente, aprobada, _ = porteria
+    _, codigo = aprobada(requiere_bioseguridad=True, contacto_aves_reciente=False)
+    r = _acceso(cliente, sentido='entrada', codigo_pase=codigo)
+    assert r.status_code == 422
+    assert 'Bioseguridad' in r.data['detalle']
+    assert _acceso(cliente, sentido='entrada', codigo_pase=codigo, desinfeccion=True).status_code == 201
+
+
+def test_agd_04_salida_sin_entrada_responde_422(porteria):
+    """4a: salida de alguien que no entró hoy"""
+    cliente, _, empleado_id = porteria
+    assert _acceso(cliente, sentido='salida', nombre='Desconocido').status_code == 422
+    assert _acceso(cliente, sentido='salida', empleado=empleado_id).status_code == 422
+
+
+def test_agd_04_correccion_es_un_registro_nuevo(porteria):
+    """4b: no se edita; la corrección es un registro nuevo con observación que dice cuál corrige"""
+    cliente, _, _ = porteria
+    malo = _acceso(cliente, sentido='entrada', tipo='vehiculo', placa='ABC12').data
+    assert cliente.patch(f"/api/v1/agenda/registros-acceso/{malo['id']}/", {'placa': 'ABC123'}, format='json').status_code == 405
+    assert _acceso(cliente, sentido='entrada', tipo='vehiculo', placa='ABC123', corrige=malo['id']).status_code == 400
+    r = _acceso(cliente, sentido='entrada', tipo='vehiculo', placa='ABC123', corrige=malo['id'], observacion='Placa mal digitada')
+    assert (r.status_code, r.data['corrige'], r.data['metodo']) == (201, malo['id'], 'lectura_placa')
+
+
+def test_agd_04_jornada_no_se_crea_por_el_crud(agd):
+    """La jornada solo nace en portería: el CRUD de jornadas no acepta POST"""
+    cliente, _, _ = agd
+    assert cliente.post('/api/v1/personal/jornadas/', {}, format='json').status_code == 405
 
 
 @pytest.mark.skip(reason='AGD-05: por construir')

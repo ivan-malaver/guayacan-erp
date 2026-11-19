@@ -2377,6 +2377,8 @@ tabla('agenda', 'registro_acceso', 2, 'Cada entrada o salida real por la porter�
     ('desinfeccion', 'boolean', 'not null default false', 'Pasó por desinfección (personas y vehículos que van al galpón)'),
     ('ocurrido_en', 'timestamptz', 'not null default now()', 'Momento'),
     ('registrado_por', USR, '', 'Portero o encargado'),
+    ('observacion', 'varchar(200)', '', 'Novedad o motivo de la corrección (los registros no se editan: se corrige con uno nuevo)'),
+    ('corrige_id', 'fk:agenda.registro_acceso', '', 'Registro que este corrige (error de digitación)'),
 ], ['check (visita_id is not null or empleado_id is not null or nombre is not null or placa is not null)', 'index on (ocurrido_en)'])
 
 # ---- formación · gestión educativa (ISO 21001: necesidades, satisfacción, quejas y apelaciones)

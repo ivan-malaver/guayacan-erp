@@ -64,6 +64,8 @@ erDiagram
         boolean desinfeccion
         timestamptz ocurrido_en
         bigint registrado_por FK
+        varchar observacion
+        bigint corrige_id FK
     }
     activos_activo {
         bigint id PK
@@ -102,6 +104,7 @@ erDiagram
     nucleo_zona ||--o{ visita : "zona_destino_id"
     personal_tarea ||--o{ cita : "tarea_id"
     recurso ||--o{ cita : "recurso_id"
+    registro_acceso ||--o{ registro_acceso : "corrige_id"
     terceros_empleado ||--o{ registro_acceso : "empleado_id"
     terceros_tercero ||--o{ visita : "tercero_id"
     turismo_alojamiento ||--o| recurso : "alojamiento_id"

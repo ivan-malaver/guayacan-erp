@@ -3561,6 +3561,8 @@ Cada entrada o salida real por la portería (persona o vehículo): con pase, car
 | `desinfeccion` | boolean | no |  | Pasó por desinfección (personas y vehículos que van al galpón) |
 | `ocurrido_en` | timestamptz | no |  | Momento |
 | `registrado_por` | bigint | sí | `nucleo.usuario` | Portero o encargado |
+| `observacion` | varchar(200) | sí |  | Novedad o motivo de la corrección (los registros no se editan: se corrige con uno nuevo) |
+| `corrige_id` | bigint | sí | `agenda.registro_acceso` | Registro que este corrige (error de digitación) |
 
 ## Esquema `proyectos`
 

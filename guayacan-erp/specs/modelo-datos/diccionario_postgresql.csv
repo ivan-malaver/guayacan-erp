@@ -2765,6 +2765,8 @@ agenda,registro_acceso,Fase 2,metodo,text (lista),no,,"valores: pase_qr, carne_q
 agenda,registro_acceso,Fase 2,desinfeccion,boolean,no,false,,,Pasó por desinfección (personas y vehículos que van al galpón)
 agenda,registro_acceso,Fase 2,ocurrido_en,timestamptz,no,now(),,,Momento
 agenda,registro_acceso,Fase 2,registrado_por,bigint,sí,,,nucleo.usuario,Portero o encargado
+agenda,registro_acceso,Fase 2,observacion,varchar(200),sí,,,,Novedad o motivo de la corrección (los registros no se editan: se corrige con uno nuevo)
+agenda,registro_acceso,Fase 2,corrige_id,bigint,sí,,,agenda.registro_acceso,Registro que este corrige (error de digitación)
 agenda,registro_acceso,Fase 2,id_cliente,uuid,sí,,único,,"Identificador UUIDv7 que genera el celular al capturar sin conexión; si llega dos veces, la segunda se ignora (sincronización idempotente)"
 agenda,registro_acceso,Fase 2,capturado_en,timestamptz,sí,,,,Momento en que se registró en el celular (puede ser horas antes de llegar al servidor)
 agenda,registro_acceso,Fase 2,dispositivo_captura_id,bigint,sí,,,nucleo.dispositivo_captura,"Celular, lector o báscula con que se capturó"

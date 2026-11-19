@@ -3930,6 +3930,8 @@ create table agenda.registro_acceso (
     desinfeccion boolean not null default false,
     ocurrido_en timestamptz not null default now(),
     registrado_por bigint,
+    observacion varchar(200),
+    corrige_id bigint,
     id_cliente uuid unique,
     capturado_en timestamptz,
     dispositivo_captura_id bigint,
@@ -4899,6 +4901,7 @@ alter table agenda.registro_acceso add constraint fk_registro_acceso_predio fore
 alter table agenda.registro_acceso add constraint fk_registro_acceso_visita_id foreign key (predio_id, visita_id) references agenda.visita(predio_id, id);
 alter table agenda.registro_acceso add constraint fk_registro_acceso_empleado_id foreign key (predio_id, empleado_id) references terceros.empleado(predio_id, id);
 alter table agenda.registro_acceso add constraint fk_registro_acceso_registrado_por foreign key (registrado_por) references nucleo.usuario(id);
+alter table agenda.registro_acceso add constraint fk_registro_acceso_corrige_id foreign key (predio_id, corrige_id) references agenda.registro_acceso(predio_id, id);
 alter table agenda.registro_acceso add constraint fk_registro_acceso_dispositivo foreign key (predio_id, dispositivo_captura_id) references nucleo.dispositivo_captura(predio_id, id);
 alter table formacion.necesidad_formacion add constraint fk_necesidad_formacion_predio foreign key (predio_id) references nucleo.predio(id);
 alter table formacion.necesidad_formacion add constraint fk_necesidad_formacion_tercero_id foreign key (predio_id, tercero_id) references terceros.tercero(predio_id, id);
@@ -5426,6 +5429,7 @@ create index ix_visita_ingreso_programado on agenda.visita (predio_id, ingreso_p
 create index ix_registro_acceso_visita_id on agenda.registro_acceso (visita_id);
 create index ix_registro_acceso_empleado_id on agenda.registro_acceso (empleado_id);
 create index ix_registro_acceso_registrado_por on agenda.registro_acceso (registrado_por);
+create index ix_registro_acceso_corrige_id on agenda.registro_acceso (corrige_id);
 create index ix_registro_acceso_ocurrido_en on agenda.registro_acceso (predio_id, ocurrido_en);
 create index ix_necesidad_formacion_tercero_id on formacion.necesidad_formacion (tercero_id);
 create index ix_necesidad_formacion_competencia_id on formacion.necesidad_formacion (competencia_id);
@@ -12406,6 +12410,8 @@ comment on column agenda.registro_acceso.metodo is 'Cómo se identificó (valore
 comment on column agenda.registro_acceso.desinfeccion is 'Pasó por desinfección (personas y vehículos que van al galpón)';
 comment on column agenda.registro_acceso.ocurrido_en is 'Momento';
 comment on column agenda.registro_acceso.registrado_por is 'Portero o encargado';
+comment on column agenda.registro_acceso.observacion is 'Novedad o motivo de la corrección (los registros no se editan: se corrige con uno nuevo)';
+comment on column agenda.registro_acceso.corrige_id is 'Registro que este corrige (error de digitación)';
 comment on column agenda.registro_acceso.id_cliente is 'Identificador UUIDv7 que genera el celular al capturar sin conexión; si llega dos veces, la segunda se ignora (sincronización idempotente)';
 comment on column agenda.registro_acceso.capturado_en is 'Momento en que se registró en el celular (puede ser horas antes de llegar al servidor)';
 comment on column agenda.registro_acceso.dispositivo_captura_id is 'Celular, lector o báscula con que se capturó';

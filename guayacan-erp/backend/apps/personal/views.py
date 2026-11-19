@@ -113,6 +113,10 @@ class JornadaViewSet(VistaModelo):
     queryset = models.Jornada.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.JornadaSerializer
+    # AGD-04: la jornada nace solo en portería (agenda.validar_acceso la abre y la cierra); sin POST aquí no hay dos
+    # caminos que la dupliquen. Quien no tiene carné entra por portería con empleado y método manual.
+    # TODO(PER): revisar al construir los casos de Personal (la sincronización sin conexión aún acepta personal.jornada)
+    http_method_names = ['get', 'put', 'patch', 'head', 'options']
 
 
 # CRUD de personal.area_responsabilidad en /api/v1/personal/areas-responsabilidad/

@@ -58,6 +58,13 @@ class RegistroAccesoViewSet(VistaModelo):
     queryset = models.RegistroAcceso.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroAccesoSerializer
+    # AGD-04: un registro de acceso no se edita (la base lo impide); se corrige con uno nuevo
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.agd_04_registrar_entradas_salidas_porteria(usuario=self.request.user,
+                                                                                 **serializer.validated_data)
 
 
 class AprobarVisita(APIView):

@@ -16,9 +16,12 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
+import hashlib
+
 from django.db import connection, transaction  # noqa: F401
 from rest_framework.exceptions import ValidationError
 
+from apps.personal.models import CredencialTrabajo
 from guayacan.eventos import publicar  # noqa: F401
 
 from . import models
@@ -128,14 +131,39 @@ def agd_04_registrar_entradas_salidas_porteria(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RQ-39, RF-16
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición) y **datos (lo que validó RegistroAccesoSerializer).
+      codigo_pase   código del QR del pase (AGD-03): se busca la visita por su huella
+      codigo_carne  código del carné QR o NFC: se busca el trabajador por la huella de su credencial vigente
+      corrige       registro que este corrige (4b); exige observacion
+    Devuelve el registro creado.
+
+    La base (agenda.validar_acceso) hace el resto: visita aprobada y en horario, placa, desinfección al galpón,
+    visita a en_sitio o salio, y la jornada del trabajador: la abre al entrar y la cierra al salir. Este servicio
+    nunca escribe personal.jornada, así no hay dos caminos que la creen.
     """
-    # Por construir. Pasos sugeridos para AGD-04:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: agenda.validar_acceso()
-    # 4. publicar('agenda.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('AGD-04: por construir')
+    codigo_pase = datos.pop('codigo_pase', None)
+    codigo_carne = datos.pop('codigo_carne', None)
+    if codigo_pase:
+        visita = models.Visita.objects.filter(pase_hash=_huella(codigo_pase.strip().upper())).first()
+        if not visita:
+            raise ValidationError({'codigo_pase': 'El pase no corresponde a ninguna visita'})
+        datos['visita'] = visita
+        datos.setdefault('metodo', 'pase_qr')
+    if codigo_carne:
+        credencial = CredencialTrabajo.objects.filter(codigo_hash=_huella(codigo_carne.strip()), revocada_en__isnull=True).first()
+        if not credencial:
+            raise ValidationError({'codigo_carne': 'Carné desconocido o revocado'})
+        datos['empleado_id'] = credencial.empleado_id
+        datos.setdefault('metodo', f'carne_{credencial.tipo}')
+    datos.setdefault('metodo', 'lectura_placa' if datos.get('placa') and not datos.get('nombre') else 'manual')
+    if datos.get('corrige') and not datos.get('observacion'):
+        raise ValidationError({'observacion': 'Una corrección dice qué se corrige'})
+    return models.RegistroAcceso.objects.create(**datos)
+
+
+def _huella(codigo):
+    """Huella SHA-256 con que la base guarda los códigos de pases y carnés."""
+    return hashlib.sha256(codigo.encode()).hexdigest()
 
 
 def agd_05_consultar_quien_esta_finca(*, usuario, **datos):

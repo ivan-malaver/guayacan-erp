@@ -52,7 +52,15 @@ class DecisionVisitaSerializer(serializers.Serializer):
 
 # agenda.registro_acceso <-> JSON en /api/v1/agenda/registros-acceso/
 class RegistroAccesoSerializer(serializers.ModelSerializer):
+    # AGD-04: lo que lee el portero; el servicio lo convierte en visita o empleado (solo se reciben)
+    codigo_pase = serializers.CharField(max_length=40, required=False, write_only=True)
+    codigo_carne = serializers.CharField(max_length=80, required=False, write_only=True)
+
     class Meta:
         model = models.RegistroAcceso  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # AGD-04: quién registró lo pone la base con el usuario de la sesión
+        read_only_fields = SOLO_LECTURA + ('registrado_por',)
+        # Si no se envían, el servicio deduce el método y la base pone la hora, el punto y la desinfección
+        extra_kwargs = {'metodo': {'required': False}, 'ocurrido_en': {'required': False}, 'punto': {'required': False},
+                        'desinfeccion': {'required': False}}
