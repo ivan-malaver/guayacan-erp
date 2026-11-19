@@ -365,29 +365,42 @@ begin
 end $$;
 
 create or replace function adopcion.marcar_abandono(p_fecha date default current_date) returns integer language plpgsql as $$
-declare r record; v_n integer := 0; v_meses integer := coalesce(nucleo.parametro_valor('meses_abandono_adopcion', p_fecha), 3)::integer;
+declare r record; v_n integer := 0; v_seg bigint;
+  v_meses integer := coalesce(nucleo.parametro_valor('meses_abandono_adopcion', p_fecha), 3)::integer;
+  v_gracia integer := coalesce(nucleo.parametro_valor('dias_gracia_abandono', p_fecha), 15)::integer;
 begin
   perform nucleo.exigir_funcion('adopcion');
-  for r in select c.id, c.numero, c.bien_id, count(*) as vencidas
+  for r in select c.id, c.numero, c.bien_id, count(*) as vencidas, max(q.vence_en) as ultima_vencida,
+                  (array_agg(q.vence_en order by q.vence_en))[v_meses] as vence_ultimo_aviso,
+                  (array_agg(q.id order by q.vence_en))[1] as cuota_mas_antigua
            from adopcion.contrato c join adopcion.cuota q on q.contrato_id = c.id
            where c.estado = 'activo' and q.estado = 'pendiente' and q.vence_en < p_fecha
            group by c.id loop
-    if r.vencidas >= v_meses then
+    -- Un aviso por cada cuota que se vence (no uno por día): sale al adoptante por el outbox (WhatsApp o correo)
+    if not exists (select 1 from adopcion.seguimiento s where s.bien_id = r.bien_id and s.tipo = 'aviso_mora'
+                   and s.fecha::date > r.ultima_vencida) then
+      insert into adopcion.seguimiento (bien_id, tipo, fecha, descripcion)
+      values (r.bien_id, 'aviso_mora', p_fecha, format('Cuotas vencidas: %s de %s antes de pasar a readopción', r.vencidas, v_meses))
+      returning id into v_seg;
+      insert into nucleo.evento_salida (tipo_evento, entidad, entidad_id, carga)
+      values ('adopcion.aviso_mora', 'adopcion.contrato', r.id, jsonb_build_object('contrato', r.numero, 'bien_id', r.bien_id,
+              'seguimiento_id', v_seg, 'cuotas_vencidas', r.vencidas, 'faltan', greatest(v_meses - r.vencidas, 0),
+              'cuota_mas_antigua', r.cuota_mas_antigua, 'dias_gracia', v_gracia));
+    end if;
+    -- Nunca sin aviso previo: el aviso de la última cuota permitida debe estar entregado hace al menos v_gracia días
+    if r.vencidas >= v_meses and exists (select 1 from adopcion.seguimiento s where s.bien_id = r.bien_id and s.tipo = 'aviso_mora'
+           and s.enviado_al_adoptante and s.fecha::date > r.vence_ultimo_aviso and s.fecha::date <= p_fecha - v_gracia) then
       update adopcion.contrato set estado = 'terminado_abandono' where id = r.id;
       update adopcion.cuota set estado = 'anulada' where contrato_id = r.id and estado = 'pendiente';
       update adopcion.bien set estado = 'en_readopcion' where id = r.bien_id;
       insert into nucleo.evento_salida (tipo_evento, entidad, entidad_id, carga)
       values ('adopcion.abandonado', 'adopcion.contrato', r.id, jsonb_build_object('contrato', r.numero, 'cuotas_vencidas', r.vencidas));
       v_n := v_n + 1;
-    elsif r.vencidas >= 1 then
-      insert into adopcion.seguimiento (bien_id, tipo, fecha, descripcion)
-      select r.bien_id, 'aviso_mora', p_fecha, format('Cuotas vencidas: %s de %s antes de pasar a readopción', r.vencidas, v_meses)
-      where not exists (select 1 from adopcion.seguimiento s where s.bien_id = r.bien_id and s.tipo = 'aviso_mora' and s.fecha::date = p_fecha);
     end if;
   end loop;
   return v_n;
 end $$;
-comment on function adopcion.marcar_abandono(date) is 'Tarea diaria: con N cuotas vencidas (meses_abandono_adopcion, 3) el contrato termina sin reembolso y el bien pasa a readopción; antes avisa. El cuidado nunca se suspende (Ley 1774 de 2016)';
+comment on function adopcion.marcar_abandono(date) is 'Tarea diaria: un aviso por cada cuota que se vence (evento adopcion.aviso_mora); con N cuotas vencidas (meses_abandono_adopcion, 3) y el último aviso entregado hace dias_gracia_abandono días (15), el contrato termina sin reembolso y el bien pasa a readopción. El cuidado nunca se suspende (Ley 1774 de 2016)';
 
 create or replace function adopcion.marcar_madurez(p_fecha date default current_date) returns integer language plpgsql as $$
 declare v_n integer;
@@ -497,4 +510,5 @@ select id, 'adopcion', 'Adopción de árboles y animales por turistas (apéndice
 from nucleo.predio on conflict (predio_id, codigo) do nothing;
 insert into nucleo.parametro (predio_id, clave, valor, tipo_dato, vigente_desde, descripcion) values
  (null, 'comision_adopcion_pct', '5', 'porcentaje', '2026-10-30', 'Comisión de administración sobre la utilidad neta de cada liquidación de un bien adoptado'),
- (null, 'meses_abandono_adopcion', '3', 'entero', '2026-10-30', 'Cuotas vencidas tras las cuales el bien pasa a readopción');
+ (null, 'meses_abandono_adopcion', '3', 'entero', '2026-10-30', 'Cuotas vencidas tras las cuales el bien pasa a readopción'),
+ (null, 'dias_gracia_abandono', '15', 'entero', '2026-10-30', 'Días desde el último aviso de mora entregado antes de pasar el bien a readopción');

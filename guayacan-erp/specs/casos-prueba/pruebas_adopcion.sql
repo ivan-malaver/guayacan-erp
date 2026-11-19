@@ -73,11 +73,17 @@ select adopcion.generar_cuotas('2026-02-01'); select adopcion.generar_cuotas('20
 select adopcion.generar_cuotas('2026-03-01'); select adopcion.generar_cuotas('2026-04-01');
 select prueba.ok((select count(*) from adopcion.cuota q join adopcion.contrato c on c.id = q.contrato_id where c.numero = 'ADO-1') = 3, 'Tres meses, tres cuotas (idempotente)');
 
--- Mora y abandono a los 3 meses
-select adopcion.marcar_abandono('2026-03-12');
+-- Mora y abandono: un aviso por cada cuota que se vence; abandono solo con el tercer aviso entregado y 15 días de gracia
+select adopcion.marcar_abandono('2026-03-12'); select adopcion.marcar_abandono('2026-03-13');
 select prueba.ok((select estado from adopcion.contrato where numero = 'ADO-1') = 'activo'
-  and exists (select 1 from adopcion.seguimiento where bien_id = :b_agu and tipo = 'aviso_mora'), 'Con 2 cuotas vencidas: aviso, el contrato sigue');
-select prueba.ok(adopcion.marcar_abandono('2026-04-20') = 1, 'Con 3 cuotas vencidas el contrato termina por abandono');
+  and (select count(*) from adopcion.seguimiento where bien_id = :b_agu and tipo = 'aviso_mora') = 1, 'Con 2 cuotas vencidas: un solo aviso aunque la tarea corra cada día; el contrato sigue');
+select prueba.ok(exists (select 1 from nucleo.evento_salida where tipo_evento = 'adopcion.aviso_mora'), 'El aviso sale al adoptante por el outbox');
+select prueba.ok(adopcion.marcar_abandono('2026-04-20') = 0, 'Con 3 cuotas vencidas: todavía sin abandono');
+select prueba.ok((select count(*) from adopcion.seguimiento where bien_id = :b_agu and tipo = 'aviso_mora') = 2, 'Con la tercera cuota vencida sale el último aviso');
+select prueba.ok(adopcion.marcar_abandono('2026-05-20') = 0, 'Sin aviso entregado nunca hay abandono');
+update adopcion.seguimiento set enviado_al_adoptante = true where bien_id = :b_agu and tipo = 'aviso_mora' and fecha::date = '2026-04-20';
+select prueba.ok(adopcion.marcar_abandono('2026-05-04') = 0, 'Aviso entregado hace 14 días: todavía no');
+select prueba.ok(adopcion.marcar_abandono('2026-05-05') = 1, 'Tercer aviso entregado y 15 días de gracia: el contrato termina por abandono');
 select prueba.ok((select estado from adopcion.bien where id = :b_agu) = 'en_readopcion'
   and not exists (select 1 from adopcion.cuota q join adopcion.contrato c on c.id = q.contrato_id where c.numero = 'ADO-1' and q.estado = 'pendiente'),
   'El árbol pasa a readopción y las cuotas pendientes se anulan');
