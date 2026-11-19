@@ -6,6 +6,7 @@ Cada función es la prueba del flujo principal de un caso de uso. Están marcada
 2. Escriba la prueba del flujo principal y agregue una por cada flujo alterno de la especificación.
 3. Corra pytest desde la carpeta backend (necesita la base cargada; ver INSTALAR.md)."""
 import json
+from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -159,9 +160,89 @@ def test_pro_02_mismo_lote_y_dia_responde_409(postura):
     assert r.data['codigo'] == 'duplicado'
 
 
-@pytest.mark.skip(reason='PRO-03: por construir')
-def test_pro_03_registrar_alimentacion_pesajes_eventos_sanitarios_flujo_principal():
-    """PRO-03 · Registrar alimentación, pesajes y eventos sanitarios"""
+@pytest.fixture
+def galpon(api):
+    """Un lote de 100 gallinas (PRO-01) y 2 bultos de 40 kg de concentrado en bodega."""
+    cliente, lote, _ = api
+    lote_id = cliente.post('/api/v1/produccion/lotes-animal/', {**lote, 'cantidad_inicial': 100}, format='json').data['id']
+    with connection.cursor() as cur:
+        cur.execute("insert into inventario.lote_inventario (producto_id, bodega_id, codigo_lote, origen, fecha_produccion, "
+                    "cantidad_inicial, costo_unitario) select p.id, (select min(id) from inventario.bodega), 'PRB-CON-1', "
+                    "'compra', '2026-11-01', 2, 120000 from inventario.producto p where p.sku = 'CON-POS' returning id, producto_id")
+        inventario_id, concentrado = cur.fetchone()
+    return cliente, lote_id, inventario_id, concentrado
+
+
+def _disponible(inventario_id):
+    with connection.cursor() as cur:
+        cur.execute('select cantidad_disponible from inventario.lote_inventario where id = %s', [inventario_id])
+        return cur.fetchone()[0]
+
+
+def _vivos(lote_id):
+    with connection.cursor() as cur:
+        cur.execute('select cantidad_actual from produccion.lote_animal where id = %s', [lote_id])
+        return cur.fetchone()[0]
+
+
+def test_pro_03_registrar_alimentacion_pesajes_eventos_sanitarios_flujo_principal(galpon):
+    """PRO-03 · Alimentación: se guarda y sale del kardex en la unidad del producto (20 kg = medio bulto)"""
+    cliente, lote_id, inventario_id, concentrado = galpon
+    r = cliente.post('/api/v1/produccion/registros-alimentacion/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'producto': concentrado, 'cantidad_kg': 20, 'origen': 'comprado'}, format='json')
+    assert r.status_code == 201, r.data
+    assert _disponible(inventario_id) == Decimal('1.50')
+
+
+def test_pro_03_sin_inventario_guarda_el_registro_y_avisa(galpon):
+    """5a: no alcanza el alimento; el registro queda, no hay salida a medias y bodega recibe «Inventario insuficiente»"""
+    cliente, lote_id, inventario_id, concentrado = galpon
+    r = cliente.post('/api/v1/produccion/registros-alimentacion/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'producto': concentrado, 'cantidad_kg': 100, 'origen': 'comprado'}, format='json')
+    assert r.status_code == 201, r.data
+    assert _disponible(inventario_id) == 2
+    assert _evento(r.data['id'], 'inventario.salida_rechazada')['motivo'] == 'Inventario insuficiente'
+
+
+def test_pro_03_pesaje_de_muestra(galpon):
+    """Paso 3: pesaje de una muestra del lote"""
+    cliente, lote_id, _, _ = galpon
+    r = cliente.post('/api/v1/produccion/registros-pesaje/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'animales_muestreados': 10, 'peso_promedio_kg': 1.85}, format='json')
+    assert r.status_code == 201, r.data
+
+
+def test_pro_03_mortalidad_baja_la_cantidad_del_lote(galpon):
+    """Paso 5: si hubo muertes, baja la cantidad actual del lote y avisa al encargado"""
+    cliente, lote_id, _, _ = galpon
+    r = cliente.post('/api/v1/produccion/eventos-sanitario/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'tipo': 'mortalidad', 'cantidad_afectada': 3, 'causa': 'calor'}, format='json')
+    assert r.status_code == 201, r.data
+    assert _vivos(lote_id) == 97
+    assert _evento(r.data['id'], 'produccion.mortalidad_registrada')['cantidad_actual'] == 97
+
+
+def test_pro_03_mortalidad_mayor_que_los_vivos_no_guarda_nada(galpon):
+    """No mueren más animales de los que hay: no queda el evento ni cambia el lote"""
+    cliente, lote_id, _, _ = galpon
+    r = cliente.post('/api/v1/produccion/eventos-sanitario/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'tipo': 'mortalidad', 'cantidad_afectada': 101}, format='json')
+    assert r.status_code == 400
+    assert _vivos(lote_id) == 100
+    with connection.cursor() as cur:
+        cur.execute('select count(*) from produccion.evento_sanitario where lote_animal_id = %s', [lote_id])
+        assert cur.fetchone()[0] == 0
+
+
+def test_pro_03_lote_cerrado_no_recibe_registros(galpon):
+    """Precondición: lote activo"""
+    cliente, lote_id, _, _ = galpon
+    with connection.cursor() as cur:
+        cur.execute("update produccion.lote_animal set estado = 'cerrado', fecha_cierre = '2026-11-18' where id = %s", [lote_id])
+    r = cliente.post('/api/v1/produccion/registros-pesaje/', {'lote_animal': lote_id, 'fecha': '2026-11-18',
+                     'animales_muestreados': 10, 'peso_promedio_kg': 1.85}, format='json')
+    assert r.status_code == 400
+    assert 'cerrado' in str(r.data['lote_animal'])
 
 
 @pytest.mark.skip(reason='PRO-04: por construir')

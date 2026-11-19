@@ -17,6 +17,7 @@ Cada función está vacía (NotImplementedError) y su documentación resume la e
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
 from django.db import connection, transaction  # noqa: F401
+from django.db.models import F
 from rest_framework.exceptions import ValidationError
 
 from guayacan.eventos import publicar  # noqa: F401
@@ -100,7 +101,7 @@ def pro_02_registrar_postura_diaria_clasificar_huevo(*, usuario, **datos):
     return registro
 
 
-def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, **datos):
+def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, modelo, **datos):
     """PRO-03 · Registrar alimentación, pesajes y eventos sanitarios
 
     Actores: Operario de campo
@@ -110,14 +111,62 @@ def pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(*, usuario, **datos
     Endpoints: CRUD de sus tablas
     Requerimientos: RF-07, RF-18
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (quien hace la petición), modelo (RegistroAlimentacion, RegistroPesaje o EventoSanitario,
+    lo elige la vista según la ruta) y **datos (lo que validó su serializer).
+    Devuelve el registro creado.
     """
-    # Por construir. Pasos sugeridos para PRO-03:
-    # 1. with transaction.atomic():
-    # 3. Guardar con el serializer (el CRUD ya lo hace) o con models.<Clase>.objects.create(...)
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-03: por construir')
+    # shortcut: sin columnas para periodo de retiro (4a), umbral de mortalidad del lote (4b) ni dosis numérica
+    # (salida del medicamento); agregarlas al modelo de datos cuando se definan y completar aquí
+    if datos['lote_animal'].estado != 'activo':
+        raise ValidationError({'lote_animal': 'El lote está cerrado'})
+    with transaction.atomic():
+        registro = modelo.objects.create(**datos)
+        if modelo is models.RegistroAlimentacion and not _consumir_alimento(registro, usuario):
+            # 5a: el registro queda y bodega corrige; la salida no se hace a medias
+            publicar('inventario.salida_rechazada', 'produccion.registro_alimentacion', registro.id,
+                     {'producto_id': registro.producto_id, 'cantidad_kg': registro.cantidad_kg,
+                      'motivo': 'Inventario insuficiente'})
+        if modelo is models.EventoSanitario and registro.tipo in ('mortalidad', 'descarte'):
+            n = registro.cantidad_afectada
+            # Descuenta en la base para que dos registros simultáneos no dejen el lote en negativo
+            if not models.LoteAnimal.objects.filter(pk=registro.lote_animal_id, cantidad_actual__gte=n).update(
+                    cantidad_actual=F('cantidad_actual') - n):
+                raise ValidationError({'cantidad_afectada': 'Supera los animales vivos del lote'})
+            if registro.animal_id:
+                models.Animal.objects.filter(pk=registro.animal_id).update(
+                    estado='muerto' if registro.tipo == 'mortalidad' else 'descartado')
+            publicar('produccion.mortalidad_registrada', 'produccion.evento_sanitario', registro.id,
+                     {'lote_animal_id': registro.lote_animal_id, 'tipo': registro.tipo, 'cantidad': n,
+                      'cantidad_actual': models.LoteAnimal.objects.get(pk=registro.lote_animal_id).cantidad_actual})
+    return registro
+
+
+def _consumir_alimento(registro, usuario):
+    """Salida del alimento por consumo interno, primero lo que vence primero. False si no alcanza."""
+    with connection.cursor() as cur:
+        # El kardex cuenta en la unidad del producto (p. ej. bulto de 40 kg); el registro viene en kilos
+        cur.execute("select u.factor_base from inventario.producto p join inventario.unidad_medida u on u.id = p.unidad_id "
+                    "where p.id = %s and u.unidad_base = 'kg'", [registro.producto_id])
+        fila = cur.fetchone()
+    if not fila:
+        raise ValidationError({'producto': 'El alimento debe medirse en kilos o en una unidad de kilos'})
+    cantidad = round(registro.cantidad_kg / fila[0], 2)
+    try:
+        with transaction.atomic(), connection.cursor() as cur:
+            # Reparte la cantidad entre los lotes disponibles; el disparador del kardex descuenta cada uno
+            cur.execute("insert into inventario.movimiento_inventario (lote_inventario_id, tipo, cantidad, costo_unitario, "
+                        "documento_tipo, documento_id, usuario_id) "
+                        "select id, 'consumo_interno', least(cantidad_disponible, %(c)s - previo), costo_unitario, "
+                        "'registro_alimentacion', %(doc)s, %(u)s from (select l.*, coalesce(sum(l.cantidad_disponible) over "
+                        "(order by l.fecha_vencimiento nulls last, l.fecha_produccion, l.id rows between unbounded preceding "
+                        "and 1 preceding), 0) previo from inventario.lote_inventario l where l.producto_id = %(p)s "
+                        "and l.estado = 'disponible' and l.cantidad_disponible > 0) x where previo < %(c)s returning cantidad",
+                        {'c': cantidad, 'doc': registro.id, 'u': usuario.id, 'p': registro.producto_id})
+            if sum(c for (c,) in cur.fetchall()) < cantidad:
+                raise ValidationError('Inventario insuficiente')  # deshace solo las salidas de este bloque
+    except ValidationError:
+        return False
+    return True
 
 
 def pro_04_registrar_eventos_reproductivos_ovinos_caprinos(*, usuario, **datos):

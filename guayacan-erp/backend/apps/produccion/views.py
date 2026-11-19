@@ -61,28 +61,43 @@ class RegistroPosturaViewSet(VistaModelo):
                                                                                        **serializer.validated_data)
 
 
-# CRUD de produccion.registro_alimentacion en /api/v1/produccion/registros-alimentacion/
+# CRUD de produccion.registro_alimentacion en /api/v1/produccion/registros-alimentacion/  (el alta es PRO-03)
 class RegistroAlimentacionViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.RegistroAlimentacion.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroAlimentacionSerializer
 
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(
+            usuario=self.request.user, modelo=models.RegistroAlimentacion, **serializer.validated_data)
 
-# CRUD de produccion.evento_sanitario en /api/v1/produccion/eventos-sanitario/
+
+# CRUD de produccion.evento_sanitario en /api/v1/produccion/eventos-sanitario/  (el alta es PRO-03)
 class EventoSanitarioViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.EventoSanitario.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.EventoSanitarioSerializer
 
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(
+            usuario=self.request.user, modelo=models.EventoSanitario, **serializer.validated_data)
 
-# CRUD de produccion.registro_pesaje en /api/v1/produccion/registros-pesaje/
+
+# CRUD de produccion.registro_pesaje en /api/v1/produccion/registros-pesaje/  (el alta es PRO-03)
 class RegistroPesajeViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.RegistroPesaje.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.RegistroPesajeSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_03_registrar_alimentacion_pesajes_eventos_sanitarios(
+            usuario=self.request.user, modelo=models.RegistroPesaje, **serializer.validated_data)
 
 
 # CRUD de produccion.evento_reproductivo en /api/v1/produccion/eventos-reproductivo/
