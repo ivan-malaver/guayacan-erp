@@ -119,3 +119,11 @@ T_A.append(('adopcion', 'movimiento_saldo', 3, 'Cuenta del adoptante, solo inser
     ('fecha', 'timestamptz', 'not null default now()', 'Fecha y hora del movimiento'),
     ('creado_en', 'timestamptz', 'not null default now()', 'Fecha y hora de creación del registro'),
 ], [], False))
+T_A.append(('adopcion', 'enlace_adoptante', 3, 'Enlace personal con que el adoptante sin cuenta sigue su bien (ADO-06): la base guarda solo la huella del código; sirve mientras no venza, no se revoque y el contrato siga activo.', [
+    ('contrato_id', 'fk:adopcion.contrato', 'not null', 'Contrato que el enlace deja ver'),
+    ('token_hash', 'char(64)', 'not null', 'Huella SHA-256 del código del enlace (el código no se guarda)'),
+    ('vence_en', 'timestamptz', 'not null', 'Vence a los 12 meses'),
+    ('revocado_en', 'timestamptz', '', 'Cuándo se revocó'),
+    ('ultimo_uso_en', 'timestamptz', '', 'Última vez que se abrió'),
+    ('emitido_por', 'fk:nucleo.usuario', '', 'Quién lo emitió'),
+], ['unique (token_hash)']))

@@ -201,9 +201,26 @@ create table adopcion.movimiento_saldo (
 );
 comment on table adopcion.movimiento_saldo is 'Cuenta del adoptante (solo inserción): abonos de liquidaciones, cuotas compensadas y pagos. No genera intereses ni se invierte';
 
+create table adopcion.enlace_adoptante (
+    id bigint generated always as identity primary key,
+    predio_id bigint not null default nucleo.predio_actual(),
+    contrato_id bigint not null,
+    token_hash char(64) not null,
+    vence_en timestamptz not null,
+    revocado_en timestamptz,
+    ultimo_uso_en timestamptz,
+    emitido_por bigint,
+    creado_en timestamptz not null default now(),
+    actualizado_en timestamptz not null default now(),
+    unique (predio_id, id), unique (predio_id, token_hash),
+    foreign key (predio_id, contrato_id) references adopcion.contrato(predio_id, id),
+    foreign key (emitido_por) references nucleo.usuario(id)
+);
+comment on table adopcion.enlace_adoptante is 'Enlace personal con que el adoptante sin cuenta sigue su bien (ADO-06): la base guarda solo la huella SHA-256 del código; sirve mientras no venza, no se revoque y el contrato siga activo';
+
 -- RLS, actualizado_en y auditoría con las convenciones de la v5
 do $$ declare t text; begin
-  foreach t in array array['plan', 'sitio', 'bien', 'contrato', 'cuota', 'seguimiento', 'liquidacion', 'movimiento_saldo'] loop
+  foreach t in array array['plan', 'sitio', 'bien', 'contrato', 'cuota', 'seguimiento', 'liquidacion', 'movimiento_saldo', 'enlace_adoptante'] loop
     execute format('alter table adopcion.%I enable row level security; alter table adopcion.%I force row level security;', t, t);
     execute format('create policy aislamiento_predio on adopcion.%I using (predio_id = nucleo.predio_actual()) with check (predio_id = nucleo.predio_actual());', t);
     if t <> 'movimiento_saldo' then

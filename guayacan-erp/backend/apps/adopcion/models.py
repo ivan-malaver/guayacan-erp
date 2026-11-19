@@ -309,3 +309,25 @@ class MovimientoSaldo(models.Model):
         db_table = 'adopcion"."movimiento_saldo'
         # Comentario de la tabla, el mismo que tiene la base
         db_table_comment = 'Cuenta del adoptante, solo inserción: abonos de liquidaciones, cuotas compensadas y pagos al adoptante. No genera intereses ni se invierte.'
+
+
+# ==============================================================================================================
+# Tabla adopcion.enlace_adoptante  ·  por finca (seguridad por filas)  ·  ADO-06 (escrita a mano, migración 007)
+# ==============================================================================================================
+class EnlaceAdoptante(models.Model):
+    """Enlace personal con que el adoptante sin cuenta sigue su bien: la base guarda solo la huella del código."""
+
+    id = models.BigAutoField(primary_key=True, db_comment='Identificador interno')
+    predio = models.ForeignKey('nucleo.Predio', models.DO_NOTHING, db_column='predio_id', related_name='+', db_constraint=False, editable=False, db_default=sql('nucleo.predio_actual()'), db_comment='Finca dueña del registro; la pone la base según la sesión (RLS)')
+    contrato = models.ForeignKey('adopcion.Contrato', models.DO_NOTHING, db_column='contrato_id', related_name='+', db_constraint=False, db_comment='Contrato que el enlace deja ver')
+    token_hash = models.CharField(max_length=64, db_comment='Huella SHA-256 del código del enlace (el código no se guarda)')
+    vence_en = models.DateTimeField(db_comment='Vence a los 12 meses')
+    revocado_en = models.DateTimeField(null=True, blank=True, db_comment='Cuándo se revocó')
+    ultimo_uso_en = models.DateTimeField(null=True, blank=True, db_comment='Última vez que se abrió')
+    emitido_por = models.ForeignKey('nucleo.Usuario', models.DO_NOTHING, db_column='emitido_por', related_name='+', db_constraint=False, null=True, blank=True, db_comment='Quién lo emitió')
+    creado_en = models.DateTimeField(db_default=Now(), editable=False, db_comment='Creación del registro')
+    actualizado_en = models.DateTimeField(db_default=Now(), editable=False, db_comment='Última modificación (la pone la base)')
+
+    class Meta:
+        managed = False
+        db_table = 'adopcion"."enlace_adoptante'

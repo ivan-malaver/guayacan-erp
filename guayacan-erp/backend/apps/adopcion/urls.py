@@ -30,14 +30,17 @@ urlpatterns = [
     # --- Acciones de los casos de uso (responden 501 «por construir» hasta que se programen)
     # ADO-02 · Comprar un árbol o un animal: POST /api/v1/adopcion/contratos/compra/ (el pago confirma en /api/v1/pagos/webhook/)
     path('contratos/compra/', views.Compra.as_view(), name='ado-02-contratos-compra'),
+    # ADO-06 · Enlace personal del adoptante sin cuenta (la ficha se ve en /api/v1/publico/adopcion/<finca>.<código>/)
+    path('contratos/<int:id>/enlace/', views.EmitirEnlace.as_view(), name='ado-06-contratos-id-enlace'),
+    path('enlaces/<int:id>/revocar/', views.RevocarEnlace.as_view(), name='ado-06-enlaces-id-revocar'),
     # ADO-03 · Sembrar en persona: POST /api/v1/adopcion/bienes/{id}/siembra/
     path('bienes/<int:id>/siembra/', views.Siembra.as_view(), name='ado-03-bienes-id-siembra'),
     # ADO-05 · Cobrar y pagar la cuota mensual: POST /api/v1/adopcion/cuotas/{id}/pagar/
     path('cuotas/<int:id>/pagar/', views.PagarCuota.as_view(), name='ado-05-cuotas-id-pagar'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/
-    path('mis-bienes/', PorConstruir.as_view(caso_de_uso='ADO-06', metodo='GET'), name='ado-06-mis-bienes'),
+    path('mis-bienes/', views.MisBienes.as_view(), name='ado-06-mis-bienes'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/
-    path('mis-bienes/<int:id>/seguimiento/', PorConstruir.as_view(caso_de_uso='ADO-06', metodo='GET'), name='ado-06-mis-bienes-id-seguimiento'),
+    path('mis-bienes/<int:id>/seguimiento/', views.SeguimientoMiBien.as_view(), name='ado-06-mis-bienes-id-seguimiento'),
     # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/liquidaciones/{id}/aprobar/
     path('liquidaciones/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='ADO-10', metodo='POST'), name='ado-10-liquidaciones-id-aprobar'),
     # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/adoptantes/{id}/pagar-saldo/

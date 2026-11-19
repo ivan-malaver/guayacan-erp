@@ -15,8 +15,10 @@ La seguridad no se programa aquí: el middleware fija la finca y el usuario, y P
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from guayacan.contexto import Contexto, fijar
@@ -171,3 +173,66 @@ class Siembra(APIView):
             datos.is_valid(raise_exception=True)
             bien = services.ado_03_sembrar_persona(usuario=request.user, bien_id=id, **datos.validated_data)
         return Response(serializers.BienSerializer(bien).data)
+
+
+class EmitirEnlace(APIView):
+    """ADO-06 · POST /api/v1/adopcion/contratos/{id}/enlace/: enlace personal del adoptante (se muestra una sola vez)."""
+
+    # TODO(roles): exigir un permiso de adopción cuando se definan los roles (igual que la compra)
+
+    def post(self, request, id):
+        return Response(services.ado_06_emitir_enlace(usuario=request.user, contrato_id=id), status=status.HTTP_201_CREATED)
+
+
+class RevocarEnlace(APIView):
+    """ADO-06 · POST /api/v1/adopcion/enlaces/{id}/revocar/."""
+
+    def post(self, request, id):
+        services.ado_06_revocar_enlace(usuario=request.user, enlace_id=id)
+        return Response({'enlace': id, 'revocado': True})
+
+
+class LimitePublico(AnonRateThrottle):
+    rate = '60/min'  # nadie prueba códigos a ciegas (y protege el servidor)
+
+
+class FichaPorEnlace(APIView):
+    """ADO-06 · GET /api/v1/publico/adopcion/<finca>.<código>/: el adoptante sin cuenta ve su árbol o animal.
+
+    Llega sin sesión: con la finca del enlace se fija la seguridad por filas y el código decide qué contrato se ve.
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    throttle_classes = [LimitePublico]
+
+    def get(self, request, enlace):
+        finca, _, codigo = enlace.partition('.')
+        if not finca.isdigit() or not codigo:
+            raise NotFound('El enlace no existe o ya no está vigente')
+        fijar(Contexto(predio_id=int(finca)))
+        contrato = services.ado_06_contrato_por_enlace(codigo)
+        return Response(services.ado_06_seguir_mi_arbol_mi_animal(contrato=contrato))
+
+
+def _mis_contratos(usuario):
+    """Contratos activos del adoptante que sí tiene cuenta (su usuario apunta a su tercero)."""
+    return models.Contrato.objects.filter(adoptante_id=usuario.tercero_id, estado='activo') if usuario.tercero_id else models.Contrato.objects.none()
+
+
+class MisBienes(APIView):
+    """ADO-06 · GET /api/v1/adopcion/mis-bienes/: los bienes del adoptante con cuenta (sin el seguimiento completo)."""
+
+    def get(self, request):
+        fichas = [services.ado_06_seguir_mi_arbol_mi_animal(contrato=c) for c in _mis_contratos(request.user).order_by('id')]
+        return Response([{k: f[k] for k in ('contrato', 'estado', 'bien', 'saldo_a_favor')} for f in fichas])
+
+
+class SeguimientoMiBien(APIView):
+    """ADO-06 · GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/: la ficha completa de uno de sus bienes."""
+
+    def get(self, request, id):
+        contrato = _mis_contratos(request.user).filter(bien_id=id).first()
+        if not contrato:
+            raise NotFound('No es uno de sus bienes')
+        return Response(services.ado_06_seguir_mi_arbol_mi_animal(contrato=contrato))

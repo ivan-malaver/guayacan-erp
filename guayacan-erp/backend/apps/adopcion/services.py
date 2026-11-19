@@ -16,6 +16,10 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
 # transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
+import hashlib
+import secrets
+from datetime import timedelta
+
 from django.db import Error, connection, transaction  # noqa: F401
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
@@ -316,7 +320,7 @@ def ado_05_confirmar_pago_cuota(*, referencia, estado, id_transaccion, valor):
     return cuota
 
 
-def ado_06_seguir_mi_arbol_mi_animal(*, usuario, **datos):
+def ado_06_seguir_mi_arbol_mi_animal(*, contrato):
     """ADO-06 · Seguir mi árbol o mi animal
 
     Actores: Adoptante; secundarios: Operario de campo
@@ -326,15 +330,69 @@ def ado_06_seguir_mi_arbol_mi_animal(*, usuario, **datos):
     Endpoints: GET /api/v1/adopcion/mis-bienes/; GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/
     Requerimientos: RQ-48
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Ficha de un contrato para su adoptante: el bien, su seguimiento (fotos, video de siembra...), las cuotas y el saldo
+    a favor. Solo datos de ese contrato. La usan el enlace personal (sin cuenta) y /mis-bienes/ (con cuenta).
     """
-    # Por construir. Pasos sugeridos para ADO-06:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.saldo()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-06: por construir')
+    bien = models.Bien.objects.select_related('plan', 'sitio').get(pk=contrato.bien_id)
+    with connection.cursor() as cur:
+        cur.execute('select adopcion.saldo(%s)', [contrato.adoptante_id])
+        saldo = cur.fetchone()[0]
+    return {
+        'contrato': contrato.numero, 'estado': contrato.estado, 'desde': contrato.fecha,
+        'bien': {'id': bien.id, 'codigo': bien.codigo, 'nombre': bien.nombre_dado, 'plan': bien.plan.nombre,
+                 'tipo': bien.plan.tipo, 'estado': bien.estado, 'sembrado_en': bien.fecha_inicio,
+                 'sitio': bien.sitio and bien.sitio.codigo},
+        'seguimiento': list(models.Seguimiento.objects.filter(bien=bien).order_by('-fecha')
+                            .values('tipo', 'fecha', 'descripcion', 'evidencia_url')),
+        'cuotas': list(models.Cuota.objects.filter(contrato=contrato).order_by('-periodo')
+                       .values('periodo', 'valor', 'estado', 'vence_en', 'pagada_en')),
+        'saldo_a_favor': saldo,
+    }
+
+
+VIGENCIA_ENLACE = timedelta(days=365)
+
+
+def _huella(codigo):
+    return hashlib.sha256(codigo.encode()).hexdigest()
+
+
+def ado_06_emitir_enlace(*, usuario, contrato_id):
+    """Enlace personal del adoptante para seguir su bien sin crear cuenta. Revoca el anterior del mismo contrato.
+
+    Devuelve {'enlace', 'ruta', 'vence_en'}: la ruta lleva el código, que se muestra una sola vez y no se guarda
+    (la base solo tiene su huella). Quien lo pide (vendedor o el agente de WhatsApp) lo envía en ese momento.
+    """
+    # TODO(Volumen 4): el agente lo pide justo al enviarlo por WhatsApp o correo (si el adoptante lo autorizó);
+    # nunca va en el outbox, donde quedaría en claro
+    contrato = models.Contrato.objects.filter(pk=contrato_id, estado='activo').first()
+    if not contrato:
+        raise ValidationError({'contrato': 'Solo un contrato activo tiene enlace para su adoptante'})
+    codigo = secrets.token_urlsafe(32)
+    with transaction.atomic():
+        models.EnlaceAdoptante.objects.filter(contrato=contrato, revocado_en__isnull=True).update(revocado_en=timezone.now())
+        enlace = models.EnlaceAdoptante.objects.create(contrato=contrato, token_hash=_huella(codigo),
+                                                       vence_en=timezone.now() + VIGENCIA_ENLACE, emitido_por=usuario)
+    return {'enlace': enlace.id, 'ruta': f'/api/v1/publico/adopcion/{contrato.predio_id}.{codigo}/', 'vence_en': enlace.vence_en}
+
+
+def ado_06_revocar_enlace(*, usuario, enlace_id):
+    """Revoca un enlace (el adoptante lo perdió, lo compartió...). Ceder o terminar el contrato ya lo invalida solo."""
+    if not models.EnlaceAdoptante.objects.filter(pk=enlace_id, revocado_en__isnull=True).update(revocado_en=timezone.now()):
+        raise NotFound('No hay un enlace vigente con ese número')
+
+
+def ado_06_contrato_por_enlace(codigo):
+    """El contrato que deja ver el código, con la finca ya fijada. Vencido, revocado, contrato no activo o código falso
+    responden igual (404), para no dar pistas a quien prueba códigos."""
+    enlace = (models.EnlaceAdoptante.objects.select_for_update().select_related('contrato')
+              .filter(token_hash=_huella(codigo), revocado_en__isnull=True, vence_en__gt=timezone.now(),
+                      contrato__estado='activo').first())
+    if not enlace:
+        raise NotFound('El enlace no existe o ya no está vigente')
+    enlace.ultimo_uso_en = timezone.now()
+    enlace.save(update_fields=['ultimo_uso_en'])
+    return enlace.contrato
 
 
 def ado_07_detectar_abandono_poner_readopcion(*, usuario, **datos):

@@ -5,11 +5,13 @@ Cada función es la prueba del flujo principal de un caso de uso. Están marcada
 1. Quite la línea @pytest.mark.skip.
 2. Escriba la prueba del flujo principal y agregue una por cada flujo alterno de la especificación.
 3. Corra pytest desde la carpeta backend (necesita la base cargada; ver INSTALAR.md)."""
+import hashlib
 import json
 from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -463,9 +465,101 @@ def test_ado_05_cuota_pagada_no_se_cobra_otra_vez(ado_05):
     assert 'pagada' in str(r.data['estado'])
 
 
-@pytest.mark.skip(reason='ADO-06: por construir')
-def test_ado_06_seguir_mi_arbol_mi_animal_flujo_principal():
-    """ADO-06 · Seguir mi árbol o mi animal"""
+@pytest.fixture
+def ado_06(ado_05):
+    """El árbol sembrado con su cuota (ADO-05); el vendedor emite el enlace personal del adoptante."""
+    api, cuota, predio = ado_05
+    contrato, bien, adoptante = _fila('select c.id, c.bien_id, c.adoptante_id from adopcion.cuota q join adopcion.contrato c '
+                                      'on c.id = q.contrato_id where q.id = %s', cuota)
+    r = api.post(f'/api/v1/adopcion/contratos/{contrato}/enlace/')
+    assert r.status_code == 201, r.data
+    return api, r.data, contrato, bien, adoptante
+
+
+def _abrir(ruta):
+    """El adoptante abre su enlace: sin sesión."""
+    return APIClient().get(ruta)
+
+
+def test_ado_06_seguir_mi_arbol_mi_animal_flujo_principal(ado_06):
+    """ADO-06 · Con su enlace, sin cuenta, el adoptante ve su árbol, el seguimiento, la cuota y el saldo; la base guarda
+    solo la huella del código"""
+    _, enlace, _, bien, _ = ado_06
+    r = _abrir(enlace['ruta'])
+    assert r.status_code == 200, r.data
+    assert (r.data['bien']['id'], r.data['bien']['estado']) == (bien, 'activo')
+    assert [s['tipo'] for s in r.data['seguimiento']] == ['siembra']
+    assert [(c['estado'], c['valor']) for c in r.data['cuotas']] == [('pendiente', 25000)]
+    assert r.data['saldo_a_favor'] == 0
+    codigo = enlace['ruta'].rstrip('/').rsplit('.', 1)[1]
+    assert _fila('select token_hash = %s, ultimo_uso_en is not null from adopcion.enlace_adoptante where id = %s',
+                 hashlib.sha256(codigo.encode()).hexdigest(), enlace['enlace']) == (True, True)
+
+
+def test_ado_06_enlace_revocado_deja_de_servir(ado_06):
+    """Se puede revocar: el mismo enlace responde 404"""
+    api, enlace, _, _, _ = ado_06
+    assert api.post(f"/api/v1/adopcion/enlaces/{enlace['enlace']}/revocar/").status_code == 200
+    assert _abrir(enlace['ruta']).status_code == 404
+
+
+def test_ado_06_un_enlace_nuevo_revoca_el_anterior(ado_06):
+    """Emitir otro enlace para el mismo contrato deja sin efecto el anterior"""
+    api, viejo, contrato, _, _ = ado_06
+    nuevo = api.post(f'/api/v1/adopcion/contratos/{contrato}/enlace/').data
+    assert (_abrir(viejo['ruta']).status_code, _abrir(nuevo['ruta']).status_code) == (404, 200)
+
+
+def test_ado_06_contrato_terminado_o_enlace_vencido_no_sirven(ado_06):
+    """Si el contrato deja de estar activo (cedido, liquidado, abandonado) o pasan los 12 meses, el enlace ya no sirve"""
+    api, enlace, contrato, _, _ = ado_06
+    _fila("update adopcion.enlace_adoptante set vence_en = now() - interval '1 day' where id = %s returning id", enlace['enlace'])
+    assert _abrir(enlace['ruta']).status_code == 404
+    nuevo = api.post(f'/api/v1/adopcion/contratos/{contrato}/enlace/').data
+    _fila("update adopcion.contrato set estado = 'terminado_abandono' where id = %s returning id", contrato)
+    assert _abrir(nuevo['ruta']).status_code == 404
+
+
+def test_ado_06_codigo_falso_responde_404(ado_06):
+    """Un código inventado, o mal formado, no muestra nada"""
+    _, enlace, _, _, _ = ado_06
+    finca = enlace['ruta'].split('/')[-2].split('.')[0]
+    assert _abrir(f'/api/v1/publico/adopcion/{finca}.codigo-inventado/').status_code == 404
+    assert _abrir('/api/v1/publico/adopcion/sin-finca/').status_code == 404
+
+
+def test_ado_06_mis_bienes_para_el_adoptante_con_cuenta(ado_06):
+    """Quien sí se registró ve sus bienes en /mis-bienes/; otra persona no ve los ajenos"""
+    _, _, _, bien, adoptante = ado_06
+    predio = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
+
+    def cliente(tercero, correo):
+        usuario = _fila("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
+                        "values ('Adoptante de prueba', %s, 'x', %s) returning id", correo, tercero)[0]
+        _fila("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'cliente' returning id", usuario)
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=f"Bearer {emitir_tokens(get_user_model().objects.get(pk=usuario), predio)['acceso']}")
+        return c
+
+    anna = cliente(adoptante, 'anna-prb@example.com')
+    assert [b['bien']['id'] for b in anna.get('/api/v1/adopcion/mis-bienes/').data] == [bien]
+    r = anna.get(f'/api/v1/adopcion/mis-bienes/{bien}/seguimiento/')
+    assert (r.status_code, r.data['bien']['id']) == (200, bien)
+    otro = _fila("insert into terceros.tercero (tipo_persona, nombres) values ('natural', 'Otra persona') returning id")[0]
+    ajeno = cliente(otro, 'otra-prb@example.com')
+    assert ajeno.get('/api/v1/adopcion/mis-bienes/').data == []
+    assert ajeno.get(f'/api/v1/adopcion/mis-bienes/{bien}/seguimiento/').status_code == 404
+
+
+def test_ado_06_limite_de_60_por_minuto(ado_06):
+    """C: la ruta pública acepta 60 peticiones por minuto de una misma dirección"""
+    _, enlace, _, _, _ = ado_06
+    cache.clear()
+    try:
+        assert all(_abrir(enlace['ruta']).status_code == 200 for _ in range(60))
+        assert _abrir(enlace['ruta']).status_code == 429
+    finally:
+        cache.clear()  # el contador no debe afectar a otras pruebas
 
 
 @pytest.mark.skip(reason='ADO-07: por construir')
