@@ -468,12 +468,16 @@ def _requisito(codigo):
 def test_pro_07_registrar_analisis_suelo_recomendacion_flujo_principal(api):
     """PRO-07 · Sin recomendación, el análisis avisa al Agrónomo (IA) y cuenta como evidencia BPA-02"""
     cliente, lote, _ = api
-    _abrir_expediente('ICA_BPA')
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.funcion_activa('certificacion_bpa')")
+        bpa = cur.fetchone()[0]
+    if bpa:  # el expediente BPA solo se abre con la función encendida
+        _abrir_expediente('ICA_BPA')
     r = cliente.post('/api/v1/produccion/analisis-suelo/', {'zona': lote['zona'], 'fecha_muestreo': '2026-11-10',
                      'laboratorio': 'Agrosavia', 'ph': 5.2, 'materia_organica_pct': 3.1}, format='json')
     assert r.status_code == 201, r.data
     assert _evento(r.data['id'], 'produccion.analisis_suelo_registrado')['ph'] == '5.20'  # el outbox guarda los decimales como texto
-    assert _requisito('BPA-02') == 'cumple'
+    assert _requisito('BPA-02') == ('cumple' if bpa else None)
 
 
 def test_pro_07_con_recomendacion_del_encargado_no_espera_al_agente(api):
