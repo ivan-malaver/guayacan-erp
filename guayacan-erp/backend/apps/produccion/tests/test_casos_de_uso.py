@@ -450,9 +450,34 @@ def test_pro_06_siembra_perdida_no_cosecha(cosecha):
     assert r.status_code == 400
 
 
-@pytest.mark.skip(reason='PRO-07: por construir')
-def test_pro_07_registrar_analisis_suelo_recomendacion_flujo_principal():
-    """PRO-07 · Registrar un análisis de suelo y su recomendación"""
+def _requisito(codigo):
+    """Estado del requisito en el expediente de la finca, o None si la finca no tiene ese expediente."""
+    with connection.cursor() as cur:
+        cur.execute('select ev.estado from cumplimiento.evaluacion_requisito ev join cumplimiento.requisito q '
+                    'on q.id = ev.requisito_id where q.codigo = %s', [codigo])
+        return (cur.fetchone() or [None])[0]
+
+
+def test_pro_07_registrar_analisis_suelo_recomendacion_flujo_principal(api):
+    """PRO-07 · Sin recomendación, el análisis avisa al Agrónomo (IA) y cuenta como evidencia BPA-02"""
+    cliente, lote, _ = api
+    r = cliente.post('/api/v1/produccion/analisis-suelo/', {'zona': lote['zona'], 'fecha_muestreo': '2026-11-10',
+                     'laboratorio': 'Agrosavia', 'ph': 5.2, 'materia_organica_pct': 3.1}, format='json')
+    assert r.status_code == 201, r.data
+    assert _evento(r.data['id'], 'produccion.analisis_suelo_registrado')['ph'] == '5.20'  # el outbox guarda los decimales como texto
+    assert _requisito('BPA-02') in (None, 'cumple')  # None: la finca de prueba no lleva el expediente BPA
+
+
+def test_pro_07_con_recomendacion_del_encargado_no_espera_al_agente(api):
+    """2a: el encargado escribe la recomendación; no se pide al agente"""
+    cliente, lote, _ = api
+    r = cliente.post('/api/v1/produccion/analisis-suelo/', {'zona': lote['zona'], 'fecha_muestreo': '2026-11-10', 'ph': 5.2,
+                     'recomendacion': 'Encalar 1 t/ha con cal dolomita'}, format='json')
+    assert r.status_code == 201, r.data
+    with connection.cursor() as cur:
+        cur.execute("select count(*) from nucleo.evento_salida where tipo_evento = 'produccion.analisis_suelo_registrado' "
+                    "and entidad_id = %s", [r.data['id']])
+        assert cur.fetchone()[0] == 0
 
 
 @pytest.mark.skip(reason='PRO-08: por construir')

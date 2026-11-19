@@ -326,13 +326,27 @@ def pro_07_registrar_analisis_suelo_recomendacion(*, usuario, **datos):
     Requerimientos: RF-04
 
     Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Devuelve el análisis creado.
     """
-    # Por construir. Pasos sugeridos para PRO-07:
-    # 1. with transaction.atomic():
-    # 3. Guardar con el serializer (el CRUD ya lo hace) o con models.<Clase>.objects.create(...)
-    # 4. publicar('produccion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PRO-07: por construir')
+    # shortcut: el paso 4 (crear las labores planeadas) espera el plan de labores; hoy se registran con PRO-05
+    with transaction.atomic():
+        analisis = models.AnalisisSuelo.objects.create(**datos)
+        # El expediente BPA toma este registro como evidencia (BPA-02)
+        _reevaluar_expedientes('produccion.analisis_suelo')
+        if not analisis.recomendacion:
+            # El Agrónomo (IA) propone la recomendación (Volumen 4); 2a: sin agente, el encargado la escribe con PATCH
+            publicar('produccion.analisis_suelo_registrado', 'produccion.analisis_suelo', analisis.id,
+                     {'zona_id': analisis.zona_id, 'ph': analisis.ph, 'materia_organica_pct': analisis.materia_organica_pct,
+                      'aluminio_cmol_kg': analisis.aluminio_cmol_kg})
+    return analisis
+
+
+def _reevaluar_expedientes(tabla):
+    """Reevalúa ya los expedientes con un requisito que toma esta tabla como evidencia (la tarea nocturna lo repite)."""
+    with connection.cursor() as cur:
+        cur.execute('select cumplimiento.evaluar_expediente(e.id) from cumplimiento.expediente e where exists '
+                    '(select 1 from cumplimiento.requisito q where q.norma_id = e.norma_id and q.regla_evidencia = %s)',
+                    [f'registro:{tabla}'])
 
 
 def pro_08_registrar_bioseguridad_e_inocuidad(*, usuario, **datos):

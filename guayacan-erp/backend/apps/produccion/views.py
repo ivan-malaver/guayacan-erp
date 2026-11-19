@@ -168,12 +168,17 @@ class CosechaViewSet(VistaModelo):
                                                                         **serializer.validated_data)
 
 
-# CRUD de produccion.analisis_suelo en /api/v1/produccion/analisis-suelo/
+# CRUD de produccion.analisis_suelo en /api/v1/produccion/analisis-suelo/  (el alta es PRO-07)
 class AnalisisSueloViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.AnalisisSuelo.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.AnalisisSueloSerializer
+
+    def perform_create(self, serializer):
+        # Lo mismo que haría serializer.save(): la respuesta 201 se arma con este objeto
+        serializer.instance = services.pro_07_registrar_analisis_suelo_recomendacion(usuario=self.request.user,
+                                                                                     **serializer.validated_data)
 
 
 # CRUD de produccion.categoria_huevo en /api/v1/produccion/categorias-huevo/
