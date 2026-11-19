@@ -10,6 +10,7 @@ aquí mismo, debajo de los generados."""
 from rest_framework import serializers
 
 from apps.agenda.models import Visita
+from apps.personal.models import Tarea
 
 from . import models
 
@@ -118,3 +119,10 @@ class SiembraPersonaSerializer(serializers.Serializer):
     """ADO-03: lo que envía el encargado en POST /api/v1/adopcion/bienes/{id}/siembra/."""
     fecha = serializers.DateField()
     visita = serializers.PrimaryKeyRelatedField(queryset=Visita.objects.all())
+
+
+class SiembraTrabajadorSerializer(serializers.Serializer):
+    """ADO-04: lo que envía el trabajador (o el encargado) en POST /api/v1/adopcion/bienes/{id}/siembra/."""
+    fecha = serializers.DateField()
+    tarea = serializers.PrimaryKeyRelatedField(queryset=Tarea.objects.all())
+    video_url = serializers.URLField(max_length=300)  # obligatorio: sin video no hay siembra por trabajador

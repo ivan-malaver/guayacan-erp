@@ -147,19 +147,20 @@ class AvisoPago(APIView):
 
 
 class Siembra(APIView):
-    """ADO-03 · POST /api/v1/adopcion/bienes/{id}/siembra/ con {fecha, visita}: el adoptante sembró en persona.
-
-    La misma ruta servirá a ADO-04 (siembra por un trabajador, con tarea y video); hasta construirlo responde 501.
+    """POST /api/v1/adopcion/bienes/{id}/siembra/ según la modalidad del contrato:
+      ADO-03 (propia)      {fecha, visita}: el adoptante sembró en persona
+      ADO-04 (trabajador)  {fecha, tarea, video_url}: lo sembró un trabajador y el video va al adoptante
     """
 
     permission_classes = [IsAuthenticated, SoloPersonas]  # una siembra la registra quien la vio, no un agente
 
     def post(self, request, id):
         if models.Contrato.objects.filter(bien_id=id, estado='activo', modalidad_siembra='trabajador').exists():
-            return Response({'codigo': 'por_construir', 'caso_de_uso': 'ADO-04',
-                             'detalle': 'La siembra por un trabajador (ADO-04) aún no se ha construido'},
-                            status=status.HTTP_501_NOT_IMPLEMENTED)
-        datos = serializers.SiembraPersonaSerializer(data=request.data)
-        datos.is_valid(raise_exception=True)
-        bien = services.ado_03_sembrar_persona(usuario=request.user, bien_id=id, **datos.validated_data)
+            datos = serializers.SiembraTrabajadorSerializer(data=request.data)
+            datos.is_valid(raise_exception=True)
+            bien = services.ado_04_sembrar_trabajador_enviar_video(usuario=request.user, bien_id=id, **datos.validated_data)
+        else:
+            datos = serializers.SiembraPersonaSerializer(data=request.data)
+            datos.is_valid(raise_exception=True)
+            bien = services.ado_03_sembrar_persona(usuario=request.user, bien_id=id, **datos.validated_data)
         return Response(serializers.BienSerializer(bien).data)

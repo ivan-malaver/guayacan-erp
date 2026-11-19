@@ -21,6 +21,7 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.comercial.models import Factura, Pago
+from apps.personal.models import EvidenciaTarea
 from apps.terceros.models import Cliente, ConsentimientoDatos, Tercero
 from guayacan.errores import datos_del_error
 from guayacan.eventos import publicar  # noqa: F401
@@ -189,7 +190,7 @@ def ado_03_sembrar_persona(*, usuario, bien_id, **datos):
     return models.Bien.objects.get(pk=bien_id)
 
 
-def ado_04_sembrar_trabajador_enviar_video(*, usuario, **datos):
+def ado_04_sembrar_trabajador_enviar_video(*, usuario, bien_id, **datos):
     """ADO-04 · Sembrar por un trabajador y enviar el video
 
     Actores: Operario de campo; secundarios: Encargado de finca, Gestor de redes (IA)
@@ -199,17 +200,42 @@ def ado_04_sembrar_trabajador_enviar_video(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/bienes/{id}/siembra/
     Requerimientos: RQ-45
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el trabajador que sembró, o el encargado), bien_id y **datos (lo que validó
+    SiembraTrabajadorSerializer):
+      fecha      día de la siembra (el de la tarea)
+      tarea      tarea de siembra (PER-04/05) en la zona del árbol, en curso o terminada
+      video_url  video de la siembra (ya subido); obligatorio
+    Devuelve el bien sembrado (activo).
+
+    La base hace cumplir el resto: contrato activo, árbol reservado (pagado) y video (adopcion.registrar_siembra);
+    la autorización seguimiento_adopcion ya se exigió al crear el contrato (ADO-02); la evidencia solo la deja quien
+    ejecuta la tarea (personal.validar_evidencia_tarea, 403). Después el encargado aprueba la tarea (PER-06).
     """
     # TODO(datos personales): si el trabajador sale en el video, la base exige imagen_redes solo para piezas publicadas
-    # en redes, no para el video privado al adoptante; revisarlo con la política de datos antes de construir ADO-04
-    # Por construir. Pasos sugeridos para ADO-04:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.registrar_siembra(), redes.verificar_envio()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-04: por construir')
+    # en redes, no para el video privado al adoptante; revisarlo con la política de datos
+    fecha, tarea, video = datos['fecha'], datos['tarea'], datos['video_url']
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            # adopcion.registrar_siembra() no exige la función: se exige aquí (422 si está apagada)
+            cur.execute("select nucleo.exigir_funcion('adopcion')")
+            cur.execute('select s.zona_id from adopcion.bien b join adopcion.sitio s on s.id = b.sitio_id where b.id = %s', [bien_id])
+            zona = cur.fetchone()
+        if zona and tarea.zona_id != zona[0]:
+            raise ValidationError({'tarea': 'La tarea no es de la zona donde está el árbol'})
+        if tarea.fecha != fecha:
+            raise ValidationError({'fecha': 'La siembra es el día de la tarea'})
+        with connection.cursor() as cur:
+            # Árbol reservado a activo, sitio ocupado, seguimiento video_siembra y evento adopcion.sembrado con el video
+            # TODO(Volumen 4): el Gestor de redes toma adopcion.sembrado, llama a redes.verificar_envio() (ventana,
+            # plantilla y tope del canal) y envía el video al adoptante; luego marca seguimiento.enviado_al_adoptante
+            cur.execute('select adopcion.registrar_siembra(%s, %s, %s, %s)', [bien_id, fecha, tarea.id, video])
+            cur.execute("select id from adopcion.seguimiento where bien_id = %s and tipo = 'video_siembra' order by id desc limit 1",
+                        [bien_id])
+            seguimiento_id = cur.fetchone()[0]
+        # El video queda también como evidencia de la tarea, para que el encargado lo vea al aprobarla (PER-06)
+        EvidenciaTarea.objects.create(tarea=tarea, tipo='video', archivo_url=video, registro_tabla='adopcion.seguimiento',
+                                      registro_id=seguimiento_id)
+    return models.Bien.objects.get(pk=bien_id)
 
 
 def ado_05_cobrar_pagar_cuota_mensual(*, usuario, **datos):

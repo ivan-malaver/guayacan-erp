@@ -5,6 +5,7 @@ Cada función es la prueba del flujo principal de un caso de uso. Están marcada
 1. Quite la línea @pytest.mark.skip.
 2. Escriba la prueba del flujo principal y agregue una por cada flujo alterno de la especificación.
 3. Corra pytest desde la carpeta backend (necesita la base cargada; ver INSTALAR.md)."""
+import json
 from datetime import timedelta
 
 import pytest
@@ -281,19 +282,101 @@ def test_ado_03_arbol_sin_pagar_no_se_siembra(ado_02):
     assert 'contrato activo' in r.data['detalle']
 
 
-def test_ado_03_siembra_por_trabajador_espera_ado_04(ado_02):
-    """La misma ruta con modalidad trabajador responde 501 hasta construir ADO-04"""
+def _trabajador(nombre, predio_id):
+    """Un empleado con su propio usuario de operario (sin permisos de encargado). Devuelve (empleado_id, cliente)."""
+    with connection.cursor() as cur:
+        cur.execute("insert into terceros.tercero (tipo_persona, tipo_documento, numero_documento, nombres) "
+                    "values ('natural', 'CC', %s, %s) returning id", [f'PRB-{nombre}', nombre])
+        tercero = cur.fetchone()[0]
+        cur.execute("insert into terceros.empleado (tercero_id, cargo, tipo_vinculacion, fecha_ingreso) "
+                    "values (%s, 'Operario', 'jornal', '2026-01-01') returning id", [tercero])
+        empleado = cur.fetchone()[0]
+        cur.execute("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
+                    "values (%s, %s, 'x', %s) returning id", [nombre, f'prb-{nombre.lower()}@guayacan.local', tercero])
+        usuario = cur.fetchone()[0]
+        cur.execute("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'operario_granja'",
+                    [usuario])
+    cliente = APIClient()
+    tokens = emitir_tokens(get_user_model().objects.get(pk=usuario), predio_id)
+    cliente.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['acceso']}")
+    return empleado, cliente
+
+
+@pytest.fixture
+def ado_04(ado_02):
+    """El aguacate pagado con siembra por trabajador (ADO-02) y la tarea de siembra de hoy asignada a Ana y ya iniciada."""
     api, compra, bien_id = ado_02
-    c = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'modalidad_siembra': 'trabajador',
-                 'autoriza_seguimiento': True}, format='json').data
-    _avisar(c['numero'], c['predio'])
-    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': '2026-12-05'}, format='json')
-    assert (r.status_code, r.data['caso_de_uso']) == (501, 'ADO-04')
+    c = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'modalidad_siembra': 'trabajador', 'autoriza_seguimiento': True},
+                 format='json').data
+    assert _avisar(c['numero'], c['predio']).data['estado'] == 'activo'
+    zona = _fila('select s.zona_id from adopcion.bien b join adopcion.sitio s on s.id = b.sitio_id where b.id = %s', bien_id)[0]
+    ana, cliente_ana = _trabajador('Ana', c['predio'])
+    hoy = timezone.localdate().isoformat()
+
+    def tarea(zona_id=zona, iniciar=True):
+        t = api.post('/api/v1/personal/tareas/', {'titulo': 'Sembrar aguacate PRB-0001', 'fecha': hoy, 'zona': zona_id,
+                     'prioridad': 'alta', 'origen': 'manual', 'estado': 'pendiente'}, format='json').data['id']
+        assert api.patch(f'/api/v1/personal/tareas/{t}/', {'empleado': ana}, format='json').status_code == 200
+        if iniciar:
+            assert cliente_ana.patch(f'/api/v1/personal/tareas/{t}/', {'estado': 'en_curso'}, format='json').status_code == 200
+        return t
+
+    video = 'https://minio.local/evidencias/siembra-prb-0001.mp4'
+    return cliente_ana, bien_id, tarea, hoy, video, c
 
 
-@pytest.mark.skip(reason='ADO-04: por construir')
-def test_ado_04_sembrar_trabajador_enviar_video_flujo_principal():
-    """ADO-04 · Sembrar por un trabajador y enviar el video"""
+def test_ado_04_sembrar_trabajador_enviar_video_flujo_principal(ado_04):
+    """ADO-04 · Ana siembra en su tarea y sube el video: el árbol pasa a activo, el video queda en el seguimiento y como
+    evidencia de la tarea, y sale adopcion.sembrado con el video para el Gestor de redes"""
+    ana, bien_id, tarea, hoy, video, _ = ado_04
+    t = tarea()
+    r = ana.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'tarea': t, 'video_url': video}, format='json')
+    assert r.status_code == 200, r.data
+    assert r.data['estado'] == 'activo'
+    assert _fila("select tipo, evidencia_url, tarea_id from adopcion.seguimiento where bien_id = %s", bien_id) == ('video_siembra', video, t)
+    assert _fila("select tipo, archivo_url, registro_tabla from personal.evidencia_tarea where tarea_id = %s", t) == (
+        'video', video, 'adopcion.seguimiento')
+    carga = _fila("select carga from nucleo.evento_salida where tipo_evento = 'adopcion.sembrado' and entidad_id = %s", bien_id)[0]
+    assert json.loads(carga)['video'] == video
+
+
+def test_ado_04_sin_video_no_hay_siembra(ado_04):
+    """Apéndice A: la siembra por un trabajador exige el video para el adoptante"""
+    ana, bien_id, tarea, hoy, _, _ = ado_04
+    r = ana.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'tarea': tarea()}, format='json')
+    assert r.status_code == 400
+    assert 'video_url' in r.data
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('reservado',)
+
+
+def test_ado_04_trabajador_no_asignado_recibe_403(ado_04):
+    """Solo quien ejecuta la tarea deja su evidencia (regla de PER-05 en la base): nada queda a medias"""
+    _, bien_id, tarea, hoy, video, c = ado_04
+    _, beto = _trabajador('Beto', c['predio'])
+    r = beto.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'tarea': tarea(), 'video_url': video}, format='json')
+    assert (r.status_code, r.data['codigo']) == (403, 'sin_permiso')
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('reservado',)
+
+
+def test_ado_04_tarea_sin_iniciar_no_recibe_el_video(ado_04):
+    """La tarea debe estar en curso o terminada para recibir la evidencia"""
+    ana, bien_id, tarea, hoy, video, _ = ado_04
+    r = ana.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'tarea': tarea(iniciar=False), 'video_url': video},
+                 format='json')
+    assert r.status_code == 422
+    assert 'en curso o terminada' in r.data['detalle']
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('reservado',)
+
+
+def test_ado_04_tarea_de_otra_zona_no_sirve(ado_04):
+    """La tarea de siembra es la de la zona donde está el árbol"""
+    ana, bien_id, tarea, hoy, video, _ = ado_04
+    otra = _fila('select id from nucleo.zona where id <> (select s.zona_id from adopcion.bien b join adopcion.sitio s '
+                 'on s.id = b.sitio_id where b.id = %s) order by id limit 1', bien_id)[0]
+    r = ana.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'tarea': tarea(zona_id=otra), 'video_url': video},
+                 format='json')
+    assert r.status_code == 400
+    assert 'zona' in str(r.data['tarea'])
 
 
 @pytest.mark.skip(reason='ADO-05: por construir')
