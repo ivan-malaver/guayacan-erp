@@ -75,7 +75,9 @@ class PasoTareaSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.PasoTarea  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # PER-05: la hora en que se marcó la pone la base (o la sincronización con la hora del celular)
+        read_only_fields = SOLO_LECTURA + ('hecho_en',)
+        extra_kwargs = {'hecho': {'required': False}}  # nace sin marcar
 
 
 # personal.evidencia_tarea <-> JSON en /api/v1/personal/tareas/{id}/evidencias/

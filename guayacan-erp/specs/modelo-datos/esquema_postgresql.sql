@@ -2166,6 +2166,7 @@ create table personal.paso_tarea (
     descripcion varchar(200) not null,
     hecho boolean not null default false,
     hecho_en timestamptz,
+    observacion varchar(200),
     id_cliente uuid unique,
     capturado_en timestamptz,
     dispositivo_captura_id bigint,
@@ -2179,7 +2180,7 @@ create table personal.evidencia_tarea (
     id bigint generated always as identity primary key,
     predio_id bigint not null default nucleo.predio_actual(),
     tarea_id bigint not null,
-    tipo text not null constraint ck_evidencia_tarea_tipo check (tipo in ('foto', 'lectura_qr', 'lectura_nfc', 'nota_voz', 'documento', 'registro')),
+    tipo text not null constraint ck_evidencia_tarea_tipo check (tipo in ('foto', 'video', 'lectura_qr', 'lectura_nfc', 'nota_voz', 'documento', 'registro')),
     archivo_url varchar(300),
     registro_tabla varchar(60),
     registro_id bigint,
@@ -7434,11 +7435,27 @@ returns boolean language sql stable as $$
   select exists (select 1 from formacion.habilitacion h where h.tercero_id = p_tercero and h.competencia_id = p_competencia
                  and h.activa and h.desde <= p_fecha and (h.hasta is null or h.hasta >= p_fecha)) $$;
 
+create or replace function personal.puede_ejecutar_tarea(p_usuario bigint, p_empleado bigint, p_cuadrilla bigint, p_fecha date)
+returns boolean language sql stable as $$
+  select nucleo.tiene_permiso(p_usuario, 'personal.asignar_tarea')
+      or exists (select 1 from terceros.empleado e join nucleo.usuario u on u.tercero_id = e.tercero_id
+                 where u.id = p_usuario and (e.id = p_empleado
+                   or exists (select 1 from personal.cuadrilla_miembro m where m.cuadrilla_id = p_cuadrilla and m.empleado_id = e.id
+                              and m.desde <= p_fecha and (m.hasta is null or m.hasta >= p_fecha)))) $$;
+comment on function personal.puede_ejecutar_tarea(bigint, bigint, bigint, date) is 'Quién ejecuta una tarea: el trabajador asignado, un miembro de la cuadrilla asignada ese día o quien tiene personal.asignar_tarea';
+
 create or replace function personal.validar_tarea() returns trigger language plpgsql as $$
 declare v_comp bigint; v_ter bigint; v_emp record;
 begin
   if tg_op = 'UPDATE' and old.estado in ('aprobada', 'cancelada') then
     raise exception 'La tarea % está %: no se edita', old.id, old.estado;
+  end if;
+  -- PER-05: iniciar o terminar la tarea lo hace quien la ejecuta; vale también para la sincronización sin conexión
+  if new.estado in ('en_curso', 'terminada') and (tg_op = 'INSERT' or old.estado is distinct from new.estado)
+     and nucleo.usuario_actual() is not null
+     and not personal.puede_ejecutar_tarea(nucleo.usuario_actual(), new.empleado_id, new.cuadrilla_id, new.fecha) then
+    raise exception 'Solo el trabajador asignado, su cuadrilla o quien asigna tareas puede iniciar o terminar la tarea %', new.id
+      using errcode = '42501';
   end if;
   if nucleo.agente_actual() is not null and (new.empleado_id is not null or new.cuadrilla_id is not null)
      and (tg_op = 'INSERT' or new.empleado_id is distinct from old.empleado_id or new.cuadrilla_id is distinct from old.cuadrilla_id) then
@@ -7466,7 +7483,12 @@ begin
     end loop;
   end if;
   if new.estado = 'en_curso' and (tg_op = 'INSERT' or old.estado <> 'en_curso') then new.iniciada_en := coalesce(new.iniciada_en, now()); end if;
-  if new.estado = 'terminada' and (tg_op = 'INSERT' or old.estado <> 'terminada') then new.terminada_en := coalesce(new.terminada_en, now()); end if;
+  if new.estado = 'terminada' and (tg_op = 'INSERT' or old.estado <> 'terminada') then
+    new.terminada_en := coalesce(new.terminada_en, now());
+    -- PER-05: aviso al aprobador (PER-06) desde la base, así sale igual con conexión o por la sincronización
+    insert into nucleo.evento_salida (tipo_evento, entidad, entidad_id, carga) values ('personal.tarea_terminada', 'personal.tarea', new.id,
+      jsonb_build_object('titulo', new.titulo, 'empleado_id', new.empleado_id, 'cuadrilla_id', new.cuadrilla_id, 'area_id', new.area_id, 'cantidad', new.cantidad));
+  end if;
   if new.estado in ('aprobada', 'devuelta') and (tg_op = 'INSERT' or old.estado <> new.estado) then
     perform nucleo.exigir_persona('aprobar o devolver tareas');
     if tg_op = 'INSERT' or old.estado <> 'terminada' then raise exception 'Solo se aprueba o devuelve una tarea terminada'; end if;
@@ -7486,21 +7508,40 @@ end $$;
 create trigger tg_tarea_validar before insert or update on personal.tarea for each row execute function personal.validar_tarea();
 
 create or replace function personal.validar_paso_tarea() returns trigger language plpgsql as $$
-declare v_estado text;
+declare t personal.tarea;
 begin
-  select estado into v_estado from personal.tarea where id = new.tarea_id;
-  if tg_op = 'UPDATE' and v_estado in ('aprobada', 'cancelada') then
-    raise exception 'La tarea % está %: sus pasos no se editan', new.tarea_id, v_estado;
+  select * into t from personal.tarea where id = new.tarea_id;
+  if tg_op = 'UPDATE' and t.estado in ('aprobada', 'cancelada') then
+    raise exception 'La tarea % está %: sus pasos no se editan', new.tarea_id, t.estado;
+  end if;
+  if (tg_op = 'INSERT' and new.hecho) or (tg_op = 'UPDATE' and (new.hecho is distinct from old.hecho or new.observacion is distinct from old.observacion)) then
+    if nucleo.usuario_actual() is not null and not personal.puede_ejecutar_tarea(nucleo.usuario_actual(), t.empleado_id, t.cuadrilla_id, t.fecha) then
+      raise exception 'Solo el trabajador asignado, su cuadrilla o quien asigna tareas marca los pasos de la tarea %', t.id using errcode = '42501';
+    end if;
   end if;
   if new.hecho and (tg_op = 'INSERT' or not old.hecho) then
-    if v_estado <> 'en_curso' then
-      raise exception 'Solo se marcan pasos de una tarea en curso (la tarea % está %)', new.tarea_id, v_estado;
+    if t.estado <> 'en_curso' then
+      raise exception 'Solo se marcan pasos de una tarea en curso (la tarea % está %)', new.tarea_id, t.estado;
     end if;
     new.hecho_en := coalesce(new.hecho_en, now());
   end if;
   return new;
 end $$;
 create trigger tg_paso_tarea_validar before insert or update on personal.paso_tarea for each row execute function personal.validar_paso_tarea();
+
+create or replace function personal.validar_evidencia_tarea() returns trigger language plpgsql as $$
+declare t personal.tarea;
+begin
+  select * into t from personal.tarea where id = new.tarea_id;
+  if t.estado not in ('en_curso', 'terminada') then
+    raise exception 'Solo se dejan evidencias de una tarea en curso o terminada (la tarea % está %)', t.id, t.estado;
+  end if;
+  if nucleo.usuario_actual() is not null and not personal.puede_ejecutar_tarea(nucleo.usuario_actual(), t.empleado_id, t.cuadrilla_id, t.fecha) then
+    raise exception 'Solo el trabajador asignado, su cuadrilla o quien asigna tareas deja evidencias de la tarea %', t.id using errcode = '42501';
+  end if;
+  return new;
+end $$;
+create trigger tg_evidencia_tarea_validar before insert or update on personal.evidencia_tarea for each row execute function personal.validar_evidencia_tarea();
 create trigger tg_tarea_no_borrar before delete on personal.tarea for each row execute function nucleo.impedir_cambio();
 
 create or replace function personal.generar_tareas_del_dia(p_fecha date default current_date) returns integer language plpgsql as $$
@@ -11070,6 +11111,7 @@ comment on column personal.paso_tarea.orden is 'Orden';
 comment on column personal.paso_tarea.descripcion is 'Paso';
 comment on column personal.paso_tarea.hecho is 'Marcado';
 comment on column personal.paso_tarea.hecho_en is 'Cuándo';
+comment on column personal.paso_tarea.observacion is 'Por qué no se pudo hacer, o una novedad del paso';
 comment on column personal.paso_tarea.id_cliente is 'Identificador UUIDv7 que genera el celular al capturar sin conexión; si llega dos veces, la segunda se ignora (sincronización idempotente)';
 comment on column personal.paso_tarea.capturado_en is 'Momento en que se registró en el celular (puede ser horas antes de llegar al servidor)';
 comment on column personal.paso_tarea.dispositivo_captura_id is 'Celular, lector o báscula con que se capturó';
@@ -11079,7 +11121,7 @@ comment on table personal.evidencia_tarea is 'Prueba de una tarea: foto, lectura
 comment on column personal.evidencia_tarea.id is 'Identificador interno (número consecutivo generado por la base de datos)';
 comment on column personal.evidencia_tarea.predio_id is 'Finca a la que pertenece el registro; lo pone la base según la sesión y la seguridad por filas impide ver otras fincas';
 comment on column personal.evidencia_tarea.tarea_id is 'Tarea';
-comment on column personal.evidencia_tarea.tipo is 'Tipo (valores: foto, lectura_qr, lectura_nfc, nota_voz, documento, registro)';
+comment on column personal.evidencia_tarea.tipo is 'Tipo (valores: foto, video, lectura_qr, lectura_nfc, nota_voz, documento, registro)';
 comment on column personal.evidencia_tarea.archivo_url is 'Archivo';
 comment on column personal.evidencia_tarea.registro_tabla is 'Tabla del registro creado, ej. produccion.registro_postura';
 comment on column personal.evidencia_tarea.registro_id is 'Id del registro';

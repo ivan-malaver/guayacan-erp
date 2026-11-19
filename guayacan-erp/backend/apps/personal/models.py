@@ -266,6 +266,7 @@ class PasoTarea(models.Model):
     descripcion = models.CharField(max_length=200, db_comment='Paso')
     hecho = models.BooleanField(db_default=False, db_comment='Marcado')
     hecho_en = models.DateTimeField(null=True, blank=True, db_comment='Cuándo')
+    observacion = models.CharField(max_length=200, null=True, blank=True, db_comment='Por qué no se pudo hacer, o una novedad del paso')
     # Captura sin conexión: el celular genera id_cliente (UUIDv7); si el mismo registro llega dos veces,
     # la base lo detecta por este campo único y no lo duplica (ver guayacan/sincronizacion.py)
     id_cliente = models.UUIDField(null=True, blank=True, unique=True, db_comment='UUIDv7 del celular (sincronización idempotente)')
@@ -296,7 +297,7 @@ class EvidenciaTarea(models.Model):
     predio = models.ForeignKey('nucleo.Predio', models.DO_NOTHING, db_column='predio_id', related_name='+', db_constraint=False, editable=False, db_default=sql('nucleo.predio_actual()'), db_comment='Finca dueña del registro; la pone la base según la sesión (RLS)')
     # Columnas propias de la tabla (db_comment explica cada una; también está en el diccionario de datos)
     tarea = models.ForeignKey('personal.Tarea', models.DO_NOTHING, db_column='tarea_id', related_name='+', db_constraint=False, db_comment='Tarea')
-    tipo = models.CharField(max_length=11, choices=[('foto', 'foto'), ('lectura_qr', 'lectura_qr'), ('lectura_nfc', 'lectura_nfc'), ('nota_voz', 'nota_voz'), ('documento', 'documento'), ('registro', 'registro')], db_comment='Tipo')
+    tipo = models.CharField(max_length=11, choices=[('foto', 'foto'), ('video', 'video'), ('lectura_qr', 'lectura_qr'), ('lectura_nfc', 'lectura_nfc'), ('nota_voz', 'nota_voz'), ('documento', 'documento'), ('registro', 'registro')], db_comment='Tipo')
     archivo_url = models.CharField(max_length=300, null=True, blank=True, db_comment='Archivo')
     registro_tabla = models.CharField(max_length=60, null=True, blank=True, db_comment='Tabla del registro creado, ej. produccion.registro_postura')
     registro_id = models.BigIntegerField(null=True, blank=True, db_comment='Id del registro')

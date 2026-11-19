@@ -74,6 +74,10 @@ class TareaViewSet(VistaModelo):
         if {'empleado', 'cuadrilla'} & serializer.validated_data.keys():
             serializer.instance = services.per_04_asignar_tarea(usuario=self.request.user, tarea=serializer.instance,
                                                                 **serializer.validated_data)
+        elif 'estado' in serializer.validated_data:
+            # PER-05: iniciar o terminar (las reglas de quién y cuándo están en la base)
+            serializer.instance = services.per_05_ejecutar_tarea_evidencia(usuario=self.request.user, tarea=serializer.instance,
+                                                                           **serializer.validated_data)
         else:
             serializer.save()
 
@@ -89,6 +93,10 @@ class PasoTareaViewSet(VistaModelo):
     queryset = models.PasoTarea.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.PasoTareaSerializer
+
+    def perform_update(self, serializer):
+        serializer.save()
+        serializer.instance.refresh_from_db()  # PER-05: hecho_en lo pone la base al marcar el paso
 
 
 # CRUD de personal.evidencia_tarea en /api/v1/personal/tareas/{id}/evidencias/

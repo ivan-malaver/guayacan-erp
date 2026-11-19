@@ -1311,10 +1311,11 @@ tabla('personal', 'paso_tarea', 2, 'Paso de la lista de chequeo de una tarea.', 
     ('descripcion', 'varchar(200)', 'not null', 'Paso'),
     ('hecho', 'boolean', 'not null default false', 'Marcado'),
     ('hecho_en', 'timestamptz', '', 'Cuándo'),
+    ('observacion', 'varchar(200)', '', 'Por qué no se pudo hacer, o una novedad del paso'),
 ], ['unique (tarea_id, orden)'])
 tabla('personal', 'evidencia_tarea', 2, 'Prueba de una tarea: foto, lectura del carné o del lote, nota de voz o el registro que creó.', [
     ('tarea_id', 'fk:personal.tarea', 'not null', 'Tarea'),
-    ('tipo', 'enum:foto,lectura_qr,lectura_nfc,nota_voz,documento,registro', 'not null', 'Tipo'),
+    ('tipo', 'enum:foto,video,lectura_qr,lectura_nfc,nota_voz,documento,registro', 'not null', 'Tipo'),
     ('archivo_url', 'varchar(300)', '', 'Archivo'),
     ('registro_tabla', 'varchar(60)', '', 'Tabla del registro creado, ej. produccion.registro_postura'),
     ('registro_id', 'bigint', '', 'Id del registro'),

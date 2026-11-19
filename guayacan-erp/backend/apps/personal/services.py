@@ -125,7 +125,7 @@ def per_04_candidatos(*, tarea_id):
         return [dict(zip(('empleado', 'nombre', 'cargo', 'con_turno'), fila, strict=True)) for fila in cur.fetchall()]
 
 
-def per_05_ejecutar_tarea_evidencia(*, usuario, **datos):
+def per_05_ejecutar_tarea_evidencia(*, usuario, tarea, **datos):
     """PER-05 · Ejecutar una tarea con evidencia
 
     Actores: Operario de campo
@@ -135,14 +135,21 @@ def per_05_ejecutar_tarea_evidencia(*, usuario, **datos):
     Endpoints: CRUD de sus tablas
     Requerimientos: RQ-28, RNF-03
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el trabajador), tarea y **datos (lo que validó TareaSerializer: estado en_curso o terminada,
+    cantidad...). Devuelve la tarea.
+
+    Todas las reglas están en la base porque la sincronización sin conexión (NUC-05) no pasa por aquí:
+    - quién: solo el trabajador asignado, su cuadrilla o quien tiene personal.asignar_tarea (403 si no);
+    - horas de inicio y fin, y el aviso personal.tarea_terminada al aprobador (personal.validar_tarea);
+    - pasos solo en una tarea en curso (personal.validar_paso_tarea) y evidencias solo en curso o terminada
+      (personal.validar_evidencia_tarea). Pasos y evidencias se guardan con su CRUD anidado.
     """
-    # Por construir. Pasos sugeridos para PER-05:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: personal.validar_tarea()
-    # 4. publicar('personal.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('PER-05: por construir')
+    with transaction.atomic():
+        for campo, valor in datos.items():
+            setattr(tarea, campo, valor)
+        tarea.save()
+        tarea.refresh_from_db()  # las horas de inicio y fin las puso el disparador de la base
+    return tarea
 
 
 def per_06_aprobar_devolver_tarea(*, usuario, **datos):

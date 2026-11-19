@@ -2206,6 +2206,7 @@ Paso de la lista de chequeo de una tarea.
 | `descripcion` | varchar(200) | no |  | Paso |
 | `hecho` | boolean | no |  | Marcado |
 | `hecho_en` | timestamptz | sí |  | Cuándo |
+| `observacion` | varchar(200) | sí |  | Por qué no se pudo hacer, o una novedad del paso |
 
 ### `personal.evidencia_tarea` · Fase 2 · por finca · captura sin conexión
 
@@ -2214,7 +2215,7 @@ Prueba de una tarea: foto, lectura del carné o del lote, nota de voz o el regis
 | Campo | Tipo | Vacío | Referencia | Significado |
 | --- | --- | --- | --- | --- |
 | `tarea_id` | bigint | no | `personal.tarea` | Tarea |
-| `tipo` | text (lista) | no |  | Tipo · valores: foto, lectura_qr, lectura_nfc, nota_voz, documento, registro |
+| `tipo` | text (lista) | no |  | Tipo · valores: foto, video, lectura_qr, lectura_nfc, nota_voz, documento, registro |
 | `archivo_url` | varchar(300) | sí |  | Archivo |
 | `registro_tabla` | varchar(60) | sí |  | Tabla del registro creado, ej. produccion.registro_postura |
 | `registro_id` | bigint | sí |  | Id del registro |

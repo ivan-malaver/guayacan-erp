@@ -1500,6 +1500,7 @@ personal,paso_tarea,Fase 2,orden,smallint,no,,,,Orden
 personal,paso_tarea,Fase 2,descripcion,varchar(200),no,,,,Paso
 personal,paso_tarea,Fase 2,hecho,boolean,no,false,,,Marcado
 personal,paso_tarea,Fase 2,hecho_en,timestamptz,sí,,,,Cuándo
+personal,paso_tarea,Fase 2,observacion,varchar(200),sí,,,,"Por qué no se pudo hacer, o una novedad del paso"
 personal,paso_tarea,Fase 2,id_cliente,uuid,sí,,único,,"Identificador UUIDv7 que genera el celular al capturar sin conexión; si llega dos veces, la segunda se ignora (sincronización idempotente)"
 personal,paso_tarea,Fase 2,capturado_en,timestamptz,sí,,,,Momento en que se registró en el celular (puede ser horas antes de llegar al servidor)
 personal,paso_tarea,Fase 2,dispositivo_captura_id,bigint,sí,,,nucleo.dispositivo_captura,"Celular, lector o báscula con que se capturó"
@@ -1508,7 +1509,7 @@ personal,paso_tarea,Fase 2,actualizado_en,timestamptz,no,now(),,,Fecha y hora de
 personal,evidencia_tarea,Fase 2,id,bigint,no,identidad,llave primaria,,Identificador interno (número consecutivo generado por la base de datos)
 personal,evidencia_tarea,Fase 2,predio_id,bigint,no,predio de la sesión,RLS,nucleo.predio,Finca a la que pertenece el registro; lo pone la base según la sesión y la seguridad por filas impide ver otras fincas
 personal,evidencia_tarea,Fase 2,tarea_id,bigint,no,,,personal.tarea,Tarea
-personal,evidencia_tarea,Fase 2,tipo,text (lista),no,,"valores: foto, lectura_qr, lectura_nfc, nota_voz, documento, registro",,Tipo
+personal,evidencia_tarea,Fase 2,tipo,text (lista),no,,"valores: foto, video, lectura_qr, lectura_nfc, nota_voz, documento, registro",,Tipo
 personal,evidencia_tarea,Fase 2,archivo_url,varchar(300),sí,,,,Archivo
 personal,evidencia_tarea,Fase 2,registro_tabla,varchar(60),sí,,,,"Tabla del registro creado, ej. produccion.registro_postura"
 personal,evidencia_tarea,Fase 2,registro_id,bigint,sí,,,,Id del registro

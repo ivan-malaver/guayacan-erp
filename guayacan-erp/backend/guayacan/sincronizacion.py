@@ -51,7 +51,7 @@ from .errores import datos_del_error
 # None = cualquier valor que acepte el serializer de la tabla; un conjunto = solo esos valores.
 ACTUALIZABLES = {
     'personal.tarea': {'estado': {'en_curso', 'terminada'}, 'cantidad': None},
-    'personal.paso_tarea': {'hecho': None},
+    'personal.paso_tarea': {'hecho': None, 'observacion': None},
 }
 # La hora de un cambio sin conexión es la del celular, no la de la sincronización
 HORA_DEL_CAMBIO = {

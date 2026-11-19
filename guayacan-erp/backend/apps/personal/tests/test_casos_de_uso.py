@@ -151,9 +151,77 @@ def test_per_04_candidatos_del_area_disponibles(per):
     assert ana not in [c['empleado'] for c in cliente.get(f'/api/v1/personal/tareas/{tarea}/candidatos/').data]
 
 
-@pytest.mark.skip(reason='PER-05: por construir')
-def test_per_05_ejecutar_tarea_evidencia_flujo_principal():
-    """PER-05 · Ejecutar una tarea con evidencia"""
+def _cliente_de(empleado_id):
+    """El trabajador inicia sesión con su propio usuario (rol operario, sin permiso para asignar tareas)."""
+    tercero, predio = _sql('select tercero_id, predio_id from terceros.empleado where id = %s', empleado_id)
+    usuario = _sql("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
+                   "values ('Trabajador de prueba', %s, 'x', %s) returning id", f'prb{empleado_id}@guayacan.local', tercero)[0]
+    _sql("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'operario_granja'", usuario)
+    cliente = APIClient()
+    tokens = emitir_tokens(get_user_model().objects.get(pk=usuario), predio)
+    cliente.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['acceso']}")
+    return cliente
+
+
+@pytest.fixture
+def ejecucion(per):
+    """La tarea de PER-04 asignada a Ana, con un paso; Ana y Beto (no asignado) con su propia sesión."""
+    encargado, tarea, ana, beto = per
+    assert _asignar(encargado, tarea, empleado=ana).status_code == 200
+    r = encargado.post(f'/api/v1/personal/tareas/{tarea}/pasos/', {'tarea': tarea, 'orden': 1, 'descripcion': 'Desinfectar botas'},
+                       format='json')
+    assert r.status_code == 201, r.data
+    return tarea, r.data['id'], _cliente_de(ana), _cliente_de(beto)
+
+
+def test_per_05_ejecutar_tarea_evidencia_flujo_principal(ejecucion):
+    """PER-05 · Ana inicia, marca el paso con una novedad, deja el video y termina con la cantidad; sale el aviso al aprobador"""
+    tarea, paso, ana, _ = ejecucion
+    r = _asignar(ana, tarea, estado='en_curso')
+    assert (r.status_code, r.data['estado'], r.data['iniciada_en'] is not None) == (200, 'en_curso', True), r.data
+    r = ana.patch(f'/api/v1/personal/tareas/{tarea}/pasos/{paso}/', {'hecho': True, 'observacion': 'Sin cal en el pediluvio'}, format='json')
+    assert (r.status_code, r.data['hecho'], r.data['hecho_en'] is not None) == (200, True, True), r.data
+    r = ana.post(f'/api/v1/personal/tareas/{tarea}/evidencias/', {'tarea': tarea, 'tipo': 'video',
+                 'archivo_url': 'https://minio.local/evidencias/siembra.mp4'}, format='json')
+    assert r.status_code == 201, r.data
+    r = _asignar(ana, tarea, estado='terminada', cantidad=380)
+    assert (r.status_code, r.data['estado'], r.data['terminada_en'] is not None) == (200, 'terminada', True), r.data
+    carga = _sql("select carga from nucleo.evento_salida where tipo_evento = 'personal.tarea_terminada' and entidad_id = %s", tarea)[0]
+    assert json.loads(carga)['cantidad'] == 380
+
+
+def test_per_05_trabajador_no_asignado_recibe_403(ejecucion):
+    """Quién ejecuta: Beto no está asignado; iniciar la tarea responde 403 y la tarea sigue pendiente"""
+    tarea, _, _, beto = ejecucion
+    r = _asignar(beto, tarea, estado='en_curso')
+    assert (r.status_code, r.data['codigo']) == (403, 'sin_permiso')
+    assert _sql('select estado from personal.tarea where id = %s', tarea) == ('pendiente',)
+
+
+def test_per_05_no_asignado_tampoco_sin_conexion(ejecucion):
+    """La regla está en la base: por la sincronización sin conexión Beto tampoco la inicia"""
+    tarea, _, _, beto = ejecucion
+    r = beto.post('/api/v1/sincronizacion/lote/', {'registros': [{
+        'tabla': 'personal.tarea', 'operacion': 'actualizar', 'id': tarea, 'id_cliente': '0193a1b2-0000-7000-8000-000000000001',
+        'capturado_en': '2026-11-19T06:00:00-05:00', 'datos': {'estado': 'en_curso'}}]}, format='json')
+    assert r.data['resultados'][0]['estado'] == 'rechazado'
+    assert 'Solo el trabajador asignado' in r.data['resultados'][0]['detalle']
+
+
+def test_per_05_evidencia_solo_en_tarea_iniciada(ejecucion):
+    """Una tarea pendiente todavía no recibe evidencias"""
+    tarea, _, ana, _ = ejecucion
+    r = ana.post(f'/api/v1/personal/tareas/{tarea}/evidencias/', {'tarea': tarea, 'tipo': 'foto',
+                 'archivo_url': 'https://minio.local/evidencias/1.jpg'}, format='json')
+    assert r.status_code == 422
+    assert 'en curso o terminada' in r.data['detalle']
+
+
+def test_per_05_miembro_de_la_cuadrilla_la_ejecuta(per):
+    """La tarea asignada a una cuadrilla la inicia cualquiera de sus miembros"""
+    encargado, tarea, ana, _ = per
+    assert _asignar(encargado, tarea, cuadrilla=_cuadrilla(ana)).status_code == 200
+    assert _asignar(_cliente_de(ana), tarea, estado='en_curso').status_code == 200
 
 
 @pytest.mark.skip(reason='PER-06: por construir')
