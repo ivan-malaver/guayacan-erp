@@ -5,9 +5,12 @@ Cada función es la prueba del flujo principal de un caso de uso. Están marcada
 1. Quite la línea @pytest.mark.skip.
 2. Escriba la prueba del flujo principal y agregue una por cada flujo alterno de la especificación.
 3. Corra pytest desde la carpeta backend (necesita la base cargada; ver INSTALAR.md)."""
+from datetime import timedelta
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import connection
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from guayacan.autenticacion import emitir_tokens
@@ -200,9 +203,92 @@ def test_ado_02_aviso_repetido_no_duplica_la_factura(ado_02):
     assert _fila('select count(*) from comercial.pago where referencia = %s', f"{r.data['predio']}:{r.data['numero']}") == (1,)
 
 
-@pytest.mark.skip(reason='ADO-03: por construir')
-def test_ado_03_sembrar_persona_flujo_principal():
-    """ADO-03 · Sembrar en persona"""
+@pytest.fixture
+def ado_03(ado_02):
+    """El aguacate pagado (ADO-02, reservado) y una función que arma la visita de una persona: registrada,
+    aprobada (AGD-03) y, si entra, con su paso por portería (AGD-04)."""
+    api, compra, bien_id = ado_02
+    c = api.post('/api/v1/adopcion/contratos/compra/', compra, format='json').data
+    assert _avisar(c['numero'], c['predio']).data['estado'] == 'activo'
+    ahora = timezone.now()
+
+    def visita(tercero_id=c['adoptante'], entra=True):
+        v = api.post('/api/v1/agenda/visitas/', {
+            'tipo': 'turista', 'nombre': 'Anna Schmidt', 'tercero': tercero_id, 'motivo': 'Sembrar su aguacate',
+            'ingreso_programado': (ahora + timedelta(minutes=10)).isoformat(),
+            'salida_programada': (ahora + timedelta(hours=3)).isoformat()}, format='json').data
+        assert api.post(f"/api/v1/agenda/visitas/{v['id']}/aprobar/", {'decision': 'aprobar'}, format='json').status_code == 200
+        if entra:
+            codigo = api.post(f"/api/v1/agenda/visitas/{v['id']}/pase/").data['codigo_pase']
+            r = api.post('/api/v1/agenda/registros-acceso/', {'sentido': 'entrada', 'tipo': 'persona', 'codigo_pase': codigo}, format='json')
+            assert r.status_code == 201, r.data
+        return v['id']
+
+    hoy = timezone.localdate(ahora + timedelta(minutes=10)).isoformat()
+    return api, bien_id, visita, hoy, c
+
+
+def test_ado_03_sembrar_persona_flujo_principal(ado_03):
+    """ADO-03 · El adoptante entró por portería y sembró: el árbol pasa a activo, el sitio a ocupado y queda el seguimiento"""
+    api, bien_id, visita, hoy, c = ado_03
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'visita': visita()}, format='json')
+    assert r.status_code == 200, r.data
+    assert (r.data['estado'], r.data['fecha_inicio']) == ('activo', hoy)
+    assert _fila('select s.estado from adopcion.sitio s join adopcion.bien b on b.sitio_id = s.id where b.id = %s', bien_id) == ('ocupado',)
+    # Solo el comienzo del texto: la base local tiene las tildes de las funciones originales mal codificadas (TODO carga limpia)
+    assert _fila("select tipo, descripcion like 'Sembrado por su %%' from adopcion.seguimiento where bien_id = %s", bien_id) == (
+        'siembra', True)
+    assert _fila("select count(*) from nucleo.evento_salida where tipo_evento = 'adopcion.sembrado' and entidad_id = %s", bien_id) == (1,)
+
+
+def test_ado_03_visita_de_otra_persona_no_sirve(ado_03):
+    """La visita debe ser del adoptante del árbol"""
+    api, bien_id, visita, hoy, _ = ado_03
+    with connection.cursor() as cur:
+        cur.execute("insert into terceros.tercero (tipo_persona, nombres) values ('natural', 'Otra persona') returning id")
+        otro = cur.fetchone()[0]
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'visita': visita(tercero_id=otro)}, format='json')
+    assert r.status_code == 400
+    assert 'adoptante' in str(r.data['visita'])
+
+
+def test_ado_03_sin_paso_por_porteria_no_siembra(ado_03):
+    """Visita aprobada pero sin entrada en portería: no hay prueba de que vino"""
+    api, bien_id, visita, hoy, _ = ado_03
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': hoy, 'visita': visita(entra=False)}, format='json')
+    assert r.status_code == 400
+    assert 'no ha entrado' in str(r.data['visita'])
+    assert _fila('select estado from adopcion.bien where id = %s', bien_id) == ('reservado',)
+
+
+def test_ado_03_otro_dia_que_la_visita_no_siembra(ado_03):
+    """La siembra en persona es el día de la visita"""
+    api, bien_id, visita, _, _ = ado_03
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': '2027-01-01', 'visita': visita()}, format='json')
+    assert r.status_code == 400
+    assert 'fecha' in r.data
+
+
+def test_ado_03_arbol_sin_pagar_no_se_siembra(ado_02):
+    """Sin pago confirmado no hay contrato activo: la base lo rechaza"""
+    api, compra, bien_id = ado_02
+    api.post('/api/v1/adopcion/contratos/compra/', compra, format='json')  # queda pendiente_pago
+    visita = api.post('/api/v1/agenda/visitas/', {'tipo': 'turista', 'nombre': 'Anna Schmidt', 'motivo': 'Sembrar',
+                      'ingreso_programado': '2026-12-05T09:00:00-05:00', 'salida_programada': '2026-12-05T12:00:00-05:00'},
+                      format='json').data['id']
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': '2026-12-05', 'visita': visita}, format='json')
+    assert r.status_code == 422
+    assert 'contrato activo' in r.data['detalle']
+
+
+def test_ado_03_siembra_por_trabajador_espera_ado_04(ado_02):
+    """La misma ruta con modalidad trabajador responde 501 hasta construir ADO-04"""
+    api, compra, bien_id = ado_02
+    c = api.post('/api/v1/adopcion/contratos/compra/', {**compra, 'modalidad_siembra': 'trabajador',
+                 'autoriza_seguimiento': True}, format='json').data
+    _avisar(c['numero'], c['predio'])
+    r = api.post(f'/api/v1/adopcion/bienes/{bien_id}/siembra/', {'fecha': '2026-12-05'}, format='json')
+    assert (r.status_code, r.data['caso_de_uso']) == (501, 'ADO-04')
 
 
 @pytest.mark.skip(reason='ADO-04: por construir')

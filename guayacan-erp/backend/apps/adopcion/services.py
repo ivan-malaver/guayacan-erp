@@ -154,7 +154,7 @@ def ado_02_confirmar_pago(*, referencia, estado, id_transaccion, valor):
     return contrato
 
 
-def ado_03_sembrar_persona(*, usuario, **datos):
+def ado_03_sembrar_persona(*, usuario, bien_id, **datos):
     """ADO-03 · Sembrar en persona
 
     Actores: Adoptante; secundarios: Encargado de finca, Portería
@@ -164,15 +164,29 @@ def ado_03_sembrar_persona(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/bienes/{id}/siembra/
     Requerimientos: RQ-45
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (encargado u operario), bien_id y **datos (lo que validó SiembraPersonaSerializer):
+      fecha   día de la siembra
+      visita  visita del adoptante (AGD-03) que pasó por portería (AGD-04): prueba de que sembró en persona
+    Devuelve el bien sembrado (activo).
     """
-    # Por construir. Pasos sugeridos para ADO-03:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.registrar_siembra()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-03: por construir')
+    fecha, visita = datos['fecha'], datos['visita']
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            # adopcion.registrar_siembra() no exige la función: se exige aquí (422 si está apagada)
+            cur.execute("select nucleo.exigir_funcion('adopcion')")
+        contrato = models.Contrato.objects.filter(bien_id=bien_id, estado='activo').first()
+        if contrato:  # sin contrato activo la base responde «El árbol no tiene contrato activo»
+            if visita.tercero_id != contrato.adoptante_id:
+                raise ValidationError({'visita': 'La visita no es del adoptante del árbol'})
+            # en_sitio o salio solo los pone portería (agenda.validar_acceso) sobre una visita aprobada
+            if visita.estado not in ('en_sitio', 'salio'):
+                raise ValidationError({'visita': f'El adoptante no ha entrado a la finca (visita {visita.estado})'})
+            if timezone.localdate(visita.ingreso_programado) != fecha:
+                raise ValidationError({'fecha': 'La siembra en persona es el día de la visita'})
+        with connection.cursor() as cur:
+            # Árbol reservado (pagado) a activo, sitio ocupado, seguimiento y evento adopcion.sembrado
+            cur.execute('select adopcion.registrar_siembra(%s, %s)', [bien_id, fecha])
+    return models.Bien.objects.get(pk=bien_id)
 
 
 def ado_04_sembrar_trabajador_enviar_video(*, usuario, **datos):

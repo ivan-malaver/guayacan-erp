@@ -31,7 +31,7 @@ urlpatterns = [
     # ADO-02 · Comprar un árbol o un animal: POST /api/v1/adopcion/contratos/compra/ (el pago confirma en /api/v1/pagos/webhook/)
     path('contratos/compra/', views.Compra.as_view(), name='ado-02-contratos-compra'),
     # ADO-03 · Sembrar en persona: POST /api/v1/adopcion/bienes/{id}/siembra/
-    path('bienes/<int:id>/siembra/', PorConstruir.as_view(caso_de_uso='ADO-03', metodo='POST'), name='ado-03-bienes-id-siembra'),
+    path('bienes/<int:id>/siembra/', views.Siembra.as_view(), name='ado-03-bienes-id-siembra'),
     # ADO-05 · Cobrar y pagar la cuota mensual: POST /api/v1/adopcion/cuotas/{id}/pagar/
     path('cuotas/<int:id>/pagar/', PorConstruir.as_view(caso_de_uso='ADO-05', metodo='POST'), name='ado-05-cuotas-id-pagar'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/

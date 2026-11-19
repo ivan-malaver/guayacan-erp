@@ -9,6 +9,8 @@ Generado por docs/uml/fuentes/gen_apps.py. Un caso de uso que necesite otros cam
 aquí mismo, debajo de los generados."""
 from rest_framework import serializers
 
+from apps.agenda.models import Visita
+
 from . import models
 
 # Campos que pone la base (identificador, finca, fechas de control): el usuario puede verlos pero no enviarlos
@@ -110,3 +112,9 @@ class AvisoPagoSerializer(serializers.Serializer):
     estado = serializers.ChoiceField(choices=['aprobado', 'rechazado'])
     id_transaccion = serializers.CharField(max_length=80)
     valor = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class SiembraPersonaSerializer(serializers.Serializer):
+    """ADO-03: lo que envía el encargado en POST /api/v1/adopcion/bienes/{id}/siembra/."""
+    fecha = serializers.DateField()
+    visita = serializers.PrimaryKeyRelatedField(queryset=Visita.objects.all())

@@ -15,11 +15,13 @@ La seguridad no se programa aquí: el middleware fija la finca y el usuario, y P
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from guayacan.contexto import Contexto, fijar
 from guayacan.pasarela import pasarela
+from guayacan.permisos import SoloPersonas
 from guayacan.vistas import VistaModelo
 
 from . import models, serializers, services
@@ -142,3 +144,22 @@ class AvisoPago(APIView):
         fijar(Contexto(predio_id=int(datos.validated_data['referencia'].split(':', 1)[0])))
         contrato = services.ado_02_confirmar_pago(**datos.validated_data)
         return Response({'recibido': True, 'contrato': contrato.numero, 'estado': contrato.estado})
+
+
+class Siembra(APIView):
+    """ADO-03 · POST /api/v1/adopcion/bienes/{id}/siembra/ con {fecha, visita}: el adoptante sembró en persona.
+
+    La misma ruta servirá a ADO-04 (siembra por un trabajador, con tarea y video); hasta construirlo responde 501.
+    """
+
+    permission_classes = [IsAuthenticated, SoloPersonas]  # una siembra la registra quien la vio, no un agente
+
+    def post(self, request, id):
+        if models.Contrato.objects.filter(bien_id=id, estado='activo', modalidad_siembra='trabajador').exists():
+            return Response({'codigo': 'por_construir', 'caso_de_uso': 'ADO-04',
+                             'detalle': 'La siembra por un trabajador (ADO-04) aún no se ha construido'},
+                            status=status.HTTP_501_NOT_IMPLEMENTED)
+        datos = serializers.SiembraPersonaSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        bien = services.ado_03_sembrar_persona(usuario=request.user, bien_id=id, **datos.validated_data)
+        return Response(serializers.BienSerializer(bien).data)
