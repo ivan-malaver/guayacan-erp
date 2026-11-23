@@ -8,7 +8,7 @@
 | `diccionario_postgresql.csv` / `.md` | Diccionario campo por campo |
 | `diccionario_mongodb.csv` / `.md` | Diccionario de las colecciones |
 | `generador/` | `modelo.py` (tablas), `reglas_negocio.sql` (funciones y disparadores), `generar.py`, `mongo.py`, `excel_diccionario.py`, `excel_apis.py` |
-| `apendice_a_adopcion.sql` | Apéndice A: esquema `adopcion` (8 tablas), reglas y datos iniciales. Se carga después de `datos_iniciales.sql`; sus 34 pruebas están en `../casos-prueba/pruebas_adopcion.sql` |
+| `apendice_a_adopcion.sql` | Apéndice A: esquema `adopcion` (8 tablas), reglas y datos iniciales. Se carga después de `datos_iniciales.sql`; sus 48 pruebas están en `../casos-prueba/pruebas_adopcion.sql` |
 | `../casos-prueba/pruebas_reglas_v4.sql` y `pruebas_reglas_v5.sql` | 90 + 215 pruebas de las reglas, ejecutadas con el rol de la API; resultado en `resultado_pruebas_v5.log` |
 
 ## Cargar y probar (Windows con Docker)
@@ -29,6 +29,31 @@ La última línea de las pruebas debe decir `TODAS LAS PRUEBAS PASARON`. Las pru
 
 La API se conecta con un usuario miembro de `guayacan_app` (nunca superusuario) y fija al inicio de cada transacción
 `app.predio_id`, `app.usuario_id` y, si actúa un agente, `app.agente_id`.
+
+## Vistas y seguridad por filas
+
+Toda vista se crea `with (security_invoker = true)`. Sin esa opción la vista corre con los permisos de su dueño
+(`postgres`, que se salta la seguridad por filas) y mezcla los datos de todas las fincas. La prueba
+`backend/guayacan/tests/test_vistas_por_finca.py` falla si una vista nueva no la tiene.
+
+| Vista | security_invoker | Desde |
+| --- | --- | --- |
+| `inventario.v_alertas_vencimiento`, `comercial.v_catalogo_disponible`, `comercial.v_trazabilidad_lote`, `comercial.v_cartera`, `ambiental.v_indicadores` | Sí | v4 |
+| `adopcion.v_tablero` | Sí | Migración 010 |
+| `agenda.v_agenda_dia`, `agenda.v_en_sitio` | Sí | Migración 012 |
+| `crm.v_campanas`, `crm.v_embudo`, `crm.v_proyeccion_ventas` | Sí | Migración 012 |
+| `cumplimiento.v_granja_biosegura` (la consulta PRO-01 al ingresar cada lote) | Sí | Migración 012 |
+| `documental.v_vigentes` | Sí | Migración 012 |
+| `estrategia.v_matriz_lineas`, `estrategia.v_retorno_iniciativas` | Sí | Migración 012 |
+| `formacion.v_satisfaccion` | Sí | Migración 012 |
+| `personal.v_carga_semanal`, `personal.v_productividad` | Sí | Migración 012 |
+| `proyectos.v_tablero`, `seguridad.v_tablero`, `seguros.v_por_vencer` | Sí | Migración 012 |
+
+## Migraciones
+
+Una base nueva se carga con los archivos de arriba, que ya traen todos los cambios. Una base cargada antes recibe los
+cambios con los archivos de `migraciones/`, en orden (`001` a `012`); cada uno se puede correr más de una vez. En
+Windows, con PowerShell, fije `PGCLIENTENCODING=UTF8` antes de correrlos: si no, psql guarda mal las tildes.
 
 ## Tareas programadas que necesita la base (Celery Beat)
 

@@ -67,6 +67,31 @@ def test_pro_01_alerta_granja_biosegura_desde_200_aves(api):
     assert _evento(r.data['id'])['granja_biosegura'].startswith('alerta')
 
 
+def test_pro_01_granja_biosegura_no_suma_aves_de_otra_finca(api):
+    """Migración 012: las 250 gallinas de la finca B no ponen en alerta a la finca A (cumplimiento.v_granja_biosegura)"""
+    cliente, lote, finca_a = api
+    with connection.cursor() as cur:
+        cur.execute('select distinct f.predio_id from nucleo.usuario u cross join lateral nucleo.predios_del_usuario(u.id) f '
+                    'where f.predio_id <> %s order by 1', [finca_a])
+        otra = cur.fetchone()
+        if not otra:
+            pytest.skip('La base local tiene una sola finca')
+        cur.execute('select aves_postura_levante from cumplimiento.v_granja_biosegura')
+        if cur.fetchone()[0] + lote['cantidad_inicial'] >= 200:
+            pytest.skip('La finca A ya tiene casi 200 aves')
+        cur.execute("select set_config('app.predio_id', %s, true)", [str(otra[0])])
+        # Galpón propio de la finca B (puede no tener zonas) con 250 gallinas de postura
+        cur.execute("insert into nucleo.zona (codigo, nombre, tipo_zona) values ('PRB-GAL-B', 'Galpón finca B', 'galpon') returning id")
+        cur.execute("insert into produccion.lote_animal (codigo, especie_id, zona_id, proposito, fecha_ingreso, cantidad_inicial, "
+                    "cantidad_actual) values ('PRB-AV-B', %s, %s, 'postura', '2026-11-01', 250, 250)", [lote['especie'], cur.fetchone()[0]])
+        cur.execute('select aves_postura_levante from cumplimiento.v_granja_biosegura')
+        assert cur.fetchone()[0] >= 250  # la finca B sí ve sus gallinas
+        cur.execute("select set_config('app.predio_id', %s, true)", [str(finca_a)])
+    r = cliente.post('/api/v1/produccion/lotes-animal/', lote, format='json')
+    assert r.status_code == 201, r.data
+    assert _evento(r.data['id'])['granja_biosegura'] == 'en regla'
+
+
 def test_pro_01_especie_inexistente_no_crea_lote(api):
     """Flujo alterno: la especie debe estar en el catálogo (precondición)"""
     cliente, lote, _ = api

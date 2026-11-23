@@ -7581,7 +7581,7 @@ begin
 end $$;
 create trigger tg_jornada_calcular before insert or update on personal.jornada for each row execute function personal.calcular_jornada();
 
-create or replace view personal.v_productividad as
+create or replace view personal.v_productividad with (security_invoker = true) as
 select t.empleado_id, t.plantilla_tarea_id, date_trunc('month', t.fecha)::date as mes, count(*) as tareas_aprobadas,
        sum(t.cantidad) as cantidad, round(sum(t.cantidad) / nullif(sum(extract(epoch from t.terminada_en - t.iniciada_en)) / 3600, 0), 2) as cantidad_por_hora,
        round(avg(extract(epoch from t.terminada_en - t.iniciada_en) / 60) / nullif(max(p.duracion_estimada_min), 0) * 100, 1) as pct_tiempo_vs_estandar
@@ -7966,7 +7966,7 @@ end $$;
 create trigger tg_version_documento_obsoletar after insert or update of estado on documental.version_documento
   for each row execute function documental.obsoletar_anteriores();
 
-create or replace view documental.v_vigentes as
+create or replace view documental.v_vigentes with (security_invoker = true) as
 select d.id as documento_id, d.codigo, d.titulo, d.tipo, d.uso_agentes, v.id as version_id, v.version, v.archivo_url, v.vigente_desde, v.vence_en,
        case when v.vence_en is null then 'vigente' when v.vence_en < current_date then 'vencido'
             when v.vence_en - v.avisar_dias <= current_date then 'por_vencer' else 'vigente' end as situacion
@@ -8057,7 +8057,7 @@ begin
 end $$;
 create trigger tg_accion_correctiva_verificar before update on cumplimiento.accion_correctiva for each row execute function cumplimiento.verificar_accion();
 
-create or replace view cumplimiento.v_granja_biosegura as
+create or replace view cumplimiento.v_granja_biosegura with (security_invoker = true) as
 select (select coalesce(sum(l.cantidad_actual), 0) from produccion.lote_animal l join produccion.especie e on e.id = l.especie_id
         where e.grupo = 'ave' and l.estado = 'activo' and l.proposito in ('postura', 'cria')) as aves_postura_levante,
        200 as umbral_obligatorio,
@@ -8080,7 +8080,7 @@ begin
 end $$;
 create trigger tg_poliza_preparar before insert or update on seguros.poliza for each row execute function seguros.preparar_poliza();
 
-create or replace view seguros.v_por_vencer as
+create or replace view seguros.v_por_vencer with (security_invoker = true) as
 select p.id, p.numero, p.tipo, p.hasta, p.hasta - current_date as dias_para_vencer
 from seguros.poliza p where p.estado = 'vigente' and p.hasta - p.avisar_dias <= current_date;
 
@@ -8578,7 +8578,7 @@ begin
 end $$;
 comment on function seguridad.revisar_copias() is 'Tarea diaria: alerta si no hubo copia cifrada exitosa en 26 horas o si no se probó una restauración en el último mes';
 
-create or replace view seguridad.v_tablero as
+create or replace view seguridad.v_tablero with (security_invoker = true) as
 select (select count(*) from seguridad.alerta_seguridad where ocurrido_en > now() - interval '24 hours') as alertas_24h,
        (select count(*) from seguridad.alerta_seguridad where estado = 'nueva' and severidad in ('alta', 'critica')) as alertas_graves_sin_atender,
        (select count(*) from seguridad.bloqueo where levantado_por is null and (hasta is null or hasta > now())) as bloqueos_activos,
@@ -8660,17 +8660,17 @@ begin
 end $$;
 comment on function crm.convertir_prospecto(bigint, text) is 'Convierte el prospecto en tercero y cliente (si ya tenía tercero por su autorización, lo reutiliza)';
 
-create or replace view crm.v_embudo as
+create or replace view crm.v_embudo with (security_invoker = true) as
 select etapa, count(*) as prospectos, sum(volumen_estimado_mes) as volumen_estimado_mes, round(avg(puntaje), 1) as puntaje_promedio
 from crm.prospecto group by etapa;
 
-create or replace view crm.v_campanas as
+create or replace view crm.v_campanas with (security_invoker = true) as
 select c.id, c.nombre, c.canal, c.costo_real, count(p.id) as prospectos, count(p.id) filter (where p.etapa = 'ganado') as clientes_ganados,
        round(c.costo_real / nullif(count(p.id), 0), 0) as costo_por_prospecto,
        round(c.costo_real / nullif(count(p.id) filter (where p.etapa = 'ganado'), 0), 0) as costo_por_cliente
 from crm.campana c left join crm.prospecto p on p.campana_id = c.id group by c.id;
 
-create or replace view crm.v_proyeccion_ventas as
+create or replace view crm.v_proyeccion_ventas with (security_invoker = true) as
 select date_trunc('month', cierre_estimado)::date as mes, count(*) as oportunidades, sum(valor_estimado) as valor_total,
        round(sum(valor_estimado * probabilidad_pct / 100.0), 0) as valor_ponderado
 from crm.oportunidad where estado = 'abierta' group by 1;
@@ -8774,7 +8774,7 @@ begin
 end $$;
 create trigger tg_reinversion_validar before insert or update on estrategia.reinversion for each row execute function estrategia.validar_reinversion();
 
-create or replace view estrategia.v_retorno_iniciativas as
+create or replace view estrategia.v_retorno_iniciativas with (security_invoker = true) as
 select i.id, i.titulo, i.ansoff, i.palanca, i.estado, ev.inversion_inicial, ev.vpn, ev.tir_anual, ev.roi_pct as roi_proyectado_pct,
        (select coalesce(sum(valor), 0) from estrategia.reinversion r where r.iniciativa_id = i.id and r.estado in ('aprobada', 'ejecutada')) as reinvertido,
        s.ingresos, s.egresos, s.meses,
@@ -8785,7 +8785,7 @@ left join lateral (select coalesce(sum(ingresos_reales), 0) ingresos, coalesce(s
                    from estrategia.seguimiento_iniciativa where iniciativa_id = i.id) s on true;
 comment on view estrategia.v_retorno_iniciativas is 'Retorno proyectado contra real de cada iniciativa y cuánto se le ha reinvertido';
 
-create or replace view estrategia.v_matriz_lineas as
+create or replace view estrategia.v_matriz_lineas with (security_invoker = true) as
 select l.id, l.codigo, l.nombre, l.estado, l.palanca_dominante,
        (finanzas.estado_resultados(date_trunc('year', current_date)::date, current_date, l.centro_costo_id)->>'ingresos_operacionales')::numeric as ingresos_anio,
        (finanzas.estado_resultados(date_trunc('year', current_date)::date, current_date, l.centro_costo_id)->>'margen_contribucion')::numeric as margen_contribucion_anio,
@@ -8916,7 +8916,7 @@ returns table (fecha date, hora time, requeridas integer, programadas integer) l
   order by 1, 2 $$;
 comment on function personal.huecos_cobertura(bigint) is 'Horas del cronograma en que hay menos personas que las requeridas por el área (sirve para la operación 24/7)';
 
-create or replace view personal.v_carga_semanal as
+create or replace view personal.v_carga_semanal with (security_invoker = true) as
 select t.empleado_id, date_trunc('week', t.fecha)::date as semana, sum(t.horas) as horas,
        count(*) filter (where t.tipo <> 'descanso') as dias_trabajados,
        sum(t.horas) filter (where extract(isodow from t.fecha) = 7) as horas_domingo,
@@ -9101,7 +9101,7 @@ end $$;
 create trigger tg_registro_acceso_validar before insert on agenda.registro_acceso for each row execute function agenda.validar_acceso();
 create trigger tg_registro_acceso_inmutable before update or delete on agenda.registro_acceso for each row execute function nucleo.impedir_cambio();
 
-create or replace view agenda.v_en_sitio as
+create or replace view agenda.v_en_sitio with (security_invoker = true) as
 with ultimos as (
   select distinct on (coalesce('V' || r.visita_id, 'E' || r.empleado_id, 'N' || upper(coalesce(r.placa, r.nombre))))
          r.*, coalesce('V' || r.visita_id, 'E' || r.empleado_id, 'N' || upper(coalesce(r.placa, r.nombre))) as clave
@@ -9112,7 +9112,7 @@ select u.clave, u.tipo, u.visita_id, u.empleado_id, coalesce(v.nombre, u.nombre)
 from ultimos u left join agenda.visita v on v.id = u.visita_id where u.sentido = 'entrada';
 comment on view agenda.v_en_sitio is 'Quién y qué vehículo está dentro de la finca ahora (emergencias, robots en zonas sin personas, cierre de portería)';
 
-create or replace view agenda.v_agenda_dia as
+create or replace view agenda.v_agenda_dia with (security_invoker = true) as
 select 'cita' as clase, c.id, r.nombre as recurso, c.titulo, c.tipo, c.inicio, c.fin, c.estado from agenda.cita c join agenda.recurso r on r.id = c.recurso_id
 union all
 select 'visita', v.id, coalesce(z.nombre, 'Portería'), v.nombre || ' · ' || v.motivo, v.tipo, v.ingreso_programado, v.salida_programada, v.estado
@@ -9143,7 +9143,7 @@ begin
 end $$;
 create trigger tg_queja_validar before insert or update on formacion.queja_apelacion for each row execute function formacion.validar_queja();
 
-create or replace view formacion.v_satisfaccion as
+create or replace view formacion.v_satisfaccion with (security_invoker = true) as
 select c.id as curso_id, c.codigo, c.nombre, count(e.id) as respuestas, round(avg(e.satisfaccion), 2) as satisfaccion, round(avg(e.utilidad), 2) as utilidad,
        round(avg(e.instructor), 2) as instructor,
        (select count(*) from formacion.inscripcion i where i.curso_id = c.id and i.estado = 'aprobado') as aprobados,
@@ -9316,7 +9316,7 @@ begin
 end $$;
 comment on function proyectos.calcular_valor_ganado(bigint, date) is 'Valor ganado a una fecha de corte: PV (plan lineal por actividad), EV (avance × costo plan), AC, CPI, SPI, EAC = BAC/CPI, ETC y VAC';
 
-create or replace view proyectos.v_tablero as
+create or replace view proyectos.v_tablero with (security_invoker = true) as
 select p.id, p.codigo, p.nombre, p.estado, p.area_enfoque, p.enfoque, p.presupuesto, p.fin_plan,
        round(sum(a.costo_plan * a.avance_pct) / nullif(sum(a.costo_plan), 0), 1) as avance_ponderado_pct,
        (select m.cpi from proyectos.medicion_valor_ganado m where m.proyecto_id = p.id order by m.fecha_corte desc limit 1) as cpi,
