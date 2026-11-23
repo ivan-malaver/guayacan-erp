@@ -41,6 +41,8 @@ urlpatterns = [
     path('mis-bienes/', views.MisBienes.as_view(), name='ado-06-mis-bienes'),
     # ADO-06 · Seguir mi árbol o mi animal: GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/
     path('mis-bienes/<int:id>/seguimiento/', views.SeguimientoMiBien.as_view(), name='ado-06-mis-bienes-id-seguimiento'),
+    # ADO-07 · El aviso de mora (o el video) llegó al adoptante: POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/
+    path('seguimientos/<int:id>/marcar-enviado/', views.MarcarEnviado.as_view(), name='ado-07-seguimientos-id-marcar-enviado'),
     # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/liquidaciones/{id}/aprobar/
     path('liquidaciones/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='ADO-10', metodo='POST'), name='ado-10-liquidaciones-id-aprobar'),
     # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/adoptantes/{id}/pagar-saldo/

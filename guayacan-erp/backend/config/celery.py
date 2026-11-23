@@ -66,7 +66,7 @@ app.conf.beat_schedule = {
     'valor-ganado': {'task': 'guayacan.tareas.por_finca', 'schedule': crontab(day_of_week=1, hour=5, minute=0),
                      'args': ("select proyectos.calcular_valor_ganado(id) from proyectos.proyecto where estado = 'en_curso'",)},
     # Apéndice A · Adopción (solo en fincas con la función 'adopcion' encendida):
-    # diario: aviso de mora con 2 cuotas vencidas y paso a readopción con 3
+    # diario (ADO-07): un aviso de mora por cada cuota vencida; readopción con 3 y el último aviso entregado hace 15 días
     'adopcion-abandono': {'task': 'guayacan.tareas.por_finca', 'schedule': crontab(hour=2, minute=45), 'args': (
         "select adopcion.marcar_abandono() where exists (select 1 from nucleo.funcionalidad f "
         "where f.codigo = 'adopcion' and f.activa)",)},

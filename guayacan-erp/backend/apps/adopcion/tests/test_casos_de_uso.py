@@ -16,6 +16,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.adopcion import services
 from guayacan.autenticacion import emitir_tokens
 from guayacan.pasarela import PasarelaSimulada
 
@@ -562,9 +563,84 @@ def test_ado_06_limite_de_60_por_minuto(ado_06):
         cache.clear()  # el contador no debe afectar a otras pruebas
 
 
-@pytest.mark.skip(reason='ADO-07: por construir')
-def test_ado_07_detectar_abandono_poner_readopcion_flujo_principal():
-    """ADO-07 · Detectar abandono y poner en readopción"""
+@pytest.fixture
+def ado_07(ado_05):
+    """El contrato de ADO-05 con tres cuotas (vencen el día 10 de tres meses seguidos) y ninguna pagada."""
+    api, cuota, _ = ado_05
+    contrato, bien, periodo = _fila('select c.id, c.bien_id, q.periodo from adopcion.cuota q join adopcion.contrato c '
+                                    'on c.id = q.contrato_id where q.id = %s', cuota)
+    meses = [periodo]
+    for _ in range(2):
+        meses.append((meses[-1] + timedelta(days=32)).replace(day=1))
+        _fila('select adopcion.generar_cuotas(%s)', meses[-1])
+    assert _fila('select count(*) from adopcion.cuota where contrato_id = %s', contrato) == (3,)
+    return api, contrato, bien, [m.replace(day=11) for m in meses]  # el día siguiente a cada vencimiento
+
+
+def _abandono(fecha):
+    """La tarea diaria corre ese día."""
+    return services.ado_07_detectar_abandono_poner_readopcion(fecha=fecha)
+
+
+def _avisos_mora(bien):
+    return [s for s, in _filas("select id from adopcion.seguimiento where bien_id = %s and tipo = 'aviso_mora' order by fecha", bien)]
+
+
+def _filas(sql, *params):
+    with connection.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchall()
+
+
+def test_ado_07_detectar_abandono_poner_readopcion_flujo_principal(ado_07):
+    """ADO-07 · Un aviso por cada cuota vencida (no uno por día); con la tercera vencida y su aviso entregado hace 15 días
+    el contrato termina por abandono, las cuotas se anulan y el bien pasa a readopción"""
+    api, contrato, bien, dias = ado_07
+    for n, dia in enumerate(dias, 1):
+        assert _abandono(dia) == 0
+        assert _abandono(dia + timedelta(days=1)) == 0  # la tarea corre a diario: no repite el aviso
+        assert len(_avisos_mora(bien)) == n
+    assert _avisos('adopcion.aviso_mora', contrato) == 3
+    ultimo = _avisos_mora(bien)[-1]
+    r = api.post(f'/api/v1/adopcion/seguimientos/{ultimo}/marcar-enviado/')
+    assert (r.status_code, r.data['enviado_al_adoptante']) == (200, True), r.data
+    assert _abandono(dias[-1] + timedelta(days=14)) == 0  # aún en los días de gracia
+    assert _abandono(dias[-1] + timedelta(days=15)) == 1
+    assert _fila('select estado from adopcion.contrato where id = %s', contrato) == ('terminado_abandono',)
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('en_readopcion',)
+    assert _fila("select count(*) from adopcion.cuota where contrato_id = %s and estado <> 'anulada'", contrato) == (0,)
+    assert _avisos('adopcion.abandonado', contrato) == 1
+
+
+def test_ado_07_sin_aviso_entregado_nunca_hay_abandono(ado_07):
+    """Nunca sin aviso previo: si el canal no confirma la entrega, el contrato sigue activo aunque pasen meses"""
+    _, contrato, _, dias = ado_07
+    for dia in dias:
+        _abandono(dia)
+    assert _abandono(dias[-1] + timedelta(days=90)) == 0
+    assert _fila('select estado from adopcion.contrato where id = %s', contrato) == ('activo',)
+
+
+def test_ado_07_solo_el_aviso_de_la_tercera_cuota_cuenta(ado_07):
+    """Entregar los avisos de la primera y segunda cuota no basta: hace falta el de la tercera"""
+    api, contrato, bien, dias = ado_07
+    for dia in dias:
+        _abandono(dia)
+    for aviso in _avisos_mora(bien)[:2]:
+        assert api.post(f'/api/v1/adopcion/seguimientos/{aviso}/marcar-enviado/').status_code == 200
+    assert _abandono(dias[-1] + timedelta(days=30)) == 0
+    assert _fila('select estado from adopcion.contrato where id = %s', contrato) == ('activo',)
+
+
+def test_ado_07_enviado_no_se_cambia_por_el_crud(ado_07):
+    """enviado_al_adoptante es de solo lectura en /seguimientos/: nadie adelanta el abandono por ahí"""
+    api, _, bien, dias = ado_07
+    _abandono(dias[0])
+    aviso = _avisos_mora(bien)[0]
+    r = api.patch(f'/api/v1/adopcion/seguimientos/{aviso}/', {'enviado_al_adoptante': True}, format='json')
+    assert r.status_code == 200, r.data
+    assert _fila('select enviado_al_adoptante from adopcion.seguimiento where id = %s', aviso) == (False,)
+    assert api.post('/api/v1/adopcion/seguimientos/999999999/marcar-enviado/').status_code == 404
 
 
 @pytest.mark.skip(reason='ADO-08: por construir')

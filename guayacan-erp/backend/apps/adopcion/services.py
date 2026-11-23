@@ -245,7 +245,8 @@ def ado_04_sembrar_trabajador_enviar_video(*, usuario, bien_id, **datos):
         with connection.cursor() as cur:
             # Árbol reservado a activo, sitio ocupado, seguimiento video_siembra y evento adopcion.sembrado con el video
             # TODO(Volumen 4): el Gestor de redes toma adopcion.sembrado, llama a redes.verificar_envio() (ventana,
-            # plantilla y tope del canal) y envía el video al adoptante; luego marca seguimiento.enviado_al_adoptante
+            # plantilla y tope del canal) y envía el video al adoptante; luego lo confirma con
+            # POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/ (ado_07_marcar_enviado)
             cur.execute('select adopcion.registrar_siembra(%s, %s, %s, %s)', [bien_id, fecha, tarea.id, video])
             cur.execute("select id from adopcion.seguimiento where bien_id = %s and tipo = 'video_siembra' order by id desc limit 1",
                         [bien_id])
@@ -395,25 +396,43 @@ def ado_06_contrato_por_enlace(codigo):
     return enlace.contrato
 
 
-def ado_07_detectar_abandono_poner_readopcion(*, usuario, **datos):
+def ado_07_detectar_abandono_poner_readopcion(*, fecha=None):
     """ADO-07 · Detectar abandono y poner en readopción
 
     Actores: Tareas programadas; secundarios: Adoptante, Gestor de redes (IA)
     Fase 3 · función adopcion
     Tablas: adopcion.contrato, adopcion.cuota, adopcion.bien, adopcion.seguimiento
     Reglas en la base: adopcion.marcar_abandono()
-    Endpoints: CRUD de sus tablas
+    Endpoints: POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/
     Requerimientos: RQ-46
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: fecha (por omisión hoy). Devuelve cuántos contratos terminaron por abandono.
+    La corre la tarea diaria (config/celery.py, 'adopcion-abandono'). La base hace todo: un aviso de mora por cada
+    cuota que se vence (evento adopcion.aviso_mora) y abandono solo con 3 cuotas vencidas y el aviso de la tercera
+    entregado hace 15 días o más (dias_gracia_abandono). Nunca hay abandono sin aviso entregado: el Gestor de redes
+    lo confirma con ado_07_marcar_enviado().
     """
-    # Por construir. Pasos sugeridos para ADO-07:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.marcar_abandono()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-07: por construir')
+    with transaction.atomic(), connection.cursor() as cur:
+        # marcar_abandono() ya exige la función «adopcion» (422 si está apagada)
+        cur.execute('select adopcion.marcar_abandono(coalesce(%s, current_date))', [fecha])
+        return cur.fetchone()[0]
+
+
+def ado_07_marcar_enviado(*, usuario, seguimiento_id):
+    """El canal confirmó que el registro le llegó al adoptante (aviso de mora, video de siembra...).
+
+    Solo esta acción pone enviado_al_adoptante (en el CRUD es de solo lectura): del aviso de mora entregado cuentan
+    los días de gracia antes del abandono. Repetirla no cambia nada. Devuelve el seguimiento.
+    """
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.exigir_funcion('adopcion')")
+    seguimiento = models.Seguimiento.objects.filter(pk=seguimiento_id).first()
+    if not seguimiento:
+        raise NotFound(f'No hay seguimiento {seguimiento_id}')
+    if not seguimiento.enviado_al_adoptante:
+        seguimiento.enviado_al_adoptante = True
+        seguimiento.save(update_fields=['enviado_al_adoptante'])
+    return seguimiento
 
 
 def ado_08_readoptar(*, usuario, **datos):

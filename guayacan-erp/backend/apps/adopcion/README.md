@@ -12,7 +12,7 @@ Adopción de árboles y animales: catálogo, sitios, bienes, contratos de compra
 | ADO-04 | Sembrar por un trabajador y enviar el video | 3 · `adopcion` | Operario de campo | `POST /api/v1/adopcion/bienes/{id}/siembra/` |
 | ADO-05 | Cobrar y pagar la cuota mensual | 3 · `adopcion` | Tareas programadas | `POST /api/v1/adopcion/cuotas/{id}/pagar/` |
 | ADO-06 | Seguir mi árbol o mi animal | 3 · `adopcion` | Adoptante | `GET /api/v1/adopcion/mis-bienes/`<br>`GET /api/v1/adopcion/mis-bienes/{id}/seguimiento/` |
-| ADO-07 | Detectar abandono y poner en readopción | 3 · `adopcion` | Tareas programadas | CRUD |
+| ADO-07 | Detectar abandono y poner en readopción | 3 · `adopcion` | Tareas programadas | `POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/` |
 | ADO-08 | Readoptar | 3 · `adopcion` | Adoptante | CRUD |
 | ADO-09 | Registrar y vender productos del bien | 3 · `adopcion` | Operario de campo | CRUD |
 | ADO-10 | Liquidar productos con el 5 % | 3 · `adopcion` | Administrador | `POST /api/v1/adopcion/liquidaciones/{id}/aprobar/`<br>`POST /api/v1/adopcion/adoptantes/{id}/pagar-saldo/` |

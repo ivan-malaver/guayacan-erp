@@ -175,6 +175,14 @@ class Siembra(APIView):
         return Response(serializers.BienSerializer(bien).data)
 
 
+class MarcarEnviado(APIView):
+    """ADO-07 · POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/: el Gestor de redes confirma la entrega al adoptante."""
+
+    def post(self, request, id):
+        seguimiento = services.ado_07_marcar_enviado(usuario=request.user, seguimiento_id=id)
+        return Response(serializers.SeguimientoSerializer(seguimiento).data)
+
+
 class EmitirEnlace(APIView):
     """ADO-06 · POST /api/v1/adopcion/contratos/{id}/enlace/: enlace personal del adoptante (se muestra una sola vez)."""
 

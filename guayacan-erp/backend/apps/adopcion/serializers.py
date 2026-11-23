@@ -63,7 +63,8 @@ class SeguimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Seguimiento  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # enviado_al_adoptante solo lo pone POST /seguimientos/{id}/marcar-enviado/ (ADO-07: de él depende el abandono)
+        read_only_fields = SOLO_LECTURA + ('enviado_al_adoptante',)
 
 
 # adopcion.liquidacion <-> JSON en /api/v1/adopcion/liquidaciones/
