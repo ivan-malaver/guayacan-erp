@@ -780,9 +780,66 @@ def test_ado_12_talar_sacrificar_liquidar_flujo_principal():
     """ADO-12 · Talar o sacrificar y liquidar"""
 
 
-@pytest.mark.skip(reason='ADO-13: por construir')
-def test_ado_13_reponer_bien_muerto_garantia_flujo_principal():
-    """ADO-13 · Reponer un bien muerto en garantía"""
+def _morir(api, bien, fecha, causa='Pudrición de raíz'):
+    return api.post(f'/api/v1/adopcion/bienes/{bien}/muerte/', {'fecha': fecha, 'causa': causa}, format='json')
+
+
+def _sitio(bien):
+    return _fila('select s.estado from adopcion.bien b join adopcion.sitio s on s.id = b.sitio_id where b.id = %s', bien)[0]
+
+
+def test_ado_13_reponer_bien_muerto_garantia_flujo_principal(ado_11):
+    """ADO-13 · Muere dentro de la garantía (12 meses) y al día: se repone gratis en el mismo sitio y el contrato sigue
+    con el bien nuevo; se avisa al adoptante"""
+    api, contrato, bien, _ = ado_11
+    r = _morir(api, bien, timezone.localdate())
+    assert r.status_code == 200, r.data
+    nuevo = r.data['repuesto']
+    assert (r.data['contrato'], r.data['estado_contrato']) == (contrato, 'activo')
+    assert _fila('select bien_id from adopcion.contrato where id = %s', contrato) == (nuevo,)
+    assert _fila('select estado, reemplaza_id, sitio_id = (select sitio_id from adopcion.bien where id = %s) '
+                 'from adopcion.bien where id = %s', bien, nuevo) == ('activo', bien, True)
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('muerto',)
+    assert _sitio(nuevo) == 'ocupado'
+    assert _fila("select count(*) from adopcion.seguimiento where bien_id = %s and tipo = 'reposicion'", nuevo) == (1,)
+    assert _avisos('adopcion.bien_muerto', contrato) == 1
+
+
+def test_ado_13_fuera_de_garantia_termina_el_contrato(ado_11):
+    """Pasada la garantía no se repone: el contrato termina, las cuotas futuras se anulan y el sitio queda libre"""
+    api, contrato, bien, _ = ado_11
+    _fila("update adopcion.cuota set estado = 'pagada', pagada_en = now() where contrato_id = %s returning id", contrato)
+    _fila("select adopcion.generar_cuotas((date_trunc('month', current_date) + interval '14 months')::date)")
+    r = _morir(api, bien, timezone.localdate() + timedelta(days=400))
+    assert (r.status_code, r.data['repuesto'], r.data['estado_contrato']) == (200, None, 'terminado_muerte'), r.data
+    assert _fila("select count(*) from adopcion.cuota where contrato_id = %s and estado = 'pendiente'", contrato) == (0,)
+    assert _sitio(bien) == 'libre'
+
+
+def test_ado_13_con_cuotas_vencidas_no_hay_garantia(ado_11):
+    """Dentro de la garantía pero en mora: no se repone"""
+    api, contrato, bien, _ = ado_11
+    vence = _fila('select vence_en from adopcion.cuota where contrato_id = %s', contrato)[0]
+    r = _morir(api, bien, vence + timedelta(days=1))
+    assert (r.status_code, r.data['repuesto'], r.data['estado_contrato']) == (200, None, 'terminado_muerte'), r.data
+
+
+def test_ado_13_bien_sin_dueno_libera_el_sitio(ado_08):
+    """Un árbol en readopción (sin contrato activo) muere: queda muerto y su sitio libre (migración 009)"""
+    api, _, bien, _ = ado_08
+    r = _morir(api, bien, timezone.localdate())
+    assert (r.status_code, r.data['repuesto'], r.data['contrato']) == (200, None, None), r.data
+    assert _sitio(bien) == 'libre'
+
+
+def test_ado_13_no_se_registra_dos_veces(ado_11):
+    """Un bien muerto no vuelve a morir (422); un bien que no existe responde 404"""
+    api, _, bien, _ = ado_11
+    hoy = timezone.localdate()
+    assert _morir(api, bien, hoy).status_code == 200
+    r = _morir(api, bien, hoy)
+    assert (r.status_code, r.data['codigo']) == (422, 'regla_negocio'), r.data
+    assert _morir(api, 999999999, hoy).status_code == 404
 
 
 @pytest.mark.skip(reason='ADO-14: por construir')

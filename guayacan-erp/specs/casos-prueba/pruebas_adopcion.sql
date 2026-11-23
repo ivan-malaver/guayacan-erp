@@ -98,6 +98,8 @@ select prueba.ok((select estado from adopcion.bien where id = :b_agu) = 'activo'
 select adopcion.registrar_muerte(:b_agu, '2026-06-01', 'Pudrición de raíz por encharcamiento');
 select prueba.ok((select b.codigo from adopcion.contrato c join adopcion.bien b on b.id = c.bien_id where c.numero = 'ADO-2') = 'AGU-0001-R',
   'Muerte en garantía: reposición sin costo y el contrato pasa al árbol nuevo');
+select prueba.esperar_error(format('select adopcion.registrar_muerte(%s, %L, %L)', :b_agu, '2026-06-02', 'otra vez'), 'ya está muerto',
+  'No se registra dos veces la muerte del mismo bien');
 
 -- Animal: compra, madurez, decisión del dueño, sacrificio con soporte y liquidación del 5 %
 insert into produccion.lote_animal (codigo, especie_id, zona_id, proposito, fecha_ingreso, cantidad_inicial, cantidad_actual)

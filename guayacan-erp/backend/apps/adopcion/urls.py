@@ -52,7 +52,7 @@ urlpatterns = [
     # ADO-11 · Decidir en la madurez: mantener o liquidar: POST /api/v1/adopcion/contratos/{id}/decision/
     path('contratos/<int:id>/decision/', views.Decision.as_view(), name='ado-11-contratos-id-decision'),
     # ADO-13 · Reponer un bien muerto en garantía: POST /api/v1/adopcion/bienes/{id}/muerte/
-    path('bienes/<int:id>/muerte/', PorConstruir.as_view(caso_de_uso='ADO-13', metodo='POST'), name='ado-13-bienes-id-muerte'),
+    path('bienes/<int:id>/muerte/', views.Muerte.as_view(), name='ado-13-bienes-id-muerte'),
     # ADO-14 · Ceder o regalar la adopción: POST /api/v1/adopcion/contratos/{id}/ceder/
     path('contratos/<int:id>/ceder/', PorConstruir.as_view(caso_de_uso='ADO-14', metodo='POST'), name='ado-14-contratos-id-ceder'),
     # ADO-15 · Consultar el tablero de adopción: GET /api/v1/adopcion/tablero/

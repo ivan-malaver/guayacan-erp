@@ -468,9 +468,13 @@ begin
   select * into b from adopcion.bien where id = p_bien;
   select * into p from adopcion.plan where id = b.plan_id;
   select * into c from adopcion.contrato where bien_id = p_bien and estado = 'activo';
+  if b.estado in ('muerto', 'liquidado') then raise exception 'El bien % ya está %', b.codigo, b.estado; end if;
   update adopcion.bien set estado = 'muerto' where id = p_bien;
   insert into adopcion.seguimiento (bien_id, tipo, fecha, descripcion) values (p_bien, 'muerte', p_fecha, p_causa);
-  if c.id is null then return null; end if;
+  if c.id is null then  -- sin dueño (disponible o en readopción): solo se libera el sitio
+    update adopcion.sitio set estado = 'libre' where id = b.sitio_id;
+    return null;
+  end if;
   select exists (select 1 from adopcion.cuota where contrato_id = c.id and estado = 'pendiente' and vence_en < p_fecha) into v_mora;
   if b.fecha_inicio is not null and p_fecha <= b.fecha_inicio + make_interval(months => p.garantia_meses) and not v_mora then
     -- Garantía: se repone sin costo un bien equivalente en el mismo sitio y el contrato sigue con el nuevo

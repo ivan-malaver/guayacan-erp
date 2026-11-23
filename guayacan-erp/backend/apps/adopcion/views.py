@@ -155,6 +155,17 @@ class Decision(APIView):
         return Response(serializers.ContratoSerializer(contrato).data)
 
 
+class Muerte(APIView):
+    """ADO-13 · POST /api/v1/adopcion/bienes/{id}/muerte/ {fecha, causa}: se repone en garantía o termina el contrato."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas]  # la muerte la registra quien la vio, no un agente
+
+    def post(self, request, id):
+        datos = serializers.MuerteSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        return Response(services.ado_13_reponer_bien_muerto_garantia(usuario=request.user, bien_id=id, **datos.validated_data))
+
+
 class PagarCuota(APIView):
     """ADO-05 · POST /api/v1/adopcion/cuotas/{id}/pagar/: devuelve el enlace de cobro de la cuota pendiente."""
 

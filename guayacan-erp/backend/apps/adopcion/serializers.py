@@ -118,6 +118,12 @@ class DecisionSerializer(serializers.Serializer):
     decision = serializers.ChoiceField(choices=['mantener', 'liquidar'])
 
 
+class MuerteSerializer(serializers.Serializer):
+    """ADO-13: lo que registra el encargado en POST /api/v1/adopcion/bienes/{id}/muerte/."""
+    fecha = serializers.DateField()
+    causa = serializers.CharField(max_length=500)
+
+
 class AvisoPagoSerializer(serializers.Serializer):
     """ADO-02: aviso (webhook) de la pasarela, ya con la firma verificada."""
     referencia = serializers.RegexField(r'^\d+:.+$', max_length=60)  # '<predio_id>:<número del contrato>'

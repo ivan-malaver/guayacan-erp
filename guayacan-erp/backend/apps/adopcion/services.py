@@ -560,7 +560,7 @@ def ado_12_talar_sacrificar_liquidar(*, usuario, **datos):
     raise NotImplementedError('ADO-12: por construir')
 
 
-def ado_13_reponer_bien_muerto_garantia(*, usuario, **datos):
+def ado_13_reponer_bien_muerto_garantia(*, usuario, bien_id, fecha, causa):
     """ADO-13 · Reponer un bien muerto en garantía
 
     Actores: Encargado de finca; secundarios: Adoptante
@@ -570,15 +570,30 @@ def ado_13_reponer_bien_muerto_garantia(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/bienes/{id}/muerte/
     Requerimientos: RQ-48
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el encargado; la base exige una persona), bien_id, fecha y causa.
+    Devuelve {'bien', 'repuesto', 'contrato', 'estado_contrato'}: repuesto es el bien nuevo o None.
+
+    La base decide (adopcion.registrar_muerte): dentro de la garantía del plan y sin cuotas vencidas se repone gratis
+    un bien igual en el mismo sitio y el contrato sigue con él; si no, el contrato termina (terminado_muerte), se anulan
+    las cuotas futuras y se libera el sitio. Un bien sin dueño solo libera su sitio. Se avisa al adoptante por el outbox.
     """
-    # Por construir. Pasos sugeridos para ADO-13:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.registrar_muerte()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-13: por construir')
+    with connection.cursor() as cur:
+        # adopcion.registrar_muerte() no exige la función: se exige aquí (422 si está apagada)
+        cur.execute("select nucleo.exigir_funcion('adopcion')")
+    with transaction.atomic():
+        if not models.Bien.objects.filter(pk=bien_id).exists():
+            raise NotFound(f'No hay bien {bien_id}')
+        contrato = models.Contrato.objects.filter(bien_id=bien_id, estado='activo').first()
+        with connection.cursor() as cur:
+            cur.execute('select adopcion.registrar_muerte(%s, %s, %s)', [bien_id, fecha, causa])
+            repuesto = cur.fetchone()[0]
+        if contrato:
+            contrato.refresh_from_db(fields=['estado'])
+            publicar('adopcion.bien_muerto', 'adopcion.contrato', contrato.id,
+                     {'numero': contrato.numero, 'bien_id': bien_id, 'repuesto': repuesto, 'causa': causa,
+                      'estado_contrato': contrato.estado})
+    return {'bien': bien_id, 'repuesto': repuesto, 'contrato': contrato and contrato.id,
+            'estado_contrato': contrato and contrato.estado}
 
 
 def ado_14_ceder_regalar_adopcion(*, usuario, **datos):
