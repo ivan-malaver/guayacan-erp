@@ -166,6 +166,19 @@ class Muerte(APIView):
         return Response(services.ado_13_reponer_bien_muerto_garantia(usuario=request.user, bien_id=id, **datos.validated_data))
 
 
+class Ceder(APIView):
+    """ADO-14 · POST /api/v1/adopcion/contratos/{id}/ceder/: el adoptante regala su árbol o animal a otra persona.
+
+    Responde 201 con el contrato nuevo, ya activo (sin cobro).
+    """
+
+    def post(self, request, id):
+        datos = serializers.CesionSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        contrato = services.ado_14_ceder_regalar_adopcion(usuario=request.user, contrato_id=id, **datos.validated_data)
+        return Response(serializers.ContratoSerializer(contrato).data, status=status.HTTP_201_CREATED)
+
+
 class PagarCuota(APIView):
     """ADO-05 · POST /api/v1/adopcion/cuotas/{id}/pagar/: devuelve el enlace de cobro de la cuota pendiente."""
 

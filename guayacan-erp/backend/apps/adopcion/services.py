@@ -82,9 +82,10 @@ def ado_02_comprar_arbol_animal(*, usuario, **datos):
     return _contratar(tipo='compra', precio=plan.precio_compra, modalidad=datos.pop('modalidad_siembra'), **datos)
 
 
-def _contratar(*, tipo, precio, modalidad, bien, **datos):
-    """Compra (ADO-02) o readopción (ADO-08): registra al adoptante con su autorización de datos, crea el contrato
-    pendiente_pago y pide el cobro. Devuelve (contrato, cobro)."""
+def _contratar(*, tipo, precio, modalidad, bien, cuota_mensual=None, cobrar=True, **datos):
+    """Compra (ADO-02), readopción (ADO-08) o cesión (ADO-14): registra al adoptante con su autorización de datos y
+    crea el contrato. Con cobrar, nace pendiente_pago y se pide el cobro; sin cobrar (cesión) nace activo.
+    Devuelve (contrato, cobro); cobro es None si no se cobra."""
     if not datos['autoriza_datos']:
         raise ValidationError({'autoriza_datos': 'Sin la autorización de datos (Ley 1581) no se puede registrar al adoptante'})
     plan = bien.plan
@@ -106,14 +107,14 @@ def _contratar(*, tipo, precio, modalidad, bien, **datos):
             # shortcut: consecutivo por max+1; dos compras simultáneas chocan en el único (409) y se reintenta
             cur.execute("select coalesce(max(substring(numero from '^ADO-([0-9]+)$')::integer), 0) + 1 from adopcion.contrato")
             numero = f'ADO-{cur.fetchone()[0]}'
-        # La base exige la función «adopcion», el bien disponible (o en readopción), la modalidad de siembra y, si siembra
-        # un trabajador, la autorización seguimiento_adopcion (adopcion.validar_contrato)
+        # La base exige la función «adopcion», el bien disponible (en readopción o vivo para ceder), la modalidad de siembra
+        # y, si siembra un trabajador, la autorización seguimiento_adopcion (adopcion.validar_contrato)
         contrato = models.Contrato.objects.create(
             numero=numero, bien=bien, adoptante=tercero, tipo=tipo, precio=precio,
-            cuota_mensual=plan.cuota_mensual, modalidad_siembra=modalidad,
-            consentimiento=consentimiento, estado='pendiente_pago')
+            cuota_mensual=cuota_mensual or plan.cuota_mensual, modalidad_siembra=modalidad,
+            consentimiento=consentimiento, estado='pendiente_pago' if cobrar else 'activo')
         cobro = pasarela().crear_cobro(referencia=f'{contrato.predio_id}:{numero}', valor=contrato.precio,
-                                       descripcion=f'Adopción {bien.codigo} ({plan.nombre})')
+                                       descripcion=f'Adopción {bien.codigo} ({plan.nombre})') if cobrar else None
     return contrato, cobro
 
 
@@ -596,7 +597,7 @@ def ado_13_reponer_bien_muerto_garantia(*, usuario, bien_id, fecha, causa):
             'estado_contrato': contrato and contrato.estado}
 
 
-def ado_14_ceder_regalar_adopcion(*, usuario, **datos):
+def ado_14_ceder_regalar_adopcion(*, usuario, contrato_id, **datos):
     """ADO-14 · Ceder o regalar la adopción
 
     Actores: Adoptante
@@ -606,15 +607,31 @@ def ado_14_ceder_regalar_adopcion(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/contratos/{id}/ceder/
     Requerimientos: RQ-48
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (vendedor, administrador o agente), contrato_id (el contrato que se cede) y **datos (lo que
+    validó CesionSerializer: el nuevo adoptante y su autorización de datos). Devuelve el contrato nuevo.
+
+    Es un regalo: el contrato nuevo (tipo cesion) nace activo, sin precio ni cobro, con la misma cuota mensual; la
+    base deja el anterior cedido (adopcion.ceder_previo) y exige el bien vivo (adopcion.validar_contrato). Para ceder,
+    el contrato debe estar al día; las cuotas que aún no vencen pasan al nuevo dueño. El saldo a favor sigue siendo del
+    adoptante anterior, y su enlace personal deja de servir (el contrato ya no está activo).
     """
-    # Por construir. Pasos sugeridos para ADO-14:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.validar_contrato()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-14: por construir')
+    # TODO(roles): solo el adoptante decide ceder; cuando haya roles, exigir que lo pida él (o su evidencia)
+    with transaction.atomic():
+        anterior = models.Contrato.objects.select_for_update().select_related('bien__plan').filter(pk=contrato_id).first()
+        if not anterior:
+            raise NotFound(f'No hay contrato {contrato_id}')
+        if anterior.estado != 'activo':
+            raise ValidationError({'contrato': f'El contrato {anterior.numero} no está activo ({anterior.estado})'})
+        if models.Cuota.objects.filter(contrato=anterior, estado='pendiente', vence_en__lt=timezone.localdate()).exists():
+            raise ValidationError({'contrato': 'Para ceder, el contrato debe estar al día con sus cuotas'})
+        contrato, _ = _contratar(tipo='cesion', precio=0, modalidad='no_aplica', bien=anterior.bien,
+                                 cuota_mensual=anterior.cuota_mensual, cobrar=False, **datos)
+        if contrato.adoptante_id == anterior.adoptante_id:
+            raise ValidationError({'adoptante': 'El bien ya es de esa persona'})  # deshace la transacción
+        models.Cuota.objects.filter(contrato=anterior, estado='pendiente').update(contrato=contrato)
+        publicar('adopcion.cedido', 'adopcion.contrato', contrato.id,
+                 {'numero': contrato.numero, 'anterior': anterior.numero, 'bien_id': anterior.bien_id})
+    return contrato
 
 
 def ado_15_consultar_tablero_adopcion(*, usuario, **datos):

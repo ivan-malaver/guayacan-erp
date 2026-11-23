@@ -54,7 +54,7 @@ urlpatterns = [
     # ADO-13 · Reponer un bien muerto en garantía: POST /api/v1/adopcion/bienes/{id}/muerte/
     path('bienes/<int:id>/muerte/', views.Muerte.as_view(), name='ado-13-bienes-id-muerte'),
     # ADO-14 · Ceder o regalar la adopción: POST /api/v1/adopcion/contratos/{id}/ceder/
-    path('contratos/<int:id>/ceder/', PorConstruir.as_view(caso_de_uso='ADO-14', metodo='POST'), name='ado-14-contratos-id-ceder'),
+    path('contratos/<int:id>/ceder/', views.Ceder.as_view(), name='ado-14-contratos-id-ceder'),
     # ADO-15 · Consultar el tablero de adopción: GET /api/v1/adopcion/tablero/
     path('tablero/', PorConstruir.as_view(caso_de_uso='ADO-15', metodo='GET'), name='ado-15-tablero'),
     # --- CRUD de las tablas (al final, para que las acciones de arriba tengan prioridad)

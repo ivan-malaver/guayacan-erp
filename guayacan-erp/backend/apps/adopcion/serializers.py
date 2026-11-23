@@ -113,6 +113,11 @@ class ReadopcionSerializer(CompraSerializer):
     modalidad_siembra = None
 
 
+class CesionSerializer(ReadopcionSerializer):
+    """ADO-14: el nuevo adoptante y su autorización de datos; el bien es el del contrato que se cede."""
+    bien = None
+
+
 class DecisionSerializer(serializers.Serializer):
     """ADO-11: lo que decidió el dueño del bien maduro."""
     decision = serializers.ChoiceField(choices=['mantener', 'liquidar'])

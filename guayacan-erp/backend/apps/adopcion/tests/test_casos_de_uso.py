@@ -842,9 +842,56 @@ def test_ado_13_no_se_registra_dos_veces(ado_11):
     assert _morir(api, 999999999, hoy).status_code == 404
 
 
-@pytest.mark.skip(reason='ADO-14: por construir')
-def test_ado_14_ceder_regalar_adopcion_flujo_principal():
-    """ADO-14 · Ceder o regalar la adopción"""
+def _ceder(api, contrato, documento=('CC', 'PRB246810'), autoriza_datos=True):
+    return api.post(f'/api/v1/adopcion/contratos/{contrato}/ceder/', {
+        'autoriza_datos': autoriza_datos, 'version_politica': '2026-10', 'medio_autorizacion': 'correo',
+        'adoptante': {'tipo_documento': documento[0], 'numero_documento': documento[1], 'nombres': 'Pedro',
+                      'apellidos': 'Gómez'}}, format='json')
+
+
+def test_ado_14_ceder_regalar_adopcion_flujo_principal(ado_06):
+    """ADO-14 · Anna regala su aguacate: el contrato nuevo nace activo sin cobro y con la misma cuota, el anterior queda
+    cedido, la cuota que aún no vence pasa al nuevo dueño y el enlace de Anna deja de servir"""
+    api, enlace, anterior, bien, _ = ado_06
+    r = _ceder(api, anterior)
+    assert r.status_code == 201, r.data
+    c = r.data
+    assert (c['tipo'], c['estado'], c['precio'], c['cuota_mensual'], c['bien']) == ('cesion', 'activo', '0.00', '25000.00', bien)
+    assert _fila('select estado from adopcion.contrato where id = %s', anterior) == ('cedido',)
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('activo',)
+    assert _fila("select count(*) from adopcion.cuota where contrato_id = %s and estado = 'pendiente'", c['id']) == (1,)
+    assert _fila('select count(*) from adopcion.cuota where contrato_id = %s', anterior) == (0,)
+    assert _abrir(enlace['ruta']).status_code == 404
+    assert _avisos('adopcion.cedido', c['id']) == 1
+    assert _fila("select count(*) from comercial.pago where referencia like %s", f"%:{c['numero']}") == (0,)
+
+
+def test_ado_14_con_cuotas_vencidas_no_se_cede(ado_06):
+    """Para ceder hay que estar al día: un regalo no borra una deuda"""
+    api, _, anterior, _, _ = ado_06
+    _fila("update adopcion.cuota set vence_en = current_date - 1 where contrato_id = %s returning id", anterior)
+    r = _ceder(api, anterior)
+    assert r.status_code == 400
+    assert 'al día' in str(r.data['contrato'])
+    assert _fila('select estado from adopcion.contrato where id = %s', anterior) == ('activo',)
+
+
+def test_ado_14_no_se_cede_a_si_mismo_ni_sin_autorizacion(ado_06):
+    """El nuevo dueño debe ser otra persona y autorizar sus datos (Ley 1581); si no, nada cambia"""
+    api, _, anterior, _, _ = ado_06
+    assert _ceder(api, anterior, documento=('PAS', 'PRB123456')).status_code == 400  # el pasaporte de Anna
+    assert _ceder(api, anterior, autoriza_datos=False).status_code == 400
+    assert _fila('select estado from adopcion.contrato where id = %s', anterior) == ('activo',)
+    assert _fila("select count(*) from adopcion.contrato where tipo = 'cesion'") == (0,)
+
+
+def test_ado_14_contrato_que_no_esta_activo(ado_06):
+    """Solo se cede un contrato activo"""
+    api, _, anterior, _, _ = ado_06
+    _fila("update adopcion.contrato set estado = 'terminado_abandono' where id = %s returning id", anterior)
+    r = _ceder(api, anterior)
+    assert r.status_code == 400
+    assert 'no está activo' in str(r.data['contrato'])
 
 
 @pytest.mark.skip(reason='ADO-15: por construir')
