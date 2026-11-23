@@ -27,6 +27,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.comercial.models import Factura, Pago
 from apps.personal.models import EvidenciaTarea
 from apps.terceros.models import Cliente, ConsentimientoDatos, Tercero
+from guayacan.db import consultar
 from guayacan.errores import datos_del_error
 from guayacan.eventos import publicar  # noqa: F401
 from guayacan.pasarela import pasarela
@@ -634,7 +635,7 @@ def ado_14_ceder_regalar_adopcion(*, usuario, contrato_id, **datos):
     return contrato
 
 
-def ado_15_consultar_tablero_adopcion(*, usuario, **datos):
+def ado_15_consultar_tablero_adopcion():
     """ADO-15 · Consultar el tablero de adopción
 
     Actores: Familia; secundarios: Administrador
@@ -644,12 +645,9 @@ def ado_15_consultar_tablero_adopcion(*, usuario, **datos):
     Endpoints: GET /api/v1/adopcion/tablero/
     Requerimientos: RQ-48
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Devuelve una fila por tipo de plan (frutal, ovino...): bienes con dueño, en readopción y disponibles, cuotas del
+    mes y costo de cuidado estimado. La vista respeta la seguridad por filas (migración 010): solo la finca de la sesión.
     """
-    # Por construir. Pasos sugeridos para ADO-15:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.v_tablero
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-15: por construir')
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.exigir_funcion('adopcion')")
+    return consultar('select * from adopcion.v_tablero order by tipo')

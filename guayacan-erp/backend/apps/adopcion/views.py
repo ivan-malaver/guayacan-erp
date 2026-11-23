@@ -23,7 +23,7 @@ from rest_framework.views import APIView
 
 from guayacan.contexto import Contexto, fijar
 from guayacan.pasarela import pasarela
-from guayacan.permisos import SoloPersonas
+from guayacan.permisos import SoloPersonas, requiere
 from guayacan.vistas import VistaModelo
 
 from . import models, serializers, services
@@ -177,6 +177,15 @@ class Ceder(APIView):
         datos.is_valid(raise_exception=True)
         contrato = services.ado_14_ceder_regalar_adopcion(usuario=request.user, contrato_id=id, **datos.validated_data)
         return Response(serializers.ContratoSerializer(contrato).data, status=status.HTTP_201_CREATED)
+
+
+class Tablero(APIView):
+    """ADO-15 · GET /api/v1/adopcion/tablero/: cifras de adopción de la finca, por tipo (familia y administrador)."""
+
+    permission_classes = [IsAuthenticated, requiere('adopcion.ver_tablero')]
+
+    def get(self, request):
+        return Response(services.ado_15_consultar_tablero_adopcion())
 
 
 class PagarCuota(APIView):

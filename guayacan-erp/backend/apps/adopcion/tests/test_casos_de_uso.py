@@ -529,18 +529,23 @@ def test_ado_06_codigo_falso_responde_404(ado_06):
     assert _abrir('/api/v1/publico/adopcion/sin-finca/').status_code == 404
 
 
+def _cliente(tercero, correo, predio):
+    """Cliente de API de un adoptante que sí se registró: usuario con rol cliente que apunta a su tercero."""
+    usuario = _fila("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
+                    "values ('Adoptante de prueba', %s, 'x', %s) returning id", correo, tercero)[0]
+    _fila("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'cliente' returning id", usuario)
+    c = APIClient()
+    c.credentials(HTTP_AUTHORIZATION=f"Bearer {emitir_tokens(get_user_model().objects.get(pk=usuario), predio)['acceso']}")
+    return c
+
+
 def test_ado_06_mis_bienes_para_el_adoptante_con_cuenta(ado_06):
     """Quien sí se registró ve sus bienes en /mis-bienes/; otra persona no ve los ajenos"""
     _, _, _, bien, adoptante = ado_06
     predio = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
 
     def cliente(tercero, correo):
-        usuario = _fila("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash, tercero_id) "
-                        "values ('Adoptante de prueba', %s, 'x', %s) returning id", correo, tercero)[0]
-        _fila("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'cliente' returning id", usuario)
-        c = APIClient()
-        c.credentials(HTTP_AUTHORIZATION=f"Bearer {emitir_tokens(get_user_model().objects.get(pk=usuario), predio)['acceso']}")
-        return c
+        return _cliente(tercero, correo, predio)
 
     anna = cliente(adoptante, 'anna-prb@example.com')
     assert [b['bien']['id'] for b in anna.get('/api/v1/adopcion/mis-bienes/').data] == [bien]
@@ -933,6 +938,40 @@ def test_ado_15_tablero_aislado_por_finca(otra_finca):
     _en_predio(finca_a)
 
 
-@pytest.mark.skip(reason='ADO-15: por construir')
-def test_ado_15_consultar_tablero_adopcion_flujo_principal():
-    """ADO-15 · Consultar el tablero de adopción"""
+def _tablero(api):
+    r = api.get('/api/v1/adopcion/tablero/')
+    return r, {f['tipo']: f for f in r.data} if r.status_code == 200 else None
+
+
+def test_ado_15_consultar_tablero_adopcion_flujo_principal(ado_06):
+    """ADO-15 · El administrador ve por tipo los bienes con dueño, la cuota del mes y el costo de cuidado de su finca"""
+    api, _, _, _, _ = ado_06
+    r, por_tipo = _tablero(api)
+    assert r.status_code == 200, r.data
+    frutal = por_tipo['frutal']
+    assert (frutal['bienes_con_dueno'], frutal['en_readopcion'], frutal['disponibles']) == (1, 0, 0)
+    assert (frutal['cuotas_mes'], frutal['costo_cuidado_mes']) == (25000, 9000)
+
+
+def test_ado_15_la_api_no_muestra_otra_finca(otra_finca, ado_02):
+    """Aislamiento por la API: la sesión de la finca A no suma el aguacate de la finca B"""
+    api, _, _ = ado_02
+    _, por_tipo = _tablero(api)
+    assert por_tipo['frutal']['disponibles'] == 1
+
+
+def test_ado_15_el_adoptante_no_ve_el_tablero(ado_06):
+    """Las cifras del negocio no son para el adoptante con cuenta (rol cliente): 403"""
+    _, _, _, bien, adoptante = ado_06
+    predio = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
+    r, _ = _tablero(_cliente(adoptante, 'anna-tablero@example.com', predio))
+    assert r.status_code == 403
+    assert 'adopcion.ver_tablero' in str(r.data)
+
+
+def test_ado_15_funcion_apagada_responde_422(ado_01):
+    """Sin la función «adopcion» encendida en la finca no hay tablero"""
+    api, funcion, _, _, _ = ado_01
+    funcion(False)
+    r, _ = _tablero(api)
+    assert r.status_code == 422

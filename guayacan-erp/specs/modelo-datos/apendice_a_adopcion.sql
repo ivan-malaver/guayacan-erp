@@ -517,3 +517,7 @@ insert into nucleo.parametro (predio_id, clave, valor, tipo_dato, vigente_desde,
  (null, 'comision_adopcion_pct', '5', 'porcentaje', '2026-10-30', 'Comisión de administración sobre la utilidad neta de cada liquidación de un bien adoptado'),
  (null, 'meses_abandono_adopcion', '3', 'entero', '2026-10-30', 'Cuotas vencidas tras las cuales el bien pasa a readopción'),
  (null, 'dias_gracia_abandono', '15', 'entero', '2026-10-30', 'Días desde el último aviso de mora entregado antes de pasar el bien a readopción');
+-- ADO-15: el tablero muestra las cifras del negocio; lo ven la familia y el administrador, no el adoptante (rol cliente)
+insert into nucleo.permiso (codigo, nombre, modulo) values ('adopcion.ver_tablero', 'Ver el tablero de adopción', 'adopcion');
+insert into nucleo.rol_permiso (rol_id, permiso_id)
+select r.id, p.id from nucleo.rol r join nucleo.permiso p on p.codigo = 'adopcion.ver_tablero' where r.codigo in ('administrador', 'familia');
