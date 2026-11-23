@@ -491,7 +491,8 @@ begin
 end $$;
 comment on function adopcion.registrar_muerte(bigint, date, text) is 'Muerte del bien: dentro de la garantía y al día se repone gratis; si no, el contrato termina sin cuotas futuras';
 
-create or replace view adopcion.v_tablero as
+-- security_invoker: la vista respeta la seguridad por filas de quien consulta (cada finca ve solo sus totales)
+create or replace view adopcion.v_tablero with (security_invoker = true) as
 select p.tipo,
        count(*) filter (where b.estado in ('activo', 'maduro', 'reservado')) as bienes_con_dueno,
        count(*) filter (where b.estado = 'en_readopcion') as en_readopcion,

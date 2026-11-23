@@ -894,6 +894,45 @@ def test_ado_14_contrato_que_no_esta_activo(ado_06):
     assert 'no está activo' in str(r.data['contrato'])
 
 
+def _en_predio(predio):
+    """Cambia la finca de la sesión dentro de la transacción de la prueba (lo que hace el middleware por petición)."""
+    _fila("select set_config('app.predio_id', %s, true)", str(predio))
+
+
+def _disponibles_frutal():
+    return _fila("select coalesce(sum(disponibles), 0) from adopcion.v_tablero where tipo = 'frutal'")[0]
+
+
+@pytest.fixture
+def otra_finca(ado_02):
+    """Una segunda finca con su propio aguacate disponible (finca B); la sesión vuelve a la finca A al terminar."""
+    _, _, bien = ado_02
+    finca_a = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
+    otras = _filas('select distinct f.predio_id from nucleo.usuario u cross join lateral nucleo.predios_del_usuario(u.id) f '
+                   'where f.predio_id <> %s order by 1', finca_a)
+    if not otras:
+        pytest.skip('La base local tiene una sola finca')
+    finca_b = otras[0][0]
+    _en_predio(finca_b)
+    _fila("insert into nucleo.funcionalidad (predio_id, codigo, descripcion, fase, activa) values (nucleo.predio_actual(), "
+          "'adopcion', 'Adopción (prueba)', 3, true) on conflict (predio_id, codigo) do update set activa = true returning id")
+    plan = _fila("insert into adopcion.plan (codigo, nombre, tipo, cultivo_id, precio_compra, precio_readopcion, cuota_mensual, "
+                 "costo_bien, costo_cuidado_mensual, meses_madurez) select 'PRB-AGU-B', 'Aguacate finca B', 'frutal', id, "
+                 "150000, 60000, 25000, 45000, 9000, 48 from produccion.cultivo where codigo = 'aguacate' returning id")[0]
+    _fila("insert into adopcion.bien (codigo, plan_id) values ('PRB-B-0001', %s) returning id", plan)
+    _en_predio(finca_a)
+    return finca_a, finca_b
+
+
+def test_ado_15_tablero_aislado_por_finca(otra_finca):
+    """Migración 010: cada finca ve en adopcion.v_tablero solo sus propios bienes, no los de la otra"""
+    finca_a, finca_b = otra_finca
+    assert _disponibles_frutal() == 1  # el aguacate de ADO-01 en la finca A
+    _en_predio(finca_b)
+    assert _disponibles_frutal() == 1  # solo el de la finca B
+    _en_predio(finca_a)
+
+
 @pytest.mark.skip(reason='ADO-15: por construir')
 def test_ado_15_consultar_tablero_adopcion_flujo_principal():
     """ADO-15 · Consultar el tablero de adopción"""
