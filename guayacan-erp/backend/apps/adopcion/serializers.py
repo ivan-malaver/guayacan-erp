@@ -113,6 +113,11 @@ class ReadopcionSerializer(CompraSerializer):
     modalidad_siembra = None
 
 
+class DecisionSerializer(serializers.Serializer):
+    """ADO-11: lo que decidió el dueño del bien maduro."""
+    decision = serializers.ChoiceField(choices=['mantener', 'liquidar'])
+
+
 class AvisoPagoSerializer(serializers.Serializer):
     """ADO-02: aviso (webhook) de la pasarela, ya con la firma verificada."""
     referencia = serializers.RegexField(r'^\d+:.+$', max_length=60)  # '<predio_id>:<número del contrato>'

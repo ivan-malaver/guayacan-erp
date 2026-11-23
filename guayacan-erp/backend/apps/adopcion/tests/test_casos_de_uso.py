@@ -720,9 +720,59 @@ def test_ado_10_liquidar_productos_5_flujo_principal():
     """ADO-10 · Liquidar productos con el 5 %"""
 
 
-@pytest.mark.skip(reason='ADO-11: por construir')
-def test_ado_11_decidir_madurez_mantener_liquidar_flujo_principal():
-    """ADO-11 · Decidir en la madurez: mantener o liquidar"""
+@pytest.fixture
+def ado_11(ado_05):
+    """El aguacate sembrado de ADO-05; madurar(True) corre adopcion.marcar_madurez() pasados sus 48 meses."""
+    api, cuota, _ = ado_05
+    contrato, bien = _fila('select c.id, c.bien_id from adopcion.cuota q join adopcion.contrato c on c.id = q.contrato_id '
+                           'where q.id = %s', cuota)
+
+    def madurar():
+        assert _fila("select adopcion.marcar_madurez((current_date + interval '48 months')::date)") == (1,)
+
+    return api, contrato, bien, madurar
+
+
+def _decidir(api, contrato, decision):
+    return api.post(f'/api/v1/adopcion/contratos/{contrato}/decision/', {'decision': decision}, format='json')
+
+
+def test_ado_11_decidir_madurez_mantener_liquidar_flujo_principal(ado_11):
+    """ADO-11 · Con el bien maduro, el dueño decide liquidar: queda anotado con su fecha y se avisa al administrador"""
+    api, contrato, bien, madurar = ado_11
+    madurar()
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('maduro',)
+    r = _decidir(api, contrato, 'liquidar')
+    assert r.status_code == 200, r.data
+    assert (r.data['decision_madurez'], r.data['estado'], r.data['decidido_en'] is not None) == ('liquidar', 'activo', True)
+    assert _avisos('adopcion.decision_madurez', contrato) == 1
+
+
+def test_ado_11_mantener_sigue_con_la_cuota(ado_11):
+    """Mantener: el contrato sigue activo y el bien sigue pagando su cuota"""
+    api, contrato, _, madurar = ado_11
+    madurar()
+    r = _decidir(api, contrato, 'mantener')
+    assert (r.status_code, r.data['decision_madurez'], r.data['estado']) == (200, 'mantener', 'activo')
+
+
+def test_ado_11_antes_de_la_madurez_responde_422(ado_11):
+    """La base no deja decidir sobre un bien que todavía no llega a su madurez"""
+    api, contrato, _, _ = ado_11
+    r = _decidir(api, contrato, 'liquidar')
+    assert r.status_code == 422
+    assert _fila('select decision_madurez from adopcion.contrato where id = %s', contrato) == (None,)
+
+
+def test_ado_11_decision_invalida_o_contrato_terminado(ado_11):
+    """Solo mantener o liquidar, y solo sobre un contrato activo"""
+    api, contrato, _, madurar = ado_11
+    madurar()
+    assert _decidir(api, contrato, 'vender').status_code == 400
+    _fila("update adopcion.contrato set estado = 'terminado_abandono' where id = %s returning id", contrato)
+    r = _decidir(api, contrato, 'liquidar')
+    assert r.status_code == 400
+    assert 'no está activo' in str(r.data['contrato'])
 
 
 @pytest.mark.skip(reason='ADO-12: por construir')

@@ -508,7 +508,7 @@ def ado_10_liquidar_productos_5(*, usuario, **datos):
     raise NotImplementedError('ADO-10: por construir')
 
 
-def ado_11_decidir_madurez_mantener_liquidar(*, usuario, **datos):
+def ado_11_decidir_madurez_mantener_liquidar(*, usuario, contrato_id, decision):
     """ADO-11 · Decidir en la madurez: mantener o liquidar
 
     Actores: Adoptante; secundarios: Administrador
@@ -518,15 +518,25 @@ def ado_11_decidir_madurez_mantener_liquidar(*, usuario, **datos):
     Endpoints: POST /api/v1/adopcion/contratos/{id}/decision/
     Requerimientos: RQ-47
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (la persona que registra lo que decidió el adoptante), contrato_id y decision
+    ('mantener' o 'liquidar'). Devuelve el contrato.
+
+    adopcion.marcar_madurez() pasa el bien a maduro el día 1 (config/celery.py). La base exige el bien maduro y que
+    decida una persona, no un agente (adopcion.validar_contrato), y anota decidido_en. Mantener: el contrato sigue con
+    su cuota. Liquidar: el administrador tala, sacrifica o vende en pie y liquida (ADO-12).
     """
-    # Por construir. Pasos sugeridos para ADO-11:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.marcar_madurez(), adopcion.validar_contrato()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-11: por construir')
+    with transaction.atomic():
+        contrato = models.Contrato.objects.select_for_update().filter(pk=contrato_id).first()
+        if not contrato:
+            raise NotFound(f'No hay contrato {contrato_id}')
+        if contrato.estado != 'activo':
+            raise ValidationError({'contrato': f'El contrato {contrato.numero} no está activo ({contrato.estado})'})
+        contrato.decision_madurez = decision
+        contrato.save(update_fields=['decision_madurez'])
+        contrato.refresh_from_db(fields=['decidido_en'])
+        publicar('adopcion.decision_madurez', 'adopcion.contrato', contrato.id,
+                 {'numero': contrato.numero, 'bien_id': contrato.bien_id, 'decision': decision})
+    return contrato
 
 
 def ado_12_talar_sacrificar_liquidar(*, usuario, **datos):

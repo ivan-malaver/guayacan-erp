@@ -143,6 +143,18 @@ class Readopcion(APIView):
         return Response({**serializers.ContratoSerializer(contrato).data, 'cobro': cobro}, status=status.HTTP_201_CREATED)
 
 
+class Decision(APIView):
+    """ADO-11 · POST /api/v1/adopcion/contratos/{id}/decision/ {decision}: mantener o liquidar el bien maduro."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas]  # la decisión del dueño la registra una persona, no un agente
+
+    def post(self, request, id):
+        datos = serializers.DecisionSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        contrato = services.ado_11_decidir_madurez_mantener_liquidar(usuario=request.user, contrato_id=id, **datos.validated_data)
+        return Response(serializers.ContratoSerializer(contrato).data)
+
+
 class PagarCuota(APIView):
     """ADO-05 · POST /api/v1/adopcion/cuotas/{id}/pagar/: devuelve el enlace de cobro de la cuota pendiente."""
 
