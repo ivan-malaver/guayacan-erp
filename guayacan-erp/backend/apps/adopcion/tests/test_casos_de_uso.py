@@ -643,9 +643,71 @@ def test_ado_07_enviado_no_se_cambia_por_el_crud(ado_07):
     assert api.post('/api/v1/adopcion/seguimientos/999999999/marcar-enviado/').status_code == 404
 
 
-@pytest.mark.skip(reason='ADO-08: por construir')
-def test_ado_08_readoptar_flujo_principal():
-    """ADO-08 · Readoptar"""
+@pytest.fixture
+def ado_08(ado_07):
+    """El aguacate quedó en readopción por abandono (ADO-07) y un vendedor lo ofrece a otro adoptante."""
+    api, contrato, bien, dias = ado_07
+    for dia in dias:
+        _abandono(dia)
+    api.post(f'/api/v1/adopcion/seguimientos/{_avisos_mora(bien)[-1]}/marcar-enviado/')
+    assert _abandono(dias[-1] + timedelta(days=15)) == 1
+    readopcion = {'bien': bien, 'autoriza_datos': True, 'autoriza_seguimiento': True, 'version_politica': '2026-10',
+                  'medio_autorizacion': 'web', 'adoptante': {'tipo_documento': 'CC', 'numero_documento': 'PRB987654',
+                                                            'nombres': 'Lucía', 'apellidos': 'Rojas'}}
+    return api, readopcion, bien, contrato
+
+
+def test_ado_08_readoptar_flujo_principal(ado_08):
+    """ADO-08 · El contrato nace pendiente al precio de readopción y sin siembra; al pagar se activa, el bien vuelve a
+    activo en su mismo sitio (con su fecha de siembra) y el nuevo adoptante paga la cuota desde el mes siguiente"""
+    api, readopcion, bien, anterior = ado_08
+    sembrado = _fila('select fecha_inicio, sitio_id from adopcion.bien where id = %s', bien)
+    r = api.post('/api/v1/adopcion/contratos/readopcion/', readopcion, format='json')
+    assert r.status_code == 201, r.data
+    c = r.data
+    assert (c['tipo'], c['precio'], c['modalidad_siembra'], c['estado']) == ('readopcion', '60000.00', 'no_aplica', 'pendiente_pago')
+    assert c['cobro']['url_pago'].endswith(f"{c['predio']}:{c['numero']}")
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('en_readopcion',)  # hasta que pague
+    a = _avisar(c['numero'], c['predio'], valor='60000.00')
+    assert (a.status_code, a.data['estado']) == (200, 'activo'), a.data
+    assert _fila('select estado, fecha_inicio, sitio_id from adopcion.bien where id = %s', bien) == ('activo', *sembrado)
+    assert _fila('select estado from adopcion.contrato where id = %s', anterior) == ('terminado_abandono',)
+    assert _fila("select f.total from comercial.pago p join comercial.factura f on f.id = p.factura_id where p.referencia = %s",
+                 f"{c['predio']}:{c['numero']}") == (60000,)
+    mes = (timezone.localdate().replace(day=1) + timedelta(days=32 * 5)).replace(day=1)
+    _fila('select adopcion.generar_cuotas(%s)', mes)
+    assert _fila('select count(*), min(valor) from adopcion.cuota where contrato_id = %s', c['id']) == (1, 25000)
+
+
+def test_ado_08_bien_que_no_esta_en_readopcion_responde_400(ado_05):
+    """Solo se readopta un bien en readopción: uno activo con su adoptante no"""
+    api, cuota, _ = ado_05
+    bien = _fila('select c.bien_id from adopcion.cuota q join adopcion.contrato c on c.id = q.contrato_id where q.id = %s', cuota)[0]
+    r = api.post('/api/v1/adopcion/contratos/readopcion/', {
+        'bien': bien, 'autoriza_datos': True, 'version_politica': '2026-10', 'medio_autorizacion': 'web',
+        'adoptante': {'tipo_documento': 'CC', 'numero_documento': 'PRB987654', 'nombres': 'Lucía'}}, format='json')
+    assert r.status_code == 400
+    assert 'readopción' in str(r.data['bien'])
+
+
+def test_ado_08_sin_autorizacion_de_datos_no_registra_nada(ado_08):
+    """Ley 1581: sin autorización no hay contrato ni tercero nuevo"""
+    api, readopcion, bien, _ = ado_08
+    r = api.post('/api/v1/adopcion/contratos/readopcion/', {**readopcion, 'autoriza_datos': False}, format='json')
+    assert r.status_code == 400
+    assert _fila("select count(*) from adopcion.contrato where bien_id = %s and tipo = 'readopcion'", bien) == (0,)
+    assert _fila("select count(*) from terceros.tercero where numero_documento = 'PRB987654'") == (0,)
+
+
+def test_ado_08_si_otro_paga_primero_se_cancela_y_se_devuelve(ado_08):
+    """Dos personas readoptan el mismo bien: gana quien paga primero y al otro se le devuelve el dinero"""
+    api, readopcion, bien, _ = ado_08
+    primero = api.post('/api/v1/adopcion/contratos/readopcion/', readopcion, format='json').data
+    otra = {**readopcion, 'adoptante': {**readopcion['adoptante'], 'numero_documento': 'PRB555555', 'nombres': 'Marta'}}
+    segundo = api.post('/api/v1/adopcion/contratos/readopcion/', otra, format='json').data
+    assert _avisar(primero['numero'], primero['predio'], valor='60000.00').data['estado'] == 'activo'
+    assert _avisar(segundo['numero'], segundo['predio'], valor='60000.00').data['estado'] == 'cancelado'
+    assert _avisos('adopcion.pago_sin_bien', segundo['id']) == 1
 
 
 @pytest.mark.skip(reason='ADO-09: por construir')

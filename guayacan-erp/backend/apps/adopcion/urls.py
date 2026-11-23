@@ -30,6 +30,8 @@ urlpatterns = [
     # --- Acciones de los casos de uso (responden 501 «por construir» hasta que se programen)
     # ADO-02 · Comprar un árbol o un animal: POST /api/v1/adopcion/contratos/compra/ (el pago confirma en /api/v1/pagos/webhook/)
     path('contratos/compra/', views.Compra.as_view(), name='ado-02-contratos-compra'),
+    # ADO-08 · Readoptar: POST /api/v1/adopcion/contratos/readopcion/ (el pago confirma en el mismo webhook)
+    path('contratos/readopcion/', views.Readopcion.as_view(), name='ado-08-contratos-readopcion'),
     # ADO-06 · Enlace personal del adoptante sin cuenta (la ficha se ve en /api/v1/publico/adopcion/<finca>.<código>/)
     path('contratos/<int:id>/enlace/', views.EmitirEnlace.as_view(), name='ado-06-contratos-id-enlace'),
     path('enlaces/<int:id>/revocar/', views.RevocarEnlace.as_view(), name='ado-06-enlaces-id-revocar'),

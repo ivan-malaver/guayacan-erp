@@ -108,6 +108,11 @@ class CompraSerializer(serializers.Serializer):
     evidencia_url = serializers.URLField(max_length=300, required=False)
 
 
+class ReadopcionSerializer(CompraSerializer):
+    """ADO-08: lo mismo que la compra, sin modalidad de siembra (el bien ya está sembrado)."""
+    modalidad_siembra = None
+
+
 class AvisoPagoSerializer(serializers.Serializer):
     """ADO-02: aviso (webhook) de la pasarela, ya con la firma verificada."""
     referencia = serializers.RegexField(r'^\d+:.+$', max_length=60)  # '<predio_id>:<número del contrato>'

@@ -128,6 +128,21 @@ class Compra(APIView):
         return Response({**serializers.ContratoSerializer(contrato).data, 'cobro': cobro}, status=status.HTTP_201_CREATED)
 
 
+class Readopcion(APIView):
+    """ADO-08 · POST /api/v1/adopcion/contratos/readopcion/: un bien en readopción pasa a otro adoptante.
+
+    Responde 201 con el contrato pendiente_pago y el enlace de pago, igual que la compra.
+    """
+
+    # TODO(roles): el mismo permiso de adopción que la compra
+
+    def post(self, request):
+        datos = serializers.ReadopcionSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        contrato, cobro = services.ado_08_readoptar(usuario=request.user, **datos.validated_data)
+        return Response({**serializers.ContratoSerializer(contrato).data, 'cobro': cobro}, status=status.HTTP_201_CREATED)
+
+
 class PagarCuota(APIView):
     """ADO-05 · POST /api/v1/adopcion/cuotas/{id}/pagar/: devuelve el enlace de cobro de la cuota pendiente."""
 

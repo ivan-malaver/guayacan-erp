@@ -78,9 +78,16 @@ def ado_02_comprar_arbol_animal(*, usuario, **datos):
     Devuelve (contrato, cobro): el contrato nace pendiente_pago y el bien sigue disponible hasta que la pasarela
     confirme (ado_02_confirmar_pago). cobro trae el enlace de pago para enviarle al adoptante.
     """
+    plan = datos['bien'].plan
+    return _contratar(tipo='compra', precio=plan.precio_compra, modalidad=datos.pop('modalidad_siembra'), **datos)
+
+
+def _contratar(*, tipo, precio, modalidad, bien, **datos):
+    """Compra (ADO-02) o readopción (ADO-08): registra al adoptante con su autorización de datos, crea el contrato
+    pendiente_pago y pide el cobro. Devuelve (contrato, cobro)."""
     if not datos['autoriza_datos']:
         raise ValidationError({'autoriza_datos': 'Sin la autorización de datos (Ley 1581) no se puede registrar al adoptante'})
-    bien, plan = datos['bien'], datos['bien'].plan
+    plan = bien.plan
     with transaction.atomic():
         persona = datos['adoptante']
         # Un adoptante que ya compró o es cliente se reconoce por su documento; sus datos no se sobrescriben
@@ -99,11 +106,11 @@ def ado_02_comprar_arbol_animal(*, usuario, **datos):
             # shortcut: consecutivo por max+1; dos compras simultáneas chocan en el único (409) y se reintenta
             cur.execute("select coalesce(max(substring(numero from '^ADO-([0-9]+)$')::integer), 0) + 1 from adopcion.contrato")
             numero = f'ADO-{cur.fetchone()[0]}'
-        # La base exige la función «adopcion», el bien disponible, la modalidad de siembra y, si siembra un trabajador,
-        # la autorización seguimiento_adopcion (adopcion.validar_contrato)
+        # La base exige la función «adopcion», el bien disponible (o en readopción), la modalidad de siembra y, si siembra
+        # un trabajador, la autorización seguimiento_adopcion (adopcion.validar_contrato)
         contrato = models.Contrato.objects.create(
-            numero=numero, bien=bien, adoptante=tercero, tipo='compra', precio=plan.precio_compra,
-            cuota_mensual=plan.cuota_mensual, modalidad_siembra=datos['modalidad_siembra'],
+            numero=numero, bien=bien, adoptante=tercero, tipo=tipo, precio=precio,
+            cuota_mensual=plan.cuota_mensual, modalidad_siembra=modalidad,
             consentimiento=consentimiento, estado='pendiente_pago')
         cobro = pasarela().crear_cobro(referencia=f'{contrato.predio_id}:{numero}', valor=contrato.precio,
                                        descripcion=f'Adopción {bien.codigo} ({plan.nombre})')
@@ -133,7 +140,7 @@ def ado_02_confirmar_pago(*, referencia, estado, id_transaccion, valor):
             contrato.estado = 'activo'
             contrato.save(update_fields=['estado'])  # la base revisa otra vez que el bien siga disponible
     except Error as e:
-        if 'no está disponible' not in datos_del_error(e)[1]:
+        if not any(m in datos_del_error(e)[1] for m in ('no está disponible', 'no está en readopción')):
             raise
         # Otro adoptante pagó primero el mismo bien: el contrato se cancela y el dinero se devuelve
         contrato.estado = 'cancelado'
@@ -143,7 +150,7 @@ def ado_02_confirmar_pago(*, referencia, estado, id_transaccion, valor):
         return contrato
     pago = _facturar_y_cobrar(contrato.adoptante_id, valor, referencia, id_transaccion)
     publicar('adopcion.compra_confirmada', 'adopcion.contrato', contrato.id,
-             {'numero': numero, 'bien_id': contrato.bien_id, 'factura': f'ADO-{pago.factura.numero}',
+             {'numero': numero, 'tipo': contrato.tipo, 'bien_id': contrato.bien_id, 'factura': f'ADO-{pago.factura.numero}',
               'modalidad_siembra': contrato.modalidad_siembra})
     return contrato
 
@@ -442,18 +449,21 @@ def ado_08_readoptar(*, usuario, **datos):
     Fase 3 · función adopcion
     Tablas: adopcion.contrato, adopcion.bien
     Reglas en la base: adopcion.validar_contrato()
-    Endpoints: CRUD de sus tablas
+    Endpoints: POST /api/v1/adopcion/contratos/readopcion/
     Requerimientos: RQ-46
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (vendedor, administrador o agente; el adoptante no necesita cuenta) y **datos (lo que validó
+    ReadopcionSerializer). Devuelve (contrato, cobro), igual que la compra (ADO-02).
+
+    El bien quedó en readopción por abandono (ADO-07) y sigue vivo y sembrado en su sitio: el nuevo contrato es tipo
+    readopcion, al precio de readopción del plan y sin siembra. El pago lo confirma el mismo aviso de la pasarela
+    (ado_02_confirmar_pago); al activarse, la base pasa el bien a activo y desde el mes siguiente se cobra la cuota.
     """
-    # Por construir. Pasos sugeridos para ADO-08:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.validar_contrato()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-08: por construir')
+    # shortcut: un precio_readopcion de 0 (la base lo permite) igual pasa por la pasarela; activar sin cobro si un plan lo usa
+    bien = datos['bien']
+    if bien.estado != 'en_readopcion':
+        raise ValidationError({'bien': f'El bien {bien.codigo} no está en readopción (estado {bien.estado})'})
+    return _contratar(tipo='readopcion', precio=bien.plan.precio_readopcion, modalidad='no_aplica', **datos)
 
 
 def ado_09_registrar_vender_productos_bien(*, usuario, **datos):
