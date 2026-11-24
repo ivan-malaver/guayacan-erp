@@ -2,9 +2,13 @@
 
 Las dos primeras no necesitan base de datos. Las dos últimas (marcadas con @pytest.mark.django_db) sí: necesitan
 la base cargada con el esquema y los datos iniciales (la integración continua las corre después de las reglas)."""
+from datetime import date
+
 import pytest
+from django.conf import settings
 from django.db import connection
 from django.test import RequestFactory
+from django.utils import timezone
 
 from guayacan.contexto import Contexto, _entero, fijar, resolver_contexto
 
@@ -30,6 +34,16 @@ def test_fijar_deja_la_finca_en_la_transaccion():
     with connection.cursor() as cur:
         cur.execute('select nucleo.predio_actual(), nucleo.usuario_actual(), nucleo.agente_actual()')
         assert cur.fetchone() == (1, 1, None)
+
+
+# «Hoy» en la base es el día de la finca, no el de UTC: Django abre la conexión en UTC y de 19:00 a medianoche
+# current_date ya sería mañana (fechas por defecto, vencimientos y moras corridos un día)
+@pytest.mark.django_db
+def test_fijar_pone_la_hora_de_la_finca():
+    fijar(Contexto(usuario_id=1, predio_id=1))
+    with connection.cursor() as cur:
+        cur.execute("select current_setting('TimeZone'), current_date, (timestamptz '2026-11-23 23:30-05')::date")
+        assert cur.fetchone() == (settings.TIME_ZONE, timezone.localdate(), date(2026, 11, 23))
 
 
 # Con agente_id fijado, la base rechaza las decisiones que solo puede tomar una persona

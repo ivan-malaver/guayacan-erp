@@ -9,7 +9,9 @@ Para fijar la finca dentro de una prueba use la fixture `en_finca`:
         en_finca(predio=1, usuario=1)
 """
 import pytest
-from django.db import connection
+
+from guayacan.contexto import Contexto
+from guayacan.contexto import fijar as fijar_contexto
 
 
 @pytest.fixture(scope='session')
@@ -19,12 +21,10 @@ def django_db_setup():
 
 @pytest.fixture
 def en_finca(db):
-    """Devuelve una función que fija app.predio_id, app.usuario_id y app.agente_id para la transacción de la prueba."""
+    """Devuelve una función que fija la finca, el usuario y el agente para la transacción de la prueba (lo mismo que
+    hace guayacan.contexto.fijar en cada petición, zona horaria incluida)."""
 
     def fijar(predio, usuario=None, agente=None):
-        with connection.cursor() as cur:
-            cur.execute("select set_config('app.predio_id', %s, true), set_config('app.usuario_id', %s, true), "
-                        "set_config('app.agente_id', %s, true)",
-                        [str(predio), '' if usuario is None else str(usuario), '' if agente is None else str(agente)])
+        fijar_contexto(Contexto(usuario_id=usuario, predio_id=predio, agente_id=agente))
 
     return fijar

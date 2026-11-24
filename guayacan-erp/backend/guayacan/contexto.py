@@ -95,13 +95,18 @@ def pertenece(ctx):
 
 
 def fijar(ctx):
-    """Escribe la finca, el usuario y el agente en la sesión de PostgreSQL, solo para la transacción actual."""
+    """Escribe la finca, el usuario y el agente en la sesión de PostgreSQL, solo para la transacción actual.
+
+    También la zona horaria de la finca: Django abre la conexión en UTC y entonces, de 19:00 a medianoche en Colombia,
+    el current_date de las reglas (fechas por defecto, vencimientos, moras) ya sería el día siguiente.
+    """
     with connection.cursor() as cur:
         cur.execute(
-            "select set_config('app.predio_id', %s, true), set_config('app.usuario_id', %s, true), set_config('app.agente_id', %s, true)",
+            "select set_config('app.predio_id', %s, true), set_config('app.usuario_id', %s, true), set_config('app.agente_id', %s, true), "
+            "set_config('TimeZone', %s, true)",
             # set_config solo acepta texto: None se envía como cadena vacía
             ['' if ctx.predio_id is None else str(ctx.predio_id), '' if ctx.usuario_id is None else str(ctx.usuario_id),
-             '' if ctx.agente_id is None else str(ctx.agente_id)])
+             '' if ctx.agente_id is None else str(ctx.agente_id), settings.TIME_ZONE])
 
 
 class ContextoFincaMiddleware:

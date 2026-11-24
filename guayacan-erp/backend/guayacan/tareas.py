@@ -29,9 +29,10 @@ def _fincas():
 def _con_contexto(predio_id, sql):
     """Ejecuta una sentencia SQL «como» la finca indicada, en su propia transacción."""
     with transaction.atomic(using=CONEXION), connections[CONEXION].cursor() as cur:
-        # Sin usuario ni agente: es el sistema el que actúa
+        # Sin usuario ni agente: es el sistema el que actúa. «Hoy» es el día de la finca, no el de UTC (ver contexto.fijar)
         cur.execute("select set_config('app.predio_id', %s, true), set_config('app.usuario_id', '', true), "
-                    "set_config('app.agente_id', '', true)", [str(predio_id) if predio_id else ''])
+                    "set_config('app.agente_id', '', true), set_config('TimeZone', %s, true)",
+                    [str(predio_id) if predio_id else '', settings.TIME_ZONE])
         cur.execute(sql)
         return cur.fetchall() if cur.description else None
 
@@ -53,6 +54,7 @@ def por_finca(sql):
 def global_(sql):
     """Funciones de mantenimiento que no dependen de una finca (crear particiones, revisar copias)."""
     with transaction.atomic(using='admin'), connections['admin'].cursor() as cur:
+        cur.execute("select set_config('TimeZone', %s, true)", [settings.TIME_ZONE])
         cur.execute(sql)
 
 
