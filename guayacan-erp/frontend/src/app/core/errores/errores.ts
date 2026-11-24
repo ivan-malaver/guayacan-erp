@@ -28,6 +28,10 @@ export function mensajeDeError(err: unknown): string {
   if (cuerpo?.detalle) {
     return cuerpo.detalle;
   }
+  // Los permisos que revisa la API (requiere(...)) responden 403 con { detail } de Django REST Framework, sin «codigo»
+  if (err.status === 403) {
+    return 'No tiene permiso para hacer esto en esta finca.';
+  }
   switch (cuerpo?.codigo) {
     case 'sin_permiso':
       return 'No tiene permiso para hacer esto en esta finca.';

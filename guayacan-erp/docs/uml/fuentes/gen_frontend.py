@@ -13,8 +13,8 @@ se vuelve a correr este script en lugar de editar 28 archivos a mano.
 USO (desde la raíz del repositorio):
     python -I docs/uml/fuentes/gen_frontend.py docs/uml/fuentes frontend
 
-CUIDADO: sobrescribe los archivos *.routes.ts. Cuando un módulo ya tenga pantallas construidas a mano, quítelo
-de la generación (o copie sus rutas antes) para no perder el trabajo.
+CUIDADO: sobrescribe los archivos *.routes.ts. Cuando un módulo ya tenga pantallas construidas a mano, agréguelo a
+MANUALES: su <modulo>.routes.ts deja de generarse (app.routes.ts y modulos.ts sí lo siguen listando).
 """
 import json
 import os
@@ -26,6 +26,7 @@ import catalogo as C  # noqa: E402  (se importa después de ajustar sys.path a p
 
 FE = sys.argv[2]  # carpeta raíz del frontend
 rutas = []        # líneas de app.routes.ts, una por módulo
+MANUALES = {'adopcion'}  # módulos con pantallas construidas: su <modulo>.routes.ts se edita a mano
 
 
 def js(valor):
@@ -39,6 +40,9 @@ for m, titulo in C.MODULOS.items():
     d = os.path.join(FE, 'src', 'app', 'features', m)
     os.makedirs(d, exist_ok=True)
     nombre = titulo if isinstance(titulo, str) else m
+    rutas.append(f"      {{ path: '{m}', title: {js(nombre)}, loadChildren: () => import('./features/{m}/{m}.routes').then((r) => r.RUTAS) }},")
+    if m in MANUALES:
+        continue
     with open(os.path.join(d, f'{m}.routes.ts'), 'w', encoding='utf-8', newline='\n') as f:
         f.write(f"""// Rutas del módulo «{nombre}» (prefijo {C.PREFIJO[m]}). ARCHIVO GENERADO por docs/uml/fuentes/gen_frontend.py.
 //
@@ -64,7 +68,6 @@ export const RUTAS: Routes = [
   }},
 ];
 """)
-    rutas.append(f"      {{ path: '{m}', title: {js(nombre)}, loadChildren: () => import('./features/{m}/{m}.routes').then((r) => r.RUTAS) }},")
 
 with open(os.path.join(FE, 'src', 'app', 'app.routes.ts'), 'w', encoding='utf-8', newline='\n') as f:
     f.write(f"""// Mapa general de rutas de la aplicación. ARCHIVO GENERADO por docs/uml/fuentes/gen_frontend.py.

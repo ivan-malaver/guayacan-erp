@@ -2,10 +2,11 @@
 //
 // CÓMO RECIBE LOS DATOS: cada archivo features/<modulo>/<modulo>.routes.ts le pasa, en «data», el título
 // y la lista de casos de uso. Esta pantalla los lee de la ruta activa (ActivatedRoute) y los muestra.
-// Cuando se construya un caso de uso, su pantalla real reemplaza o complementa a esta.
+// Cuando se construya un caso de uso, su pantalla real reemplaza o complementa a esta: si el caso trae «ruta»,
+// su nombre es un enlace a esa pantalla.
 import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 
 /** Un caso de uso tal como viene del catálogo. */
@@ -14,10 +15,12 @@ interface Caso {
   nombre: string;
   fase: number; // fase del plan de desarrollo en que se construye
   funcion: string | null; // bandera de función que lo activa (p. ej. 'adopcion'), si la tiene
+  ruta?: string; // pantalla ya construida del caso, relativa al módulo (p. ej. 'tablero')
 }
 
 @Component({
   selector: 'gy-modulo-pendiente',
+  imports: [RouterLink],
   template: `
     <h1>{{ datos()?.titulo }}</h1>
     <p class="nota">Casos de uso de este módulo. Cada uno se construye con su especificación del documento técnico.</p>
@@ -25,7 +28,11 @@ interface Caso {
       @for (c of datos()?.casos ?? []; track c.id) {
         <li>
           <span class="id">{{ c.id }}</span>
-          <span>{{ c.nombre }}</span>
+          @if (c.ruta) {
+            <a [routerLink]="c.ruta">{{ c.nombre }}</a>
+          } @else {
+            <span>{{ c.nombre }}</span>
+          }
           <span class="fase">Fase {{ c.fase }}@if (c.funcion) { · {{ c.funcion }} }</span>
         </li>
       }
