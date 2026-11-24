@@ -266,6 +266,7 @@ class Liquidacion(models.Model):
     abono_adoptante = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, db_comment='Lo que se abona al adoptante')
     soporte_documento = models.ForeignKey('documental.Documento', models.DO_NOTHING, db_column='soporte_documento_id', related_name='+', db_constraint=False, null=True, blank=True, db_comment='Permiso de tala, remisión ICA o acta de beneficio')
     estado = models.CharField(max_length=8, choices=[('borrador', 'borrador'), ('aprobada', 'aprobada'), ('anulada', 'anulada')], db_default='borrador', db_comment='Estado de la liquidación')
+    registrada_por = models.BigIntegerField(null=True, blank=True, db_comment='Persona que registró el borrador (no puede aprobarla)')
     aprobada_por = models.BigIntegerField(null=True, blank=True, db_comment='Persona que la aprobó')
     aprobada_en = models.DateTimeField(null=True, blank=True, db_comment='Cuándo se aprobó')
     detalle = models.JSONField(db_default=sql("'[]'::jsonb"), db_comment='Líneas de ingresos y gastos (JSON)')

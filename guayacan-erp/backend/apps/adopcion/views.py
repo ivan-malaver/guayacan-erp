@@ -96,12 +96,25 @@ class SeguimientoViewSet(VistaModelo):
     serializer_class = serializers.SeguimientoSerializer
 
 
-# CRUD de adopcion.liquidacion en /api/v1/adopcion/liquidaciones/
+# CRUD de adopcion.liquidacion en /api/v1/adopcion/liquidaciones/  (el alta del borrador es ADO-12)
 class LiquidacionViewSet(VistaModelo):
     # Filas que puede ver la vista (la base ya filtra por la finca de la sesión)
     queryset = models.Liquidacion.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.LiquidacionSerializer
+
+    def perform_create(self, serializer):
+        serializer.instance = services.ado_12_talar_sacrificar_liquidar(usuario=self.request.user, **serializer.validated_data)
+
+
+class AprobarLiquidacion(APIView):
+    """ADO-12 (y ADO-10) · POST /api/v1/adopcion/liquidaciones/{id}/aprobar/: otra persona aprueba el borrador."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas, requiere('adopcion.aprobar_liquidacion')]
+
+    def post(self, request, id):
+        liquidacion = services.aprobar_liquidacion(usuario=request.user, liquidacion_id=id)
+        return Response(serializers.LiquidacionSerializer(liquidacion).data)
 
 
 # CRUD de adopcion.movimiento_saldo en /api/v1/adopcion/movimientos-saldo/

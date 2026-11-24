@@ -45,8 +45,8 @@ urlpatterns = [
     path('mis-bienes/<int:id>/seguimiento/', views.SeguimientoMiBien.as_view(), name='ado-06-mis-bienes-id-seguimiento'),
     # ADO-07 · El aviso de mora (o el video) llegó al adoptante: POST /api/v1/adopcion/seguimientos/{id}/marcar-enviado/
     path('seguimientos/<int:id>/marcar-enviado/', views.MarcarEnviado.as_view(), name='ado-07-seguimientos-id-marcar-enviado'),
-    # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/liquidaciones/{id}/aprobar/
-    path('liquidaciones/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='ADO-10', metodo='POST'), name='ado-10-liquidaciones-id-aprobar'),
+    # ADO-12 (y ADO-10) · Aprobar una liquidación: POST /api/v1/adopcion/liquidaciones/{id}/aprobar/ (el borrador es el CRUD)
+    path('liquidaciones/<int:id>/aprobar/', views.AprobarLiquidacion.as_view(), name='ado-10-liquidaciones-id-aprobar'),
     # ADO-10 · Liquidar productos con el 5 %: POST /api/v1/adopcion/adoptantes/{id}/pagar-saldo/
     path('adoptantes/<int:id>/pagar-saldo/', PorConstruir.as_view(caso_de_uso='ADO-10', metodo='POST'), name='ado-10-adoptantes-id-pagar-saldo'),
     # ADO-11 · Decidir en la madurez: mantener o liquidar: POST /api/v1/adopcion/contratos/{id}/decision/

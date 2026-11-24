@@ -173,6 +173,7 @@ create table adopcion.liquidacion (
     abono_adoptante numeric(14,2),
     soporte_documento_id bigint,
     estado text not null default 'borrador' constraint ck_liquidacion_estado check (estado in ('borrador', 'aprobada', 'anulada')),
+    registrada_por bigint,
     aprobada_por bigint, aprobada_en timestamptz,
     detalle jsonb not null default '[]',
     creado_en timestamptz not null default now(),
@@ -413,9 +414,16 @@ end $$;
 comment on function adopcion.marcar_madurez(date) is 'Tarea mensual: el bien que cumplió su edad de madurez pasa a maduro y se le pide al dueño decidir: mantener o liquidar';
 
 create or replace function adopcion.validar_liquidacion() returns trigger language plpgsql as $$
-declare c adopcion.contrato; p adopcion.plan; b adopcion.bien; v_pct numeric;
+declare c adopcion.contrato; p adopcion.plan; b adopcion.bien; d documental.documento; v_pct numeric;
 begin
   if tg_op = 'UPDATE' and old.estado <> 'borrador' then raise exception 'La liquidación % ya fue %', old.id, old.estado; end if;
+  -- Dos personas (ADO-12): quien registra el borrador no lo aprueba
+  if tg_op = 'INSERT' then
+    new.registrada_por := nucleo.usuario_actual();
+    if new.estado <> 'borrador' then raise exception 'Una liquidación nace en borrador: la aprueba después otra persona'; end if;
+  else
+    new.registrada_por := old.registrada_por;
+  end if;
   select * into c from adopcion.contrato where id = new.contrato_id;
   select * into b from adopcion.bien where id = c.bien_id;
   select * into p from adopcion.plan where id = b.plan_id;
@@ -431,10 +439,20 @@ begin
   new.abono_adoptante := greatest(new.utilidad_neta, 0) - new.comision;
   if new.estado = 'aprobada' then
     perform nucleo.exigir_persona('aprobar liquidaciones de adopción');
-    if new.tipo in ('tala', 'sacrificio') and p.requiere_permiso <> 'ninguno' and new.soporte_documento_id is null then
-      raise exception 'Para liquidar por % se exige el soporte (%): permiso de tala, remisión ICA o certificado de la planta de beneficio', new.tipo, p.requiere_permiso;
+    if nucleo.usuario_actual() is null or nucleo.usuario_actual() = new.registrada_por then
+      raise exception 'La liquidación % la aprueba una persona distinta de quien la registró', new.id;
     end if;
-    new.aprobada_por := coalesce(new.aprobada_por, nucleo.usuario_actual()); new.aprobada_en := now();
+    -- La venta en pie también mueve el bien (remisión ICA de un animal vivo, permiso de tala de un árbol en pie)
+    if new.tipo in ('tala', 'sacrificio', 'venta_en_pie') and p.requiere_permiso <> 'ninguno' then
+      if new.soporte_documento_id is null then
+        raise exception 'Para liquidar por % se exige el soporte (%): permiso de tala, remisión ICA o certificado de la planta de beneficio', new.tipo, p.requiere_permiso;
+      end if;
+      select * into d from documental.documento where id = new.soporte_documento_id;
+      if d.id is null or d.tipo not in ('permiso', 'certificado') or d.entidad_emisora is null or d.numero is null then
+        raise exception 'El soporte % debe ser un permiso o certificado con entidad emisora y número', d.codigo;
+      end if;
+    end if;
+    new.aprobada_por := nucleo.usuario_actual(); new.aprobada_en := now();
   end if;
   return new;
 end $$;
@@ -518,6 +536,10 @@ insert into nucleo.parametro (predio_id, clave, valor, tipo_dato, vigente_desde,
  (null, 'meses_abandono_adopcion', '3', 'entero', '2026-10-30', 'Cuotas vencidas tras las cuales el bien pasa a readopción'),
  (null, 'dias_gracia_abandono', '15', 'entero', '2026-10-30', 'Días desde el último aviso de mora entregado antes de pasar el bien a readopción');
 -- ADO-15: el tablero muestra las cifras del negocio; lo ven la familia y el administrador, no el adoptante (rol cliente)
-insert into nucleo.permiso (codigo, nombre, modulo) values ('adopcion.ver_tablero', 'Ver el tablero de adopción', 'adopcion');
+-- ADO-12: aprobar una liquidación (la base exige además que no la apruebe quien la registró)
+insert into nucleo.permiso (codigo, nombre, modulo) values
+ ('adopcion.ver_tablero', 'Ver el tablero de adopción', 'adopcion'),
+ ('adopcion.aprobar_liquidacion', 'Aprobar liquidaciones de adopción', 'adopcion');
 insert into nucleo.rol_permiso (rol_id, permiso_id)
-select r.id, p.id from nucleo.rol r join nucleo.permiso p on p.codigo = 'adopcion.ver_tablero' where r.codigo in ('administrador', 'familia');
+select r.id, p.id from nucleo.rol r join nucleo.permiso p on p.codigo in ('adopcion.ver_tablero', 'adopcion.aprobar_liquidacion')
+where r.codigo in ('administrador', 'familia');

@@ -780,9 +780,96 @@ def test_ado_11_decision_invalida_o_contrato_terminado(ado_11):
     assert 'no está activo' in str(r.data['contrato'])
 
 
-@pytest.mark.skip(reason='ADO-12: por construir')
-def test_ado_12_talar_sacrificar_liquidar_flujo_principal():
-    """ADO-12 · Talar o sacrificar y liquidar"""
+@pytest.fixture
+def ado_12(ado_11):
+    """El aguacate maduro de ADO-11 con la decisión de liquidar, y una segunda administradora que aprueba."""
+    api, contrato, bien, madurar = ado_11
+    madurar()
+    assert _decidir(api, contrato, 'liquidar').status_code == 200
+    predio = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
+    revisora = _fila("insert into nucleo.usuario (nombre_completo, correo, contrasena_hash) "
+                     "values ('Revisora de prueba', 'revisora-prb@example.com', 'x') returning id")[0]
+    _fila("insert into nucleo.usuario_rol (usuario_id, rol_id) select %s, id from nucleo.rol where codigo = 'administrador' returning id", revisora)
+    otra = APIClient()
+    otra.credentials(HTTP_AUTHORIZATION=f"Bearer {emitir_tokens(get_user_model().objects.get(pk=revisora), predio)['acceso']}")
+    tala = {'contrato': contrato, 'tipo': 'tala', 'ingresos': '1000000', 'gastos': '300000'}
+    return api, otra, contrato, bien, tala
+
+
+def _aprobar(api, liquidacion):
+    return api.post(f'/api/v1/adopcion/liquidaciones/{liquidacion}/aprobar/')
+
+
+def _documento(tipo, numero=None):
+    return _fila("insert into documental.documento (codigo, titulo, tipo, entidad_emisora, numero) "
+                 "values (%s, 'Permiso de aprovechamiento', %s, 'CAR Cundinamarca', %s) returning id", f'PRB-{tipo}', tipo, numero)[0]
+
+
+def test_ado_12_talar_sacrificar_liquidar_flujo_principal(ado_12):
+    """ADO-12 · El administrador registra la tala (borrador con utilidad, 5 % y abono calculados por la base) y otra
+    persona la aprueba: el abono va al saldo del adoptante y paga su cuota, el contrato termina, el bien queda
+    liquidado y el sitio libre"""
+    api, otra, contrato, bien, tala = ado_12
+    r = api.post('/api/v1/adopcion/liquidaciones/', tala, format='json')
+    assert r.status_code == 201, r.data
+    liq = r.data
+    assert (liq['estado'], liq['utilidad_neta'], liq['comision'], liq['abono_adoptante']) == ('borrador', '700000.00', '35000.00', '665000.00')
+    r = _aprobar(otra, liq['id'])
+    assert (r.status_code, r.data['estado']) == (200, 'aprobada'), r.data
+    assert r.data['aprobada_por'] != r.data['registrada_por']
+    assert _fila('select estado from adopcion.contrato where id = %s', contrato) == ('terminado_liquidacion',)
+    assert _fila('select estado from adopcion.bien where id = %s', bien) == ('liquidado',)
+    assert _sitio(bien) == 'libre'
+    adoptante = _fila('select adoptante_id from adopcion.contrato where id = %s', contrato)[0]
+    assert _fila('select adopcion.saldo(%s)', adoptante) == (640000,)  # 665.000 menos la cuota de 25.000 que compensó
+    assert _avisos('adopcion.liquidado', liq['id']) == 1
+
+
+def test_ado_12_quien_registra_no_aprueba(ado_12):
+    """Dos personas: el mismo administrador no aprueba su propio borrador (422) y por el CRUD nadie la aprueba"""
+    api, _, contrato, _, tala = ado_12
+    liq = api.post('/api/v1/adopcion/liquidaciones/', tala, format='json').data['id']
+    r = _aprobar(api, liq)
+    assert (r.status_code, r.data['codigo']) == (422, 'regla_negocio'), r.data
+    assert 'persona distinta' in r.data['detalle']
+    api.patch(f'/api/v1/adopcion/liquidaciones/{liq}/', {'estado': 'aprobada', 'abono_adoptante': '9999999'}, format='json')
+    assert _fila('select estado, abono_adoptante from adopcion.liquidacion where id = %s', liq) == ('borrador', 665000)
+    assert _fila('select estado from adopcion.contrato where id = %s', contrato) == ('activo',)
+
+
+def test_ado_12_permiso_de_tala_valido(ado_12):
+    """Si el plan exige permiso de la CAR: sin soporte no se aprueba, un «registro» tampoco sirve; un permiso con
+    entidad emisora y número sí"""
+    api, otra, _, bien, tala = ado_12
+    _fila("update adopcion.plan set requiere_permiso = 'tala_car' where id = (select plan_id from adopcion.bien where id = %s) returning id", bien)
+    liq = api.post('/api/v1/adopcion/liquidaciones/', tala, format='json').data['id']
+    r = _aprobar(otra, liq)
+    assert r.status_code == 422 and 'exige el soporte' in r.data['detalle'], r.data
+    api.patch(f'/api/v1/adopcion/liquidaciones/{liq}/', {'soporte_documento': _documento('registro')}, format='json')
+    r = _aprobar(otra, liq)
+    assert r.status_code == 422 and 'permiso o certificado' in r.data['detalle'], r.data
+    api.patch(f'/api/v1/adopcion/liquidaciones/{liq}/', {'soporte_documento': _documento('permiso', 'CAR-2026-0815')}, format='json')
+    assert _aprobar(otra, liq).status_code == 200
+
+
+def test_ado_12_sin_decision_de_liquidar_o_tipo_que_no_aplica(ado_11):
+    """Sin la decisión del dueño no se liquida; un árbol no se «sacrifica»"""
+    api, contrato, _, madurar = ado_11
+    madurar()
+    r = api.post('/api/v1/adopcion/liquidaciones/', {'contrato': contrato, 'tipo': 'tala', 'ingresos': '1', 'gastos': '0'}, format='json')
+    assert r.status_code == 422 and 'no ha decidido liquidar' in r.data['detalle'], r.data
+    assert _decidir(api, contrato, 'liquidar').status_code == 200
+    r = api.post('/api/v1/adopcion/liquidaciones/', {'contrato': contrato, 'tipo': 'sacrificio', 'ingresos': '1', 'gastos': '0'}, format='json')
+    assert r.status_code == 422 and 'Solo se sacrifican animales' in r.data['detalle'], r.data
+
+
+def test_ado_12_el_adoptante_no_aprueba(ado_12):
+    """Aprobar exige el permiso adopcion.aprobar_liquidacion: el rol cliente recibe 403"""
+    api, _, contrato, bien, tala = ado_12
+    liq = api.post('/api/v1/adopcion/liquidaciones/', tala, format='json').data['id']
+    adoptante = _fila('select adoptante_id from adopcion.contrato where id = %s', contrato)[0]
+    predio = _fila('select predio_id from adopcion.bien where id = %s', bien)[0]
+    assert _aprobar(_cliente(adoptante, 'anna-liq@example.com', predio), liq).status_code == 403
 
 
 def _morir(api, bien, fecha, causa='Pudrición de raíz'):

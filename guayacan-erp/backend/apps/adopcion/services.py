@@ -548,18 +548,45 @@ def ado_12_talar_sacrificar_liquidar(*, usuario, **datos):
     Fase 3 · función adopcion
     Tablas: adopcion.liquidacion, documental.documento
     Reglas en la base: adopcion.validar_liquidacion(), adopcion.aplicar_liquidacion()
-    Endpoints: CRUD de sus tablas
+    Endpoints: POST /api/v1/adopcion/liquidaciones/ (borrador); POST /api/v1/adopcion/liquidaciones/{id}/aprobar/
     Requerimientos: RQ-47
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    Parámetros: usuario (el administrador) y **datos (lo que validó LiquidacionSerializer): contrato, tipo (tala,
+    sacrificio o venta_en_pie; productos es ADO-10), ingresos, gastos y, si el plan lo pide, soporte_documento.
+    Devuelve la liquidación en borrador con la utilidad, la comisión y el abono ya calculados por la base.
+
+    La base exige que el dueño haya decidido liquidar (ADO-11) y el tipo según el bien (solo se talan árboles, solo se
+    sacrifican animales). La aprueba otra persona con aprobar_liquidacion(); al aprobarse, el abono va al saldo a favor
+    del adoptante (y paga sus cuotas pendientes), el contrato termina, el bien queda liquidado y el sitio libre.
     """
-    # Por construir. Pasos sugeridos para ADO-12:
-    # 1. with transaction.atomic():
-    # 2. La función «adopcion» debe estar encendida en la finca (la base lo exige con nucleo.exigir_funcion)
-    # 3. Llamar a la base: adopcion.validar_liquidacion(), adopcion.aplicar_liquidacion()
-    # 4. publicar('adopcion.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('ADO-12: por construir')
+    with connection.cursor() as cur:
+        cur.execute("select nucleo.exigir_funcion('adopcion')")
+    contrato = datos['contrato']
+    if contrato.estado != 'activo':
+        raise ValidationError({'contrato': f'El contrato {contrato.numero} no está activo ({contrato.estado})'})
+    liquidacion = models.Liquidacion.objects.create(**datos)
+    liquidacion.refresh_from_db()  # utilidad, comisión, abono y registrada_por los pone el disparador de la base
+    return liquidacion
+
+
+def aprobar_liquidacion(*, usuario, liquidacion_id):
+    """ADO-12 y ADO-10 · Aprobar una liquidación en borrador: la aprueba una persona distinta de quien la registró.
+
+    La base lo exige (adopcion.validar_liquidacion): dos personas y, para tala, sacrificio o venta en pie de un plan
+    con permiso, un soporte de tipo permiso o certificado con entidad emisora y número. Al aprobarse,
+    adopcion.aplicar_liquidacion() abona al adoptante, cierra contrato y bien, libera el sitio y publica adopcion.liquidado.
+    Devuelve la liquidación aprobada.
+    """
+    with transaction.atomic():
+        liquidacion = models.Liquidacion.objects.select_for_update().filter(pk=liquidacion_id).first()
+        if not liquidacion:
+            raise NotFound(f'No hay liquidación {liquidacion_id}')
+        if liquidacion.estado != 'borrador':
+            raise ValidationError({'estado': f'La liquidación ya está {liquidacion.estado}'})
+        liquidacion.estado = 'aprobada'
+        liquidacion.save(update_fields=['estado'])
+        liquidacion.refresh_from_db()
+    return liquidacion
 
 
 def ado_13_reponer_bien_muerto_garantia(*, usuario, bien_id, fecha, causa):

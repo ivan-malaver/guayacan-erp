@@ -72,7 +72,10 @@ class LiquidacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Liquidacion  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # Las cifras las calcula la base y la aprobación es una acción aparte (POST /liquidaciones/{id}/aprobar/, ADO-12)
+        read_only_fields = SOLO_LECTURA + ('estado', 'utilidad_neta', 'comision_pct', 'comision', 'abono_adoptante',
+                                           'registrada_por', 'aprobada_por', 'aprobada_en')
+        extra_kwargs = {'detalle': {'required': False}}  # la base pone '[]' si no llegan las líneas
 
 
 # adopcion.movimiento_saldo <-> JSON en /api/v1/adopcion/movimientos-saldo/

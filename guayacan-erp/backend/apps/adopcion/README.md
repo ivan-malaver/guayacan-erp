@@ -17,7 +17,7 @@ Adopción de árboles y animales: catálogo, sitios, bienes, contratos de compra
 | ADO-09 | Registrar y vender productos del bien | 3 · `adopcion` | Operario de campo | CRUD |
 | ADO-10 | Liquidar productos con el 5 % | 3 · `adopcion` | Administrador | `POST /api/v1/adopcion/liquidaciones/{id}/aprobar/`<br>`POST /api/v1/adopcion/adoptantes/{id}/pagar-saldo/` |
 | ADO-11 | Decidir en la madurez: mantener o liquidar | 3 · `adopcion` | Adoptante | `POST /api/v1/adopcion/contratos/{id}/decision/` |
-| ADO-12 | Talar o sacrificar y liquidar | 3 · `adopcion` | Administrador | CRUD |
+| ADO-12 | Talar o sacrificar y liquidar | 3 · `adopcion` | Administrador | `POST /api/v1/adopcion/liquidaciones/` (borrador)<br>`POST /api/v1/adopcion/liquidaciones/{id}/aprobar/` (otra persona) |
 | ADO-13 | Reponer un bien muerto en garantía | 3 · `adopcion` | Encargado de finca | `POST /api/v1/adopcion/bienes/{id}/muerte/` |
 | ADO-14 | Ceder o regalar la adopción | 3 · `adopcion` | Adoptante | `POST /api/v1/adopcion/contratos/{id}/ceder/` |
 | ADO-15 | Consultar el tablero de adopción | 3 · `adopcion` | Familia | `GET /api/v1/adopcion/tablero/` |

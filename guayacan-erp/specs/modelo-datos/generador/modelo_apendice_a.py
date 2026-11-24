@@ -104,6 +104,7 @@ T_A.append(('adopcion', 'liquidacion', 3, 'Venta de productos o liquidación fin
     ('abono_adoptante', 'numeric(14,2)', '', 'Lo que se abona al adoptante'),
     ('soporte_documento_id', 'fk:documental.documento', '', 'Permiso de tala, remisión ICA o acta de beneficio'),
     ('estado', 'enum:borrador,aprobada,anulada', "not null default 'borrador'", 'Estado de la liquidación'),
+    ('registrada_por', 'bigint', '', 'Persona que registró el borrador (no puede aprobarla)'),
     ('aprobada_por', 'bigint', '', 'Persona que la aprobó'),
     ('aprobada_en', 'timestamptz', '', 'Cuándo se aprobó'),
     ('detalle', 'jsonb', "not null default '[]'::jsonb", 'Líneas de ingresos y gastos (JSON)'),

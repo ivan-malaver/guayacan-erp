@@ -19,6 +19,9 @@ begin
 end $$;
 grant usage on schema prueba to guayacan_app;
 grant execute on all functions in schema prueba to guayacan_app;
+-- Segunda persona para aprobar liquidaciones (quien registra el borrador no lo aprueba)
+insert into nucleo.usuario (nombre_completo, correo, contrasena_hash) values ('Revisora de liquidaciones', 'revisora@guayacan.local', 'x');
+select id as u_rev from nucleo.usuario where correo = 'revisora@guayacan.local' \gset
 
 set role guayacan_app;
 select set_config('app.predio_id', '1', false), set_config('app.usuario_id', '1', false), set_config('app.agente_id', '', false);
@@ -119,10 +122,23 @@ select set_config('app.agente_id', '', false);
 update adopcion.contrato set decision_madurez = 'liquidar' where numero = 'ADO-3';
 select id as c_ovi from adopcion.contrato where numero = 'ADO-3' \gset
 select prueba.esperar_error(format($q$insert into adopcion.liquidacion (contrato_id, tipo, ingresos, gastos, estado)
-  values (%s, 'sacrificio', 517500, 95000, 'aprobada')$q$, :c_ovi), 'exige el soporte', 'Sacrificio sin certificado de planta de beneficio: rechazado');
-insert into documental.documento (codigo, titulo, tipo, entidad_emisora) values ('PB-2026-001', 'Certificado de beneficio OVI-0001', 'registro', 'Planta de beneficio autorizada INVIMA');
-insert into adopcion.liquidacion (contrato_id, tipo, periodo_hasta, ingresos, gastos, estado, soporte_documento_id)
-select :c_ovi, 'sacrificio', '2026-10-20', 517500, 95000, 'aprobada', id from documental.documento where codigo = 'PB-2026-001';
+  values (%s, 'sacrificio', 517500, 95000, 'aprobada')$q$, :c_ovi), 'nace en borrador', 'Una liquidación no nace aprobada');
+insert into adopcion.liquidacion (contrato_id, tipo, periodo_hasta, ingresos, gastos) values (:c_ovi, 'sacrificio', '2026-10-20', 517500, 95000);
+select id as l_ovi from adopcion.liquidacion where contrato_id = :c_ovi \gset
+select prueba.esperar_error(format($q$update adopcion.liquidacion set estado = 'aprobada' where id = %s$q$, :l_ovi), 'persona distinta',
+  'Quien registra la liquidación no la aprueba');
+select set_config('app.usuario_id', :'u_rev', false);
+select prueba.esperar_error(format($q$update adopcion.liquidacion set estado = 'aprobada' where id = %s$q$, :l_ovi), 'exige el soporte',
+  'Sacrificio sin certificado de planta de beneficio: rechazado');
+select prueba.esperar_error(format($q$update adopcion.liquidacion set tipo = 'venta_en_pie', estado = 'aprobada' where id = %s$q$, :l_ovi), 'exige el soporte',
+  'La venta en pie también exige el soporte (el animal se mueve)');
+insert into documental.documento (codigo, titulo, tipo, entidad_emisora) values ('PB-BORRADOR', 'Nota de la planta', 'registro', 'Planta de beneficio autorizada INVIMA');
+select prueba.esperar_error(format($q$update adopcion.liquidacion set estado = 'aprobada', soporte_documento_id = (select id from documental.documento where codigo = 'PB-BORRADOR') where id = %s$q$, :l_ovi),
+  'permiso o certificado', 'El soporte debe ser un permiso o certificado con emisor y número');
+insert into documental.documento (codigo, titulo, tipo, entidad_emisora, numero) values ('PB-2026-001', 'Certificado de beneficio OVI-0001', 'certificado', 'Planta de beneficio autorizada INVIMA', 'CB-4471');
+update adopcion.liquidacion set estado = 'aprobada', soporte_documento_id = (select id from documental.documento where codigo = 'PB-2026-001') where id = :l_ovi;
+select prueba.ok((select registrada_por = 1 and aprobada_por = :u_rev from adopcion.liquidacion where id = :l_ovi), 'La registra una persona y la aprueba otra');
+select set_config('app.usuario_id', '1', false);
 select prueba.ok((select utilidad_neta = 422500 and comision = 21125 and abono_adoptante = 401375 from adopcion.liquidacion where contrato_id = :c_ovi),
   'Liquidación: utilidad 422.500, comisión 5 % = 21.125, abono 401.375');
 select prueba.ok((select estado from adopcion.bien where id = :b_ovi) = 'liquidado'
@@ -138,7 +154,10 @@ select prueba.esperar_error(format($q$insert into adopcion.movimiento_saldo (ado
 select prueba.esperar_error(format('update adopcion.movimiento_saldo set valor = 1 where adoptante_id = %s', :t_john), 'permission denied', 'La cuenta del adoptante es de solo inserción');
 
 -- Productos sin utilidad: no hay comisión
-insert into adopcion.liquidacion (contrato_id, tipo, ingresos, gastos, estado) select id, 'productos', 20000, 26000, 'aprobada' from adopcion.contrato where numero = 'ADO-2';
+insert into adopcion.liquidacion (contrato_id, tipo, ingresos, gastos) select id, 'productos', 20000, 26000 from adopcion.contrato where numero = 'ADO-2';
+select set_config('app.usuario_id', :'u_rev', false);
+update adopcion.liquidacion set estado = 'aprobada' where tipo = 'productos';
+select set_config('app.usuario_id', '1', false);
 select prueba.ok((select comision = 0 and abono_adoptante = 0 and utilidad_neta = -6000 from adopcion.liquidacion where tipo = 'productos'),
   'Con pérdida no se cobra el 5 % ni se abona');
 
