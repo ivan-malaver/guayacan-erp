@@ -15,10 +15,15 @@ PATRÓN PARA CONSTRUIR CADA FUNCIÓN (ejemplo completo en docs/desarrollo/02_con
 
 Cada función está vacía (NotImplementedError) y su documentación resume la especificación.
 Especificación completa: documento técnico (pestaña de casos de uso) y docs/casos-de-uso/."""
-# transaction y publicar aún no se usan (las funciones están vacías); «noqa» evita el aviso del revisor
-from django.db import transaction  # noqa: F401
+# publicar aún no se usa (las funciones están vacías); «noqa» evita el aviso del revisor
+import uuid
+
+from django.db import connection, transaction
+from rest_framework.exceptions import NotFound, ValidationError
 
 from guayacan.eventos import publicar  # noqa: F401
+
+from . import models
 
 
 def vta_01_gestionar_listas_precios_vigencia(*, usuario, **datos):
@@ -61,24 +66,92 @@ def vta_02_proponer_aprobar_cambio_precio(*, usuario, **datos):
     raise NotImplementedError('VTA-02: por construir')
 
 
-def vta_03_tomar_confirmar_pedido(*, usuario, **datos):
+def crear_pedido(*, usuario, **datos):
+    """VTA-03 paso 1 · El pedido nace en borrador con número PED-<id> (único por finca, sin secuencia aparte)."""
+    with transaction.atomic():
+        pedido = models.Pedido.objects.create(numero=uuid.uuid4().hex[:20], **datos)  # provisional: el id aún no existe
+        pedido.numero = f'PED-{pedido.pk}'
+        pedido.save(update_fields=['numero'])
+        pedido.refresh_from_db()
+    return pedido
+
+
+def _en_borrador(pedido_id):
+    """El pedido bloqueado para cambiarlo; solo en borrador se tocan sus datos y sus líneas (4c)."""
+    pedido = models.Pedido.objects.select_for_update().filter(pk=pedido_id).first()
+    if not pedido:
+        raise NotFound(f'No hay pedido {pedido_id}')
+    if pedido.estado != 'borrador':
+        raise ValidationError({'estado': f'El pedido {pedido.numero} está {pedido.estado}: ya no se puede cambiar'})
+    return pedido
+
+
+def actualizar_pedido(*, usuario, pedido_id, **datos):
+    """VTA-03 · Cambiar cliente, canal o entrega mientras el pedido está en borrador."""
+    with transaction.atomic():
+        pedido = _en_borrador(pedido_id)
+        for campo, valor in datos.items():
+            setattr(pedido, campo, valor)
+        pedido.save()
+        pedido.refresh_from_db()
+    return pedido
+
+
+def guardar_linea(*, usuario, pedido_id, linea=None, **datos):
+    """VTA-03 pasos 1-2 · Crea o cambia una línea con el precio vigente de la lista del cliente (o PUBLICO).
+
+    El usuario envía producto, cantidad y descuento; precio, IVA del producto y total los pone esta función. Al editar
+    la línea se vuelve a tomar el precio vigente: así se resuelve el 4b («actualícelo antes de confirmar»).
+    """
+    with transaction.atomic():
+        pedido = _en_borrador(pedido_id)
+        linea = linea or models.PedidoDetalle(pedido=pedido)
+        for campo, valor in datos.items():
+            setattr(linea, campo, valor)
+        lista = pedido.cliente.lista_precios_id or models.ListaPrecios.objects.filter(codigo='PUBLICO').values_list('id', flat=True).first()
+        precio = models.PrecioProducto.objects.filter(producto=linea.producto, lista_precios_id=lista, vigente_hasta__isnull=True).first()
+        if not precio:
+            raise ValidationError({'producto': f'{linea.producto.nombre} no tiene precio vigente en la lista del cliente'})
+        linea.precio_producto = precio
+        linea.precio_unitario = precio.precio_unitario
+        linea.tarifa_iva = linea.producto.tarifa_iva
+        linea.total_linea = linea.cantidad * precio.precio_unitario - linea.descuento
+        linea.save()
+        linea.refresh_from_db()
+    return linea
+
+
+def vta_03_tomar_confirmar_pedido(*, usuario, pedido_id):
     """VTA-03 · Tomar y confirmar un pedido
 
     Actores: Vendedor, Cliente; secundarios: Asesor virtual (IA)
     Fase 1
     Tablas: comercial.pedido, comercial.pedido_detalle, comercial.reserva_lote
     Reglas en la base: inventario.reservar_fefo(), comercial.confirmar_pedido(), inventario.puede_venderse()
-    Endpoints: POST /api/v1/comercial/pedidos/{id}/confirmar/
+    Endpoints: POST /api/v1/comercial/pedidos/{id}/confirmar/ (el borrador y sus líneas son el CRUD)
     Requerimientos: RF-10, RQ-27
 
-    Parámetros: usuario (quien hace la petición) y **datos (lo que validó el serializer).
+    La base valida estado (4c), crédito, precio vigente (4b) e inventario (4a, sin reservas a medias), reserva por
+    FEFO, congela los totales y publica pedido.confirmado; quien avisa al cliente por su canal escucha ese evento.
+    Devuelve el pedido confirmado.
     """
-    # Por construir. Pasos sugeridos para VTA-03:
-    # 1. with transaction.atomic():
-    # 3. Llamar a la base: inventario.reservar_fefo(), comercial.confirmar_pedido(), inventario.puede_venderse()
-    # 4. publicar('comercial.<hecho>', '<esquema.tabla>', id, {...}) si otros módulos deben enterarse
-    # 5. Devolver el resultado para la respuesta
-    raise NotImplementedError('VTA-03: por construir')
+    with transaction.atomic():
+        if not models.Pedido.objects.filter(pk=pedido_id).exists():
+            raise NotFound(f'No hay pedido {pedido_id}')
+        with connection.cursor() as cur:
+            cur.execute('select comercial.confirmar_pedido(%s)', [pedido_id])
+    return models.Pedido.objects.get(pk=pedido_id)
+
+
+def cancelar_pedido(*, usuario, pedido_id):
+    """VTA-03 5a · Cancelar antes de despachar: comercial.cancelar_pedido() libera las reservas; después de despachar
+    la base lo rechaza (solo hay devolución). Devuelve el pedido cancelado."""
+    with transaction.atomic():
+        if not models.Pedido.objects.filter(pk=pedido_id).exists():
+            raise NotFound(f'No hay pedido {pedido_id}')
+        with connection.cursor() as cur:
+            cur.execute('select comercial.cancelar_pedido(%s)', [pedido_id])
+    return models.Pedido.objects.get(pk=pedido_id)
 
 
 def vta_04_vender_finca_feria_sin_conexion(*, usuario, **datos):

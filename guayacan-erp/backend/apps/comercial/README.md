@@ -8,7 +8,7 @@ Precios con vigencia, propuestas de precio, pedidos, facturas, pagos y entregas.
 | --- | --- | --- | --- | --- |
 | VTA-01 | Gestionar listas y precios con vigencia | 1 | Administrador | CRUD |
 | VTA-02 | Proponer y aprobar un cambio de precio | 1 | Administrador | `POST /api/v1/comercial/propuestas-precio/{id}/aprobar/` |
-| VTA-03 | Tomar y confirmar un pedido | 1 | Vendedor, Cliente | `POST /api/v1/comercial/pedidos/{id}/confirmar/` |
+| VTA-03 | Tomar y confirmar un pedido | 1 | Vendedor, Cliente | CRUD de pedidos y `/pedidos/{id}/lineas/` (borrador, precio vigente)<br>`POST /api/v1/comercial/pedidos/{id}/confirmar/`<br>`POST /api/v1/comercial/pedidos/{id}/cancelar/` |
 | VTA-04 | Vender en la finca o en la feria sin conexión | 2 | Vendedor | CRUD |
 | VTA-05 | Despachar y entregar un pedido | 1 | Operario de campo, Vendedor | `POST /api/v1/comercial/pedidos/{id}/despachar/` |
 | VTA-06 | Facturar electrónicamente | 1 | Tareas programadas | `POST /api/v1/comercial/pedidos/{id}/facturar/` |

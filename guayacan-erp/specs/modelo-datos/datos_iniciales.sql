@@ -296,14 +296,16 @@ insert into nucleo.permiso (codigo, nombre, modulo) values
  ('nomina.cerrar', 'Cerrar el periodo de nómina', 'nomina'),
  ('nomina.aprobar_pago', 'Aprobar pagos de nómina', 'nomina'),
  ('estrategia.aprobar_iniciativa', 'Aprobar iniciativas y reinversiones', 'estrategia'),
- ('seguridad.atender_alerta', 'Atender alertas e incidentes de seguridad', 'seguridad');
+ ('seguridad.atender_alerta', 'Atender alertas e incidentes de seguridad', 'seguridad'),
+ ('comercial.confirmar_pedido', 'Confirmar y cancelar pedidos', 'comercial');
 insert into nucleo.rol_permiso (rol_id, permiso_id)
 select r.id, p.id from nucleo.rol r join nucleo.permiso p on (r.codigo, p.codigo) in (
  ('administrador', 'personal.aprobar_tarea'), ('administrador', 'personal.asignar_tarea'), ('administrador', 'nomina.cerrar'),
  ('administrador', 'nomina.aprobar_pago'), ('administrador', 'estrategia.aprobar_iniciativa'), ('administrador', 'seguridad.atender_alerta'),
  ('encargado_finca', 'personal.aprobar_tarea'), ('encargado_finca', 'personal.asignar_tarea'), ('encargado_finca', 'nomina.preparar'),
  ('familia', 'personal.aprobar_tarea'), ('familia', 'nomina.cerrar'), ('familia', 'nomina.aprobar_pago'), ('familia', 'estrategia.aprobar_iniciativa'),
- ('contador', 'nomina.preparar'), ('contador', 'nomina.cerrar'));
+ ('contador', 'nomina.preparar'), ('contador', 'nomina.cerrar'),
+ ('administrador', 'comercial.confirmar_pedido'), ('vendedor', 'comercial.confirmar_pedido'));
 
 -- Matriz de responsabilidades inicial (R responsable, A aprueba, C consultado, I informado)
 insert into personal.matriz_responsabilidad (proceso, rol_id, responsabilidad)

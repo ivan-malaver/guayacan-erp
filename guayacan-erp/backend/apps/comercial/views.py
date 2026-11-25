@@ -14,9 +14,14 @@ QUÉ OPERACIONES OFRECE (heredadas de guayacan.vistas.VistaModelo)
 La seguridad no se programa aquí: el middleware fija la finca y el usuario, y PostgreSQL solo deja ver y
 cambiar lo de esa finca. Las acciones de los casos de uso (aprobar, confirmar, liquidar...) están en urls.py.
 Generado por docs/uml/fuentes/gen_apps.py."""
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from guayacan.permisos import SoloPersonas, requiere
 from guayacan.vistas import VistaModelo
 
-from . import models, serializers
+from . import models, serializers, services
 
 
 # CRUD de comercial.lista_precios en /api/v1/comercial/listas-precios/
@@ -50,6 +55,13 @@ class PedidoViewSet(VistaModelo):
     # Cómo se convierten y validan los datos
     serializer_class = serializers.PedidoSerializer
 
+    def perform_create(self, serializer):
+        serializer.instance = services.crear_pedido(usuario=self.request.user, **serializer.validated_data)
+
+    def perform_update(self, serializer):
+        serializer.instance = services.actualizar_pedido(usuario=self.request.user, pedido_id=serializer.instance.pk,
+                                                         **serializer.validated_data)
+
 
 # CRUD de comercial.pedido_detalle en /api/v1/comercial/pedidos/{id}/lineas/
 class PedidoDetalleViewSet(VistaModelo):
@@ -57,6 +69,32 @@ class PedidoDetalleViewSet(VistaModelo):
     queryset = models.PedidoDetalle.objects.all()
     # Cómo se convierten y validan los datos
     serializer_class = serializers.PedidoDetalleSerializer
+
+    def perform_create(self, serializer):
+        serializer.instance = services.guardar_linea(usuario=self.request.user, pedido_id=self.kwargs['padre'],
+                                                     **serializer.validated_data)
+
+    def perform_update(self, serializer):
+        serializer.instance = services.guardar_linea(usuario=self.request.user, pedido_id=self.kwargs['padre'],
+                                                     linea=serializer.instance, **serializer.validated_data)
+
+
+class ConfirmarPedido(APIView):
+    """VTA-03 · POST /api/v1/comercial/pedidos/{id}/confirmar/: un vendedor o el administrador confirma el borrador."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas, requiere('comercial.confirmar_pedido')]
+
+    def post(self, request, id):
+        return Response(serializers.PedidoSerializer(services.vta_03_tomar_confirmar_pedido(usuario=request.user, pedido_id=id)).data)
+
+
+class CancelarPedido(APIView):
+    """VTA-03 5a · POST /api/v1/comercial/pedidos/{id}/cancelar/: libera las reservas si aún no salió de la finca."""
+
+    permission_classes = [IsAuthenticated, SoloPersonas, requiere('comercial.confirmar_pedido')]
+
+    def post(self, request, id):
+        return Response(serializers.PedidoSerializer(services.cancelar_pedido(usuario=request.user, pedido_id=id)).data)
 
 
 # CRUD de comercial.factura en /api/v1/comercial/facturas/

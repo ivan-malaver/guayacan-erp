@@ -44,7 +44,9 @@ class PedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Pedido  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # VTA-03: el número lo pone la API; el estado y los totales, comercial.confirmar_pedido()
+        read_only_fields = SOLO_LECTURA + ('numero', 'estado', 'subtotal', 'descuento', 'impuestos', 'total')
+        extra_kwargs = {'forma_pago': {'required': False}, 'valor_domicilio': {'required': False}}  # contado y 0 por defecto
 
 
 # comercial.pedido_detalle <-> JSON en /api/v1/comercial/pedidos/{id}/lineas/
@@ -52,7 +54,9 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.PedidoDetalle  # tabla que representa
         fields = '__all__'  # expone todas sus columnas
-        read_only_fields = SOLO_LECTURA  # las que pone la base no se aceptan del usuario
+        # VTA-03: el pedido llega en la ruta; precio, IVA y total los pone services.guardar_linea
+        read_only_fields = SOLO_LECTURA + ('pedido', 'precio_producto', 'precio_unitario', 'tarifa_iva', 'total_linea')
+        extra_kwargs = {'descuento': {'required': False, 'default': 0}}
 
 
 # comercial.factura <-> JSON en /api/v1/comercial/facturas/

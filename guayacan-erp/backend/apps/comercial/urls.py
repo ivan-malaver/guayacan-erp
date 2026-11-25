@@ -37,7 +37,9 @@ urlpatterns = [
     # VTA-02 · Proponer y aprobar un cambio de precio: POST /api/v1/comercial/propuestas-precio/{id}/aprobar/
     path('propuestas-precio/<int:id>/aprobar/', PorConstruir.as_view(caso_de_uso='VTA-02', metodo='POST'), name='vta-02-propuestas-precio-id-aprobar'),
     # VTA-03 · Tomar y confirmar un pedido: POST /api/v1/comercial/pedidos/{id}/confirmar/
-    path('pedidos/<int:id>/confirmar/', PorConstruir.as_view(caso_de_uso='VTA-03', metodo='POST'), name='vta-03-pedidos-id-confirmar'),
+    path('pedidos/<int:id>/confirmar/', views.ConfirmarPedido.as_view(), name='vta-03-pedidos-id-confirmar'),
+    # VTA-03 5a · Cancelar un pedido antes de despachar: POST /api/v1/comercial/pedidos/{id}/cancelar/
+    path('pedidos/<int:id>/cancelar/', views.CancelarPedido.as_view(), name='vta-03-pedidos-id-cancelar'),
     # VTA-05 · Despachar y entregar un pedido: POST /api/v1/comercial/pedidos/{id}/despachar/
     path('pedidos/<int:id>/despachar/', PorConstruir.as_view(caso_de_uso='VTA-05', metodo='POST'), name='vta-05-pedidos-id-despachar'),
     # VTA-06 · Facturar electrónicamente: POST /api/v1/comercial/pedidos/{id}/facturar/

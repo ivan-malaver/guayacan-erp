@@ -8,7 +8,7 @@ from guayacan.vistas import PorConstruir
 # CRUD, acción por construir, ruta anidada y rutas transversales se resuelven como se espera
 def test_resuelve_crud_y_acciones():
     assert resolve('/api/v1/comercial/pedidos/').url_name.startswith('comercial-pedidos')
-    vista = resolve('/api/v1/comercial/pedidos/5/confirmar/').func.view_class
+    vista = resolve('/api/v1/comercial/pedidos/5/despachar/').func.view_class  # VTA-05
     assert issubclass(vista, PorConstruir)
     assert resolve('/api/v1/comercial/pedidos/5/lineas/').url_name == 'comercial-lineas-lista'
     assert resolve('/api/v1/nucleo/mis-fincas/').url_name == 'nuc-03-mis-fincas'
